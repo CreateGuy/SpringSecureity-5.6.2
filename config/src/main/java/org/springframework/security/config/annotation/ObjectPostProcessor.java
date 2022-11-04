@@ -32,8 +32,7 @@ import org.springframework.beans.factory.InitializingBean;
 public interface ObjectPostProcessor<T> {
 
 	/**
-	 * Initialize the object possibly returning a modified instance that should be used
-	 * instead.
+	 * 初始化对象，可能返回一个应该使用*的修改后的实例。
 	 * @param object the object to initialize
 	 * @return the initialized version of the object
 	 */

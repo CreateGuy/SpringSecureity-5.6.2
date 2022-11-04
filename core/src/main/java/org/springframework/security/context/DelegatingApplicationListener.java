@@ -25,14 +25,15 @@ import org.springframework.context.event.SmartApplicationListener;
 import org.springframework.util.Assert;
 
 /**
- * Used for delegating to a number of SmartApplicationListener instances. This is useful
- * when needing to register an SmartApplicationListener with the ApplicationContext
- * programmatically.
- *
+ * 用于监听ApplicationEvent事件的代表监听器
+ * SessionInformation
  * @author Rob Winch
  */
 public final class DelegatingApplicationListener implements ApplicationListener<ApplicationEvent> {
 
+	/**
+	 * 真正ApplicationEvent事件进行操作的监听器集合
+	 */
 	private List<SmartApplicationListener> listeners = new CopyOnWriteArrayList<>();
 
 	@Override
@@ -42,6 +43,7 @@ public final class DelegatingApplicationListener implements ApplicationListener<
 		}
 		for (SmartApplicationListener listener : this.listeners) {
 			Object source = event.getSource();
+			//判断当前监听器是否支持此事件
 			if (source != null && listener.supportsEventType(event.getClass())
 					&& listener.supportsSourceType(source.getClass())) {
 				listener.onApplicationEvent(event);
@@ -50,9 +52,10 @@ public final class DelegatingApplicationListener implements ApplicationListener<
 	}
 
 	/**
-	 * Adds a new SmartApplicationListener to use.
-	 * @param smartApplicationListener the SmartApplicationListener to use. Cannot be
-	 * null.
+	 * 添加一个监听器
+	 * 默认就只有GenericApplicationListenerAdapter会被注册进行来
+	 * 而这个GenericApplicationListenerAdapter内部只会有一个{@link org.springframework.security.core.session.SessionRegistryImpl}
+	 * @param smartApplicationListener
 	 */
 	public void addListener(SmartApplicationListener smartApplicationListener) {
 		Assert.notNull(smartApplicationListener, "smartApplicationListener cannot be null");

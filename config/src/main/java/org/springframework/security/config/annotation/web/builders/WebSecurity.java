@@ -68,24 +68,8 @@ import org.springframework.web.context.ServletContextAware;
 import org.springframework.web.filter.DelegatingFilterProxy;
 
 /**
- * <p>
- * The {@link WebSecurity} is created by {@link WebSecurityConfiguration} to create the
- * {@link FilterChainProxy} known as the Spring Security Filter Chain
- * (springSecurityFilterChain). The springSecurityFilterChain is the {@link Filter} that
- * the {@link DelegatingFilterProxy} delegates to.
- * </p>
- *
- * <p>
- * Customizations to the {@link WebSecurity} can be made by creating a
- * {@link WebSecurityConfigurer}, overriding {@link WebSecurityConfigurerAdapter} or
- * exposing a {@link WebSecurityCustomizer} bean.
- * </p>
- *
- * @author Rob Winch
- * @author Evgeniy Cheban
- * @since 3.2
- * @see EnableWebSecurity
- * @see WebSecurityConfiguration
+ * WebSecurity是由WebSecurityConfiguration创建的，用来创建Spring安全过滤器链(springSecurityFilterChain)的FilterchainProxy。
+ * 对过滤器的定制可以通过创建{@link WebSecurityConfigurerAdapter}的实现类来操作
  */
 public final class WebSecurity extends AbstractConfiguredSecurityBuilder<Filter, WebSecurity>
 		implements SecurityBuilder<Filter>, ApplicationContextAware, ServletContextAware {
@@ -100,6 +84,9 @@ public final class WebSecurity extends AbstractConfiguredSecurityBuilder<Filter,
 
 	private FilterSecurityInterceptor filterSecurityInterceptor;
 
+	/**
+	 * 防火墙
+	 */
 	private HttpFirewall httpFirewall;
 
 	private RequestRejectedHandler requestRejectedHandler;

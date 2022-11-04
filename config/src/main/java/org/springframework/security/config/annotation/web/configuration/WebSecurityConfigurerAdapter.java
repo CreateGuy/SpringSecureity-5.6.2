@@ -69,9 +69,8 @@ import org.springframework.web.accept.ContentNegotiationStrategy;
 import org.springframework.web.accept.HeaderContentNegotiationStrategy;
 
 /**
- * Provides a convenient base class for creating a {@link WebSecurityConfigurer} instance.
- * The implementation allows customization by overriding methods.
- *
+ * 为创建{@link WebSecurityConfigurer}实例提供了一个方便的基类
+ * 允许通过重写方法对Spring Security进行定制。
  * <p>
  * Will automatically apply the result of looking up {@link AbstractHttpConfigurer} from
  * {@link SpringFactoriesLoader} to allow developers to extend the defaults. To do this,

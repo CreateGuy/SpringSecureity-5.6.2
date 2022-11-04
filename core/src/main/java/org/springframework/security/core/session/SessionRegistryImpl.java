@@ -34,18 +34,8 @@ import org.springframework.core.log.LogMessage;
 import org.springframework.util.Assert;
 
 /**
- * Default implementation of
- * {@link org.springframework.security.core.session.SessionRegistry SessionRegistry} which
- * listens for {@link org.springframework.security.core.session.SessionDestroyedEvent
- * SessionDestroyedEvent}s published in the Spring application context.
- * <p>
- * For this class to function correctly in a web application, it is important that you
- * register an <a href="
- * {@docRoot}/org/springframework/security/web/session/HttpSessionEventPublisher.html">HttpSessionEventPublisher</a>
- * in the <tt>web.xml</tt> file so that this class is notified of sessions that expire.
- *
- * @author Ben Alex
- * @author Luke Taylor
+ * 针对SpringSecurity内部维护的SessionInformation的操作
+ * 比如说用户登录后，才会创建会话session，那么通常会有一个SpringSecurity的SessionInformation的创建
  */
 public class SessionRegistryImpl implements SessionRegistry, ApplicationListener<AbstractSessionEvent> {
 

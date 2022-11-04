@@ -23,19 +23,7 @@ import org.springframework.security.core.SpringSecurityCoreVersion;
 import org.springframework.util.Assert;
 
 /**
- * Represents a record of a session within the Spring Security framework.
- * <p>
- * This is primarily used for concurrent session support.
- * <p>
- * Sessions have three states: active, expired, and destroyed. A session can that is
- * invalidated by <code>session.invalidate()</code> or via Servlet Container management is
- * considered "destroyed". An "expired" session, on the other hand, is a session that
- * Spring Security wants to end because it was selected for removal for some reason
- * (generally as it was the least recently used session and the maximum sessions for the
- * user were reached). An "expired" session is removed as soon as possible by a
- * <code>Filter</code>.
- *
- * @author Ben Alex
+ * 表示Spring Security框架内部的会话，这主要用于并发会话支持
  */
 public class SessionInformation implements Serializable {
 

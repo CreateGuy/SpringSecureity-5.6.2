@@ -22,11 +22,7 @@ import org.springframework.expression.ExpressionParser;
 import org.springframework.security.core.Authentication;
 
 /**
- * Facade which isolates Spring Security's requirements for evaluating security
- * expressions from the implementation of the underlying expression objects
- *
- * @author Luke Taylor
- * @since 3.1
+ *	它将Spring Security的安全表达式的需求与底层表达式对象的实现隔离开来
  */
 public interface SecurityExpressionHandler<T> extends AopInfrastructureBean {
 

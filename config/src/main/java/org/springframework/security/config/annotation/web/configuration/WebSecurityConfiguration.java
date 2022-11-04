@@ -53,34 +53,40 @@ import org.springframework.security.web.context.AbstractSecurityWebApplicationIn
 import org.springframework.util.Assert;
 
 /**
- * Uses a {@link WebSecurity} to create the {@link FilterChainProxy} that performs the web
- * based security for Spring Security. It then exports the necessary beans. Customizations
- * can be made to {@link WebSecurity} by extending {@link WebSecurityConfigurerAdapter}
- * and exposing it as a {@link Configuration} or implementing
- * {@link WebSecurityConfigurer} and exposing it as a {@link Configuration}. This
- * configuration is imported when using {@link EnableWebSecurity}.
- *
- * @author Rob Winch
- * @author Keesun Baik
- * @since 3.2
- * @see EnableWebSecurity
- * @see WebSecurity
+ * 使用WebSecurity创建{@link FilterChainProxy}
  */
 @Configuration(proxyBeanMethods = false)
 public class WebSecurityConfiguration implements ImportAware, BeanClassLoaderAware {
 
 	private WebSecurity webSecurity;
 
+	/**
+	 * 是否大于debug级别日志的标志位
+	 */
 	private Boolean debugEnabled;
 
+	/**
+	 * SpringSecurity配置类集合
+	 * SecurityConfigurer就是我们自定义SpringSecurity配置类需要实现的接口
+	 */
 	private List<SecurityConfigurer<Filter, WebSecurity>> webSecurityConfigurers;
 
+	/**
+	 * spring过滤器链集合
+	 * 如果有多个配置类就会有多个过滤器链
+	 */
 	private List<SecurityFilterChain> securityFilterChains = Collections.emptyList();
 
+	/**
+	 * 自定义操作WebSecurity的消费方法
+	 */
 	private List<WebSecurityCustomizer> webSecurityCustomizers = Collections.emptyList();
 
 	private ClassLoader beanClassLoader;
 
+	/**
+	 * 默认是 {@link org.springframework.security.config.annotation.configuration.AutowireBeanFactoryObjectPostProcessor}
+	 */
 	@Autowired(required = false)
 	private ObjectPostProcessor<Object> objectObjectPostProcessor;
 
@@ -89,6 +95,10 @@ public class WebSecurityConfiguration implements ImportAware, BeanClassLoaderAwa
 		return new DelegatingApplicationListener();
 	}
 
+	/**
+	 * 当容器中有名称为springSecurityFilterChain的bean的时候，往容器中注入一个SecurityExpressionHandler
+	 * @return
+	 */
 	@Bean
 	@DependsOn(AbstractSecurityWebApplicationInitializer.DEFAULT_FILTER_NAME)
 	public SecurityExpressionHandler<FilterInvocation> webSecurityExpressionHandler() {
@@ -96,7 +106,8 @@ public class WebSecurityConfiguration implements ImportAware, BeanClassLoaderAwa
 	}
 
 	/**
-	 * Creates the Spring Security Filter Chain
+	 * 创建Spring Security过滤器链
+	 * 是一个复合型的
 	 * @return the {@link Filter} that represents the security filter chain
 	 * @throws Exception
 	 */
@@ -139,13 +150,9 @@ public class WebSecurityConfiguration implements ImportAware, BeanClassLoaderAwa
 	}
 
 	/**
-	 * Sets the {@code <SecurityConfigurer<FilterChainProxy, WebSecurityBuilder>}
-	 * instances used to create the web configuration.
-	 * @param objectPostProcessor the {@link ObjectPostProcessor} used to create a
-	 * {@link WebSecurity} instance
-	 * @param webSecurityConfigurers the
-	 * {@code <SecurityConfigurer<FilterChainProxy, WebSecurityBuilder>} instances used to
-	 * create the web configuration
+	 * 用于创建webSecurity
+	 * @param objectPostProcessor 后置处理器，默认只有一个{@link org.springframework.security.config.annotation.configuration.AutowireBeanFactoryObjectPostProcessor}
+	 * @param webSecurityConfigurers 通常是Security的配置类
 	 * @throws Exception
 	 */
 	@Autowired(required = false)
@@ -195,8 +202,13 @@ public class WebSecurityConfiguration implements ImportAware, BeanClassLoaderAwa
 		return new AutowiredWebSecurityConfigurersIgnoreParents(beanFactory);
 	}
 
+	/**
+	 * 设置debugEnabled级别
+	 * @param importMetadata 导入类的注解元数据
+	 */
 	@Override
 	public void setImportMetadata(AnnotationMetadata importMetadata) {
+		//默认只有WebSecurityEnablerConfiguration导入了此类，而此类一定标志了@EnableWebSecurity
 		Map<String, Object> enableWebSecurityAttrMap = importMetadata
 				.getAnnotationAttributes(EnableWebSecurity.class.getName());
 		AnnotationAttributes enableWebSecurityAttrs = AnnotationAttributes.fromMap(enableWebSecurityAttrMap);

@@ -31,12 +31,8 @@ import org.springframework.security.config.annotation.ObjectPostProcessor;
 import org.springframework.util.Assert;
 
 /**
- * Allows registering Objects to participate with an {@link AutowireCapableBeanFactory}'s
- * post processing of {@link Aware} methods, {@link InitializingBean#afterPropertiesSet()}
- * , and {@link DisposableBean#destroy()}.
- *
- * @author Rob Winch
- * @since 3.2
+ * Spring Security会通过new创建很多bean，
+ * 让这些由SpringSecurity创建的bean也和跟spring容器中的bean有同样的生命周期
  */
 final class AutowireBeanFactoryObjectPostProcessor
 		implements ObjectPostProcessor<Object>, DisposableBean, SmartInitializingSingleton {
@@ -54,6 +50,12 @@ final class AutowireBeanFactoryObjectPostProcessor
 		this.autowireBeanFactory = autowireBeanFactory;
 	}
 
+	/**
+	 * 让这些由SpringSecurity创建的bean也和跟spring容器中的bean有同样的生命周期，也能注入相应的依赖，从而进入准备好被使用的状态
+	 * @param object the object to initialize
+	 * @param <T>
+	 * @return
+	 */
 	@Override
 	@SuppressWarnings("unchecked")
 	public <T> T postProcess(T object) {
@@ -62,12 +64,14 @@ final class AutowireBeanFactoryObjectPostProcessor
 		}
 		T result = null;
 		try {
+			//进行初始化
 			result = (T) this.autowireBeanFactory.initializeBean(object, object.toString());
 		}
 		catch (RuntimeException ex) {
 			Class<?> type = object.getClass();
 			throw new RuntimeException("Could not postProcess " + object + " of type " + type, ex);
 		}
+		//进行自动装配属性
 		this.autowireBeanFactory.autowireBean(object);
 		if (result instanceof DisposableBean) {
 			this.disposableBeans.add((DisposableBean) result);

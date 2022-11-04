@@ -45,6 +45,11 @@ public final class AutowiredWebSecurityConfigurersIgnoreParents {
 		this.beanFactory = beanFactory;
 	}
 
+	/**
+	 * 获取容器中的WebSecurityConfigurer
+	 * WebSecurityConfigurer的实现类WebSecurityConfigurerAdapter是配置Spring Security过滤器的实现类
+	 * @return
+	 */
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public List<SecurityConfigurer<Filter, WebSecurity>> getWebSecurityConfigurers() {
 		List<SecurityConfigurer<Filter, WebSecurity>> webSecurityConfigurers = new ArrayList<>();
