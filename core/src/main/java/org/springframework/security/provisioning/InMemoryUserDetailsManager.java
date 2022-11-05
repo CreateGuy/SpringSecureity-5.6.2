@@ -40,19 +40,16 @@ import org.springframework.security.core.userdetails.memory.UserAttributeEditor;
 import org.springframework.util.Assert;
 
 /**
- * Non-persistent implementation of {@code UserDetailsManager} which is backed by an
- * in-memory map.
- * <p>
- * Mainly intended for testing and demonstration purposes, where a full blown persistent
- * system isn't required.
- *
- * @author Luke Taylor
- * @since 3.1
+ * UserDetailsManager的非持久实现，它由内存映射支持。
+ * 主要用于测试和演示目的，其中不需要完整的持久系统
  */
 public class InMemoryUserDetailsManager implements UserDetailsManager, UserDetailsPasswordService {
 
 	protected final Log logger = LogFactory.getLog(getClass());
 
+	/**
+	 * 存储在内存中的用户
+	 */
 	private final Map<String, MutableUserDetails> users = new HashMap<>();
 
 	private AuthenticationManager authenticationManager;

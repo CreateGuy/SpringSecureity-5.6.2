@@ -21,14 +21,17 @@ import java.util.Collection;
 import org.springframework.security.core.GrantedAuthority;
 
 /**
- * Mapping interface which can be injected into the authentication layer to convert the
- * authorities loaded from storage into those which will be used in the
- * {@code Authentication} object.
- *
- * @author Luke Taylor
+ * 权限映射接口
+ * 比如A角色有B和C的角色，那么{@link org.springframework.security.access.hierarchicalroles.RoleHierarchyAuthoritiesMapper}
+ * 就负责将A变成 A,B,C然后保存到用户认证对象中
  */
 public interface GrantedAuthoritiesMapper {
 
+	/**
+	 * 权限转换
+	 * @param authorities
+	 * @return
+	 */
 	Collection<? extends GrantedAuthority> mapAuthorities(Collection<? extends GrantedAuthority> authorities);
 
 }

@@ -55,14 +55,27 @@ public class AuthenticationManagerBuilder
 
 	private final Log logger = LogFactory.getLog(getClass());
 
+	/**
+	 * 父认证管理器
+	 * 一般情况：只有当前构建器是局部认证管理器的时候才会有父认证管理器(全局认证管理器)
+	 */
 	private AuthenticationManager parentAuthenticationManager;
 
+	/**
+	 * 认证提供者集合
+	 */
 	private List<AuthenticationProvider> authenticationProviders = new ArrayList<>();
 
 	private UserDetailsService defaultUserDetailsService;
 
+	/**
+	 * 在认证成功后是否擦除密码
+	 */
 	private Boolean eraseCredentials;
 
+	/**
+	 * 认证事件推送器
+	 */
 	private AuthenticationEventPublisher eventPublisher;
 
 	/**
@@ -219,6 +232,11 @@ public class AuthenticationManagerBuilder
 		return this;
 	}
 
+	/**
+	 * 创建认证管理器
+	 * @return
+	 * @throws Exception
+	 */
 	@Override
 	protected ProviderManager performBuild() throws Exception {
 		if (!isConfigured()) {
@@ -227,9 +245,11 @@ public class AuthenticationManagerBuilder
 		}
 		ProviderManager providerManager = new ProviderManager(this.authenticationProviders,
 				this.parentAuthenticationManager);
+		//是否在认证成功后是否擦除密码
 		if (this.eraseCredentials != null) {
 			providerManager.setEraseCredentialsAfterAuthentication(this.eraseCredentials);
 		}
+		//设置认证事件推送器
 		if (this.eventPublisher != null) {
 			providerManager.setAuthenticationEventPublisher(this.eventPublisher);
 		}
@@ -238,19 +258,7 @@ public class AuthenticationManagerBuilder
 	}
 
 	/**
-	 * Determines if the {@link AuthenticationManagerBuilder} is configured to build a non
-	 * null {@link AuthenticationManager}. This means that either a non-null parent is
-	 * specified or at least one {@link AuthenticationProvider} has been specified.
-	 *
-	 * <p>
-	 * When using {@link SecurityConfigurer} instances, the
-	 * {@link AuthenticationManagerBuilder} will not be configured until the
-	 * {@link SecurityConfigurer#configure(SecurityBuilder)} methods. This means a
-	 * {@link SecurityConfigurer} that is last could check this method and provide a
-	 * default configuration in the {@link SecurityConfigurer#configure(SecurityBuilder)}
-	 * method.
-	 * @return true, if {@link AuthenticationManagerBuilder} is configured, otherwise
-	 * false
+	 * 有了认证提供者，并且也有全局认证管理器就返回true
 	 */
 	public boolean isConfigured() {
 		return !this.authenticationProviders.isEmpty() || this.parentAuthenticationManager != null;

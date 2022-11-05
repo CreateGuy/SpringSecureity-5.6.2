@@ -20,8 +20,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 
 /**
- * An extension of the {@link UserDetailsService} which provides the ability to create new
- * users and update existing ones.
+ * {@link UserDetailsService}的扩展，提供了创建新用户和更新现有用户的能力。
  *
  * @author Luke Taylor
  * @since 2.0

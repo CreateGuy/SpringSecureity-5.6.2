@@ -81,16 +81,34 @@ public abstract class AbstractUserDetailsAuthenticationProvider
 
 	protected MessageSourceAccessor messages = SpringSecurityMessageSource.getAccessor();
 
+	/**
+	 * 用户缓存
+	 */
 	private UserCache userCache = new NullUserCache();
 
+	/**
+	 * 认证成功后是否将Principal由原来的UserDetails对象转为用户名
+	 */
 	private boolean forcePrincipalAsString = false;
 
+	/**
+	 * 通过用户名查询UserDetails失败后，是否将异常隐藏，然后抛出统一的异常{@link BadCredentialsException}
+	 */
 	protected boolean hideUserNotFoundExceptions = true;
 
+	/**
+	 * 认证前检查器
+	 */
 	private UserDetailsChecker preAuthenticationChecks = new DefaultPreAuthenticationChecks();
 
+	/**
+	 * 认证后检查器
+	 */
 	private UserDetailsChecker postAuthenticationChecks = new DefaultPostAuthenticationChecks();
 
+	/**
+	 * 认证成功后，进行权限映射
+	 */
 	private GrantedAuthoritiesMapper authoritiesMapper = new NullAuthoritiesMapper();
 
 	/**
@@ -119,21 +137,32 @@ public abstract class AbstractUserDetailsAuthenticationProvider
 		doAfterPropertiesSet();
 	}
 
+	/**
+	 * 进行认证
+	 * @param authentication 是由传入的用户名和密码创建的认证对象
+	 * @return
+	 * @throws AuthenticationException
+	 */
 	@Override
 	public Authentication authenticate(Authentication authentication) throws AuthenticationException {
 		Assert.isInstanceOf(UsernamePasswordAuthenticationToken.class, authentication,
 				() -> this.messages.getMessage("AbstractUserDetailsAuthenticationProvider.onlySupports",
 						"Only UsernamePasswordAuthenticationToken is supported"));
 		String username = determineUsername(authentication);
+		//标准是否在缓存中，默认是
 		boolean cacheWasUsed = true;
+		//尝试从缓存中获取
 		UserDetails user = this.userCache.getUserFromCache(username);
 		if (user == null) {
+			//标记为缓存中没有此用户
 			cacheWasUsed = false;
 			try {
+				//调用UserDetailsService拿到UserDetails
 				user = retrieveUser(username, (UsernamePasswordAuthenticationToken) authentication);
 			}
 			catch (UsernameNotFoundException ex) {
 				this.logger.debug("Failed to find user '" + username + "'");
+				//是否隐藏异常类型
 				if (!this.hideUserNotFoundExceptions) {
 					throw ex;
 				}
@@ -143,63 +172,71 @@ public abstract class AbstractUserDetailsAuthenticationProvider
 			Assert.notNull(user, "retrieveUser returned null - a violation of the interface contract");
 		}
 		try {
+			//认证前检查
 			this.preAuthenticationChecks.check(user);
+			//进行密码匹配
 			additionalAuthenticationChecks(user, (UsernamePasswordAuthenticationToken) authentication);
 		}
 		catch (AuthenticationException ex) {
 			if (!cacheWasUsed) {
 				throw ex;
 			}
-			// There was a problem, so try again after checking
-			// we're using latest data (i.e. not from the cache)
+			//到这就说明，进行比较的用户是在缓存中的，那么就从持久化(比如数据库)的地方中读取最新的UserDetails
+			//然后再进行密码匹配
 			cacheWasUsed = false;
 			user = retrieveUser(username, (UsernamePasswordAuthenticationToken) authentication);
 			this.preAuthenticationChecks.check(user);
 			additionalAuthenticationChecks(user, (UsernamePasswordAuthenticationToken) authentication);
 		}
+		//认证后检查器
 		this.postAuthenticationChecks.check(user);
+		//放入缓存中
 		if (!cacheWasUsed) {
 			this.userCache.putUserInCache(user);
 		}
 		Object principalToReturn = user;
+		//认证成功后是否将Principal由原来的UserDetails对象转为用户名
 		if (this.forcePrincipalAsString) {
 			principalToReturn = user.getUsername();
 		}
+		//创建一个认证成功的认证对象
 		return createSuccessAuthentication(principalToReturn, authentication, user);
 	}
 
+	/**
+	 * 返回Principal，执行此方法时候的Principal是用户名
+	 * @param authentication
+	 * @return
+	 */
 	private String determineUsername(Authentication authentication) {
 		return (authentication.getPrincipal() == null) ? "NONE_PROVIDED" : authentication.getName();
 	}
 
 	/**
-	 * Creates a successful {@link Authentication} object.
-	 * <p>
-	 * Protected so subclasses can override.
-	 * </p>
-	 * <p>
-	 * Subclasses will usually store the original credentials the user supplied (not
-	 * salted or encoded passwords) in the returned <code>Authentication</code> object.
-	 * </p>
-	 * @param principal that should be the principal in the returned object (defined by
-	 * the {@link #isForcePrincipalAsString()} method)
-	 * @param authentication that was presented to the provider for validation
-	 * @param user that was loaded by the implementation
+	 * 创建一个认证成功的认证对象
+	 * @param principal 主要内容，通常是UserDetails，而不是用户名
+	 * @param authentication 由传入的用户名和密码创建的认证对象
+	 * @param user 确定并且正确的UserDetails
 	 * @return the successful authentication token
 	 */
 	protected Authentication createSuccessAuthentication(Object principal, Authentication authentication,
 			UserDetails user) {
-		// Ensure we return the original credentials the user supplied,
-		// so subsequent attempts are successful even with encoded passwords.
-		// Also ensure we return the original getDetails(), so that future
-		// authentication events after cache expiry contain the details
+		//创建认证对象
+
 		UsernamePasswordAuthenticationToken result = new UsernamePasswordAuthenticationToken(principal,
-				authentication.getCredentials(), this.authoritiesMapper.mapAuthorities(user.getAuthorities()));
+				authentication.getCredentials(),
+				//这里还会进行权限的映射
+				this.authoritiesMapper.mapAuthorities(user.getAuthorities()));
+		//更新认证对象的详细信息,通常是一个WebAuthenticationDetails对象
 		result.setDetails(authentication.getDetails());
 		this.logger.debug("Authenticated user");
 		return result;
 	}
 
+	/**
+	 * 对认证提供者的属性进行操作
+	 * @throws Exception
+	 */
 	protected void doAfterPropertiesSet() throws Exception {
 	}
 
@@ -216,11 +253,8 @@ public abstract class AbstractUserDetailsAuthenticationProvider
 	}
 
 	/**
-	 * Allows subclasses to actually retrieve the <code>UserDetails</code> from an
-	 * implementation-specific location, with the option of throwing an
-	 * <code>AuthenticationException</code> immediately if the presented credentials are
-	 * incorrect (this is especially useful if it is necessary to bind to a resource as
-	 * the user in order to obtain or generate a <code>UserDetails</code>).
+	 * 允许子类从特定的地方拿到UserDetails(比如说数据库)
+	 * 如果提供的凭据不正确，可以立即抛出AuthenticationException
 	 * <p>
 	 * Subclasses are not required to perform any caching, as the
 	 * <code>AbstractUserDetailsAuthenticationProvider</code> will by default cache the
@@ -314,22 +348,29 @@ public abstract class AbstractUserDetailsAuthenticationProvider
 		this.authoritiesMapper = authoritiesMapper;
 	}
 
+	/**
+	 * 在进行密码匹配的之前进行检查
+	 */
 	private class DefaultPreAuthenticationChecks implements UserDetailsChecker {
+
 
 		@Override
 		public void check(UserDetails user) {
+			//账户不能是被锁定的
 			if (!user.isAccountNonLocked()) {
 				AbstractUserDetailsAuthenticationProvider.this.logger
 						.debug("Failed to authenticate since user account is locked");
 				throw new LockedException(AbstractUserDetailsAuthenticationProvider.this.messages
 						.getMessage("AbstractUserDetailsAuthenticationProvider.locked", "User account is locked"));
 			}
+			//账户不能是不可用的
 			if (!user.isEnabled()) {
 				AbstractUserDetailsAuthenticationProvider.this.logger
 						.debug("Failed to authenticate since user account is disabled");
 				throw new DisabledException(AbstractUserDetailsAuthenticationProvider.this.messages
 						.getMessage("AbstractUserDetailsAuthenticationProvider.disabled", "User is disabled"));
 			}
+			//账户不能是已经过期的
 			if (!user.isAccountNonExpired()) {
 				AbstractUserDetailsAuthenticationProvider.this.logger
 						.debug("Failed to authenticate since user account has expired");
@@ -344,6 +385,7 @@ public abstract class AbstractUserDetailsAuthenticationProvider
 
 		@Override
 		public void check(UserDetails user) {
+			//确定密码是否过期
 			if (!user.isCredentialsNonExpired()) {
 				AbstractUserDetailsAuthenticationProvider.this.logger
 						.debug("Failed to authenticate since user account credentials have expired");

@@ -19,10 +19,7 @@ package org.springframework.security.web.access;
 import org.springframework.security.core.Authentication;
 
 /**
- * Allows users to determine whether they have privileges for a given web URI.
- *
- * @author Luke Taylor
- * @since 3.0
+ * 允许用户确定他们是否拥有给定web URI的特权。
  */
 public interface WebInvocationPrivilegeEvaluator {
 

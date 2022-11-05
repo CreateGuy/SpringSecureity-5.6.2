@@ -98,6 +98,10 @@ public abstract class WebSecurityConfigurerAdapter implements WebSecurityConfigu
 
 	private ContentNegotiationStrategy contentNegotiationStrategy = new HeaderContentNegotiationStrategy();
 
+	/**
+	 * 默认就只有 {@link org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor}
+	 * 随着构建器的执行还会有 {@link org.springframework.security.config.annotation.SecurityConfigurerAdapter.CompositeObjectPostProcessor}
+	 */
 	private ObjectPostProcessor<Object> objectPostProcessor = new ObjectPostProcessor<Object>() {
 		@Override
 		public <T> T postProcess(T object) {
@@ -106,22 +110,45 @@ public abstract class WebSecurityConfigurerAdapter implements WebSecurityConfigu
 		}
 	};
 
+	/**
+	 * SpringSecurity创建的，用于创建全局的认证管理器的配置类
+	 */
 	private AuthenticationConfiguration authenticationConfiguration;
 
+	/**
+	 * 用户局部认证管理器构建器
+	 */
 	private AuthenticationManagerBuilder authenticationBuilder;
 
+	/**
+	 * 用户全局认证管理器构建器
+	 */
 	private AuthenticationManagerBuilder localConfigureAuthenticationBldr;
 
+	/**
+	 * 是否禁用SpringSecurity提供的全局认证管理器
+	 * 比如说实现类从写了protected void configure(AuthenticationManagerBuilder auth)
+	 * 那么SpringSecurity提供的全局认证管理器就没用了
+	 */
 	private boolean disableLocalConfigureAuthenticationBldr;
 
+	/**
+	 * 全局认证管理器初始化完成标志位
+	 */
 	private boolean authenticationManagerInitialized;
 
+	/**
+	 * 全局认证管理器
+	 */
 	private AuthenticationManager authenticationManager;
 
 	private AuthenticationTrustResolver trustResolver = new AuthenticationTrustResolverImpl();
 
 	private HttpSecurity http;
 
+	/**
+	 * 是否禁用默认的HttpSecurity配置
+	 */
 	private boolean disableDefaults;
 
 	/**
@@ -143,45 +170,8 @@ public abstract class WebSecurityConfigurerAdapter implements WebSecurityConfigu
 	}
 
 	/**
-	 * Used by the default implementation of {@link #authenticationManager()} to attempt
-	 * to obtain an {@link AuthenticationManager}. If overridden, the
-	 * {@link AuthenticationManagerBuilder} should be used to specify the
-	 * {@link AuthenticationManager}.
-	 *
-	 * <p>
-	 * The {@link #authenticationManagerBean()} method can be used to expose the resulting
-	 * {@link AuthenticationManager} as a Bean. The {@link #userDetailsServiceBean()} can
-	 * be used to expose the last populated {@link UserDetailsService} that is created
-	 * with the {@link AuthenticationManagerBuilder} as a Bean. The
-	 * {@link UserDetailsService} will also automatically be populated on
-	 * {@link HttpSecurity#getSharedObject(Class)} for use with other
-	 * {@link SecurityContextConfigurer} (i.e. RememberMeConfigurer )
-	 * </p>
-	 *
-	 * <p>
-	 * For example, the following configuration could be used to register in memory
-	 * authentication that exposes an in memory {@link UserDetailsService}:
-	 * </p>
-	 *
-	 * <pre>
-	 * &#064;Override
-	 * protected void configure(AuthenticationManagerBuilder auth) {
-	 * 	auth
-	 * 	// enable in memory based authentication with a user named
-	 * 	// &quot;user&quot; and &quot;admin&quot;
-	 * 	.inMemoryAuthentication().withUser(&quot;user&quot;).password(&quot;password&quot;).roles(&quot;USER&quot;).and()
-	 * 			.withUser(&quot;admin&quot;).password(&quot;password&quot;).roles(&quot;USER&quot;, &quot;ADMIN&quot;);
-	 * }
-	 *
-	 * // Expose the UserDetailsService as a Bean
-	 * &#064;Bean
-	 * &#064;Override
-	 * public UserDetailsService userDetailsServiceBean() throws Exception {
-	 * 	return super.userDetailsServiceBean();
-	 * }
-	 *
-	 * </pre>
-	 * @param auth the {@link AuthenticationManagerBuilder} to use
+	 * 如果子类实现了这个方法那么SpringSecurity提供的全局认证管理器就无效了
+	 * @param auth
 	 * @throws Exception
 	 */
 	protected void configure(AuthenticationManagerBuilder auth) throws Exception {
@@ -189,7 +179,7 @@ public abstract class WebSecurityConfigurerAdapter implements WebSecurityConfigu
 	}
 
 	/**
-	 * Creates the {@link HttpSecurity} or returns the current instance
+	 * 创建 {@link HttpSecurity} 并返回对应实例
 	 * @return the {@link HttpSecurity}
 	 * @throws Exception
 	 */
@@ -198,10 +188,14 @@ public abstract class WebSecurityConfigurerAdapter implements WebSecurityConfigu
 		if (this.http != null) {
 			return this.http;
 		}
+		//获得认证事件推送器
 		AuthenticationEventPublisher eventPublisher = getAuthenticationEventPublisher();
 		this.localConfigureAuthenticationBldr.authenticationEventPublisher(eventPublisher);
+		//获得全局认证管理器
 		AuthenticationManager authenticationManager = authenticationManager();
+		//将全局认证管理器设置为局部认证管理器的父认证管理器
 		this.authenticationBuilder.parentAuthenticationManager(authenticationManager);
+		//创建sharedObjects
 		Map<Class<?>, Object> sharedObjects = createSharedObjects();
 		this.http = new HttpSecurity(this.objectPostProcessor, this.authenticationBuilder, sharedObjects);
 		if (!this.disableDefaults) {
@@ -251,22 +245,24 @@ public abstract class WebSecurityConfigurerAdapter implements WebSecurityConfigu
 	}
 
 	/**
-	 * Gets the {@link AuthenticationManager} to use. The default strategy is if
-	 * {@link #configure(AuthenticationManagerBuilder)} method is overridden to use the
-	 * {@link AuthenticationManagerBuilder} that was passed in. Otherwise, autowire the
-	 * {@link AuthenticationManager} by type.
-	 * @return the {@link AuthenticationManager} to use
+	 * 获得全局认证管理器
+	 * @return
 	 * @throws Exception
 	 */
 	protected AuthenticationManager authenticationManager() throws Exception {
+		//确定还没有初始化过
 		if (!this.authenticationManagerInitialized) {
 			configure(this.localConfigureAuthenticationBldr);
+			//是否需要用SpringSecurity提供的全局认证管理器
 			if (this.disableLocalConfigureAuthenticationBldr) {
+				//通过SpringSecurity的认证管理器配置类中的全局认证管理器创建全局认证管理器
 				this.authenticationManager = this.authenticationConfiguration.getAuthenticationManager();
 			}
 			else {
+				//用 用户设置过属性的全局认证管理器构建器
 				this.authenticationManager = this.localConfigureAuthenticationBldr.build();
 			}
+			//标记为已经初始化过
 			this.authenticationManagerInitialized = true;
 		}
 		return this.authenticationManager;
@@ -374,16 +370,30 @@ public abstract class WebSecurityConfigurerAdapter implements WebSecurityConfigu
 		this.localConfigureAuthenticationBldr = new DefaultPasswordEncoderAuthenticationManagerBuilder(
 				objectPostProcessor, passwordEncoder) {
 
+			/**
+			 * 设置是否在认证成功后是否擦除密码
+			 * @param
+			 * @return
+			 */
 			@Override
 			public AuthenticationManagerBuilder eraseCredentials(boolean eraseCredentials) {
+				//设置的局部认证管理器的
 				WebSecurityConfigurerAdapter.this.authenticationBuilder.eraseCredentials(eraseCredentials);
+				//设置全局认证管理器的
 				return super.eraseCredentials(eraseCredentials);
 			}
 
+			/**
+			 * 设置认证事件推送器
+			 * @param eventPublisher the {@link AuthenticationEventPublisher} to use
+			 * @return
+			 */
 			@Override
 			public AuthenticationManagerBuilder authenticationEventPublisher(
 					AuthenticationEventPublisher eventPublisher) {
+				//设置的局部认证管理器的
 				WebSecurityConfigurerAdapter.this.authenticationBuilder.authenticationEventPublisher(eventPublisher);
+				//设置全局认证管理器的
 				return super.authenticationEventPublisher(eventPublisher);
 			}
 
@@ -405,24 +415,37 @@ public abstract class WebSecurityConfigurerAdapter implements WebSecurityConfigu
 		this.objectPostProcessor = objectPostProcessor;
 	}
 
+	/**
+	 * 是通过SecurityAutoConfiguration->@Import(WebSecurityEnablerConfiguration.class)
+	 * ->@EnableWebSecurity->@EnableGlobalAuthentication->@Import(AuthenticationConfiguration.class)才有的
+	 * @param authenticationConfiguration
+	 */
 	@Autowired
 	public void setAuthenticationConfiguration(AuthenticationConfiguration authenticationConfiguration) {
 		this.authenticationConfiguration = authenticationConfiguration;
 	}
 
+	/**
+	 * 获得认证事件推送器
+	 * @return
+	 */
 	private AuthenticationEventPublisher getAuthenticationEventPublisher() {
+		//先从容器中获取
 		if (this.context.getBeanNamesForType(AuthenticationEventPublisher.class).length > 0) {
 			return this.context.getBean(AuthenticationEventPublisher.class);
 		}
+		//不然就创建
 		return this.objectPostProcessor.postProcess(new DefaultAuthenticationEventPublisher());
 	}
 
 	/**
-	 * Creates the shared objects
+	 * 创建 shared objects
+	 * 用于在不同的配置类中共享数据
 	 * @return the shared Objects
 	 */
 	private Map<Class<?>, Object> createSharedObjects() {
 		Map<Class<?>, Object> sharedObjects = new HashMap<>();
+		//先获取用户设置的sharedObjects
 		sharedObjects.putAll(this.localConfigureAuthenticationBldr.getSharedObjects());
 		sharedObjects.put(UserDetailsService.class, userDetailsService());
 		sharedObjects.put(ApplicationContext.class, this.context);
@@ -432,18 +455,25 @@ public abstract class WebSecurityConfigurerAdapter implements WebSecurityConfigu
 	}
 
 	/**
-	 * Delays the use of the {@link UserDetailsService} from the
-	 * {@link AuthenticationManagerBuilder} to ensure that it has been fully configured.
-	 *
-	 * @author Rob Winch
-	 * @since 3.2
+	 * UserDetailsService的代理
+	 * 主要是当没有通过重写userDetailsService()来设置UserDetailsService的时候
+	 * 就会通过获取容器中认证管理器构建器，去这里面找
 	 */
 	static final class UserDetailsServiceDelegator implements UserDetailsService {
 
+		/**
+		 * 认证管理器构建器集合
+		 */
 		private List<AuthenticationManagerBuilder> delegateBuilders;
 
+		/**
+		 * 确定好的使用哪一个UserDetailsService
+		 */
 		private UserDetailsService delegate;
 
+		/**
+		 * 仅用于加锁
+		 */
 		private final Object delegateMonitor = new Object();
 
 		UserDetailsServiceDelegator(List<AuthenticationManagerBuilder> delegateBuilders) {
@@ -452,6 +482,12 @@ public abstract class WebSecurityConfigurerAdapter implements WebSecurityConfigu
 			this.delegateBuilders = delegateBuilders;
 		}
 
+		/**
+		 * 通过认证管理器构建器集合获取UserDetails
+		 * @param username the username identifying the user whose data is required.
+		 * @return
+		 * @throws UsernameNotFoundException
+		 */
 		@Override
 		public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
 			if (this.delegate != null) {

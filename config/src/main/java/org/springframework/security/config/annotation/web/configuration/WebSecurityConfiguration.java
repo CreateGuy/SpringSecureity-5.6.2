@@ -72,13 +72,12 @@ public class WebSecurityConfiguration implements ImportAware, BeanClassLoaderAwa
 	private List<SecurityConfigurer<Filter, WebSecurity>> webSecurityConfigurers;
 
 	/**
-	 * spring过滤器链集合
-	 * 如果有多个配置类就会有多个过滤器链
+	 * 用户自定义的spring过滤器链集合
 	 */
 	private List<SecurityFilterChain> securityFilterChains = Collections.emptyList();
 
 	/**
-	 * 自定义操作WebSecurity的消费方法
+	 * 用户自定义操作WebSecurity的消费方法
 	 */
 	private List<WebSecurityCustomizer> webSecurityCustomizers = Collections.emptyList();
 
@@ -117,12 +116,14 @@ public class WebSecurityConfiguration implements ImportAware, BeanClassLoaderAwa
 		boolean hasFilterChain = !this.securityFilterChains.isEmpty();
 		Assert.state(!(hasConfigurers && hasFilterChain),
 				"Found WebSecurityConfigurerAdapter as well as SecurityFilterChain. Please select just one.");
+		//当配置类和过滤器链都没有的时候注册一个配置类
 		if (!hasConfigurers && !hasFilterChain) {
 			WebSecurityConfigurerAdapter adapter = this.objectObjectPostProcessor
 					.postProcess(new WebSecurityConfigurerAdapter() {
 					});
 			this.webSecurity.apply(adapter);
 		}
+		// 5.2.2也没有
 		for (SecurityFilterChain securityFilterChain : this.securityFilterChains) {
 			this.webSecurity.addSecurityFilterChainBuilder(() -> securityFilterChain);
 			for (Filter filter : securityFilterChain.getFilters()) {
@@ -132,9 +133,11 @@ public class WebSecurityConfiguration implements ImportAware, BeanClassLoaderAwa
 				}
 			}
 		}
+		//执行用户自定义操作WebSecurity的回调方法
 		for (WebSecurityCustomizer customizer : this.webSecurityCustomizers) {
 			customizer.customize(this.webSecurity);
 		}
+		//开始构建
 		return this.webSecurity.build();
 	}
 
@@ -163,9 +166,11 @@ public class WebSecurityConfiguration implements ImportAware, BeanClassLoaderAwa
 		if (this.debugEnabled != null) {
 			this.webSecurity.debug(this.debugEnabled);
 		}
+		//先对配置类进行排序
 		webSecurityConfigurers.sort(AnnotationAwareOrderComparator.INSTANCE);
 		Integer previousOrder = null;
 		Object previousConfig = null;
+		//这个for循环的意思是：配置类可以通过@Order进行排序，但是如果@Order中的value值相同就表示无法进行排序，就直接抛出异常
 		for (SecurityConfigurer<Filter, WebSecurity> config : webSecurityConfigurers) {
 			Integer order = AnnotationAwareOrderComparator.lookupOrder(config);
 			if (previousOrder != null && previousOrder.equals(order)) {
@@ -181,6 +186,10 @@ public class WebSecurityConfiguration implements ImportAware, BeanClassLoaderAwa
 		this.webSecurityConfigurers = webSecurityConfigurers;
 	}
 
+	/**
+	 * 注入容器中自己设置的SecurityFilterChain
+	 * @param securityFilterChains
+	 */
 	@Autowired(required = false)
 	void setFilterChains(List<SecurityFilterChain> securityFilterChains) {
 		this.securityFilterChains = securityFilterChains;

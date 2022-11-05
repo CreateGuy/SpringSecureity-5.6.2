@@ -70,14 +70,29 @@ public class User implements UserDetails, CredentialsContainer {
 
 	private final String username;
 
+	/**
+	 * 权限(角色)
+	 */
 	private final Set<GrantedAuthority> authorities;
 
+	/**
+	 * 账户是否没有过期
+	 */
 	private final boolean accountNonExpired;
 
+	/**
+	 * 账户是否没有被锁定
+	 */
 	private final boolean accountNonLocked;
 
+	/**
+	 * 密码是否没有过期
+	 */
 	private final boolean credentialsNonExpired;
 
+	/**
+	 * 是否可用
+	 */
 	private final boolean enabled;
 
 	/**
@@ -158,6 +173,11 @@ public class User implements UserDetails, CredentialsContainer {
 		this.password = null;
 	}
 
+	/**
+	 * 对权限进行排序
+	 * @param authorities
+	 * @return
+	 */
 	private static SortedSet<GrantedAuthority> sortAuthorities(Collection<? extends GrantedAuthority> authorities) {
 		Assert.notNull(authorities, "Cannot pass a null GrantedAuthority collection");
 		// Ensure array iteration order is predictable (as per
@@ -208,7 +228,7 @@ public class User implements UserDetails, CredentialsContainer {
 	}
 
 	/**
-	 * Creates a UserBuilder with a specified user name
+	 * 使用指定的用户名创建UserBuilder
 	 * @param username the username to use
 	 * @return the UserBuilder
 	 */
@@ -299,6 +319,9 @@ public class User implements UserDetails, CredentialsContainer {
 		// @formatter:on
 	}
 
+	/**
+	 * 权限排序器
+	 */
 	private static class AuthorityComparator implements Comparator<GrantedAuthority>, Serializable {
 
 		private static final long serialVersionUID = SpringSecurityCoreVersion.SERIAL_VERSION_UID;
@@ -314,14 +337,15 @@ public class User implements UserDetails, CredentialsContainer {
 			if (g1.getAuthority() == null) {
 				return 1;
 			}
+			//是String的排序规则
 			return g1.getAuthority().compareTo(g2.getAuthority());
 		}
 
 	}
 
 	/**
-	 * Builds the user to be added. At minimum the username, password, and authorities
-	 * should provided. The remaining attributes have reasonable defaults.
+	 * UserDetails构建器
+	 * 构建要添加的用户。至少应该提供用户名、密码和权限。其余属性具有合理的缺省值。
 	 */
 	public static final class UserBuilder {
 
@@ -332,7 +356,6 @@ public class User implements UserDetails, CredentialsContainer {
 		private List<GrantedAuthority> authorities;
 
 		private boolean accountExpired;
-
 		private boolean accountLocked;
 
 		private boolean credentialsExpired;

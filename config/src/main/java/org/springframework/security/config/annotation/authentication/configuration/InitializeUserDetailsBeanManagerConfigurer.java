@@ -26,12 +26,9 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 /**
- * Lazily initializes the global authentication with a {@link UserDetailsService} if it is
- * not yet configured and there is only a single Bean of that type. Optionally, if a
- * {@link PasswordEncoder} is defined will wire this up too.
- *
- * @author Rob Winch
- * @since 4.1
+ * 主要为了给全局认证管理器添加一个的认证提供者
+ * 与{@link InitializeAuthenticationProviderBeanManagerConfigurer}
+ * 的区别：这个类是通过获取认证提供者所有需要的UserDetailsService，PasswordEncoder等等来组合成一个认证提供者
  */
 @Order(InitializeUserDetailsBeanManagerConfigurer.DEFAULT_ORDER)
 class InitializeUserDetailsBeanManagerConfigurer extends GlobalAuthenticationConfigurerAdapter {
@@ -47,6 +44,11 @@ class InitializeUserDetailsBeanManagerConfigurer extends GlobalAuthenticationCon
 		this.context = context;
 	}
 
+	/**
+	 * 为了给全局认证管理器构建器添加一个InitializeUserDetailsManagerConfigurer？？，那为什么不一开始就添加？？，搞不懂
+	 * @param auth 一般情况都是全局认证管理器构建器
+	 * @throws Exception
+	 */
 	@Override
 	public void init(AuthenticationManagerBuilder auth) throws Exception {
 		auth.apply(new InitializeUserDetailsManagerConfigurer());
@@ -54,17 +56,27 @@ class InitializeUserDetailsBeanManagerConfigurer extends GlobalAuthenticationCon
 
 	class InitializeUserDetailsManagerConfigurer extends GlobalAuthenticationConfigurerAdapter {
 
+		/**
+		 * 尝试获得有关认证的相关对象
+		 * @param auth 一般情况都是全局认证管理器
+		 * @throws Exception
+		 */
 		@Override
 		public void configure(AuthenticationManagerBuilder auth) throws Exception {
 			if (auth.isConfigured()) {
 				return;
 			}
+			//尝试获取UserDetailsService
 			UserDetailsService userDetailsService = getBeanOrNull(UserDetailsService.class);
+			//如果UserDetailsService都没有，都不能加载用户，也就用不着PasswordEncoder，那就直接返回
 			if (userDetailsService == null) {
 				return;
 			}
+			//尝试获取PasswordEncoder
 			PasswordEncoder passwordEncoder = getBeanOrNull(PasswordEncoder.class);
+			//尝试获取UserDetailsPasswordService
 			UserDetailsPasswordService passwordManager = getBeanOrNull(UserDetailsPasswordService.class);
+			//创建一个默认的认证提供者，并设置相关属性
 			DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
 			provider.setUserDetailsService(userDetailsService);
 			if (passwordEncoder != null) {
@@ -74,12 +86,13 @@ class InitializeUserDetailsBeanManagerConfigurer extends GlobalAuthenticationCon
 				provider.setUserDetailsPasswordService(passwordManager);
 			}
 			provider.afterPropertiesSet();
+			//给全局认证管理器添加一个默认的认证提供者
 			auth.authenticationProvider(provider);
 		}
 
 		/**
-		 * @return a bean of the requested class if there's just a single registered
-		 * component, null otherwise.
+		 * 如果只找到一个bean，则返回被请求类的bean，否则返回null
+		 * @param type
 		 */
 		private <T> T getBeanOrNull(Class<T> type) {
 			String[] beanNames = InitializeUserDetailsBeanManagerConfigurer.this.context.getBeanNamesForType(type);

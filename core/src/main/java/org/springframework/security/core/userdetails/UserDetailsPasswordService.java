@@ -17,20 +17,17 @@
 package org.springframework.security.core.userdetails;
 
 /**
- * An API for changing a {@link UserDetails} password.
- *
- * @author Rob Winch
- * @since 5.1
+ * 密码更新器
+ * 用于更改UserDetails密码
+ * 实现类只有关于内存用户的修改，如果说要更改数据库的密码，要自己写实现类
  */
 public interface UserDetailsPasswordService {
 
 	/**
-	 * Modify the specified user's password. This should change the user's password in the
-	 * persistent user repository (database, LDAP etc).
-	 * @param user the user to modify the password for
-	 * @param newPassword the password to change to, encoded by the configured
-	 * {@code PasswordEncoder}
-	 * @return the updated UserDetails with the new password
+	 * 修改指定用户的密码。这会更改持久用户存储库(数据库、LDAP等)中的用户密码。
+	 * @param user 源UserDetails
+	 * @param newPassword 新密码
+	 * @return 修改后UserDetails
 	 */
 	UserDetails updatePassword(UserDetails user, String newPassword);
 

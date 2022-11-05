@@ -24,17 +24,20 @@ import javax.servlet.http.HttpSession;
 import org.springframework.security.core.SpringSecurityCoreVersion;
 
 /**
- * A holder of selected HTTP details related to a web authentication request.
- *
- * @author Ben Alex
- * @author Luke Taylor
+ * 与web身份验证请求相关的所选HTTP详细信息的持有者
  */
 public class WebAuthenticationDetails implements Serializable {
 
 	private static final long serialVersionUID = SpringSecurityCoreVersion.SERIAL_VERSION_UID;
 
+	/**
+	 * 发起请求的ip地址
+	 */
 	private final String remoteAddress;
 
+	/**
+	 * HttpSession的sessionId
+	 */
 	private final String sessionId;
 
 	/**

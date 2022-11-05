@@ -55,16 +55,33 @@ public abstract class AbstractConfiguredSecurityBuilder<O, B extends SecurityBui
 
 	private final Log logger = LogFactory.getLog(getClass());
 
+	/**
+	 * 需要构建的配置类（包含了初始化过程中添加的配置类）
+	 * 例子1：如果构建器是WebSecurity那么这里就是通常是WebSecurityConfigurerAdapter的实现类
+	 * 例子2：如果构建器是AuthenticationConfiguration那么这里就是GlobalAuthenticationConfigurerAdapter
+	 */
 	private final LinkedHashMap<Class<? extends SecurityConfigurer<O, B>>, List<SecurityConfigurer<O, B>>> configurers = new LinkedHashMap<>();
 
+	/**
+	 * 构建器正在执行初始化方法的时候添加的配置类
+	 */
 	private final List<SecurityConfigurer<O, B>> configurersAddedInInitializing = new ArrayList<>();
 
+	/**
+	 * 用于在不同配置类中共享数据的
+	 */
 	private final Map<Class<?>, Object> sharedObjects = new HashMap<>();
 
+	/**
+	 * 是否允许相同类型的配置类
+	 */
 	private final boolean allowConfigurersOfSameType;
 
 	private BuildState buildState = BuildState.UNBUILT;
 
+	/**
+	 * 通常只有{@link org.springframework.security.config.annotation.configuration.AutowireBeanFactoryObjectPostProcessor}
+	 */
 	private ObjectPostProcessor<Object> objectPostProcessor;
 
 	/***
@@ -168,9 +185,9 @@ public abstract class AbstractConfiguredSecurityBuilder<O, B extends SecurityBui
 	}
 
 	/**
-	 * Adds {@link SecurityConfigurer} ensuring that it is allowed and invoking
-	 * {@link SecurityConfigurer#init(SecurityBuilder)} immediately if necessary.
-	 * @param configurer the {@link SecurityConfigurer} to add
+	 * 添加一个配置类到对应的集合中
+	 * @param configurer
+	 * @param <C>
 	 */
 	@SuppressWarnings("unchecked")
 	private <C extends SecurityConfigurer<O, B>> void add(C configurer) {
@@ -182,12 +199,16 @@ public abstract class AbstractConfiguredSecurityBuilder<O, B extends SecurityBui
 				throw new IllegalStateException("Cannot apply " + configurer + " to already built object");
 			}
 			List<SecurityConfigurer<O, B>> configs = null;
+			//如果允许相同配置类的存在的话
 			if (this.allowConfigurersOfSameType) {
 				configs = this.configurers.get(clazz);
 			}
+			//如果不允许相同配置类的话，是直接创建一个长度为1的ArrayList
 			configs = (configs != null) ? configs : new ArrayList<>(1);
 			configs.add(configurer);
+			//添加到对应集合中
 			this.configurers.put(clazz, configs);
+			//如果当前构建器是正在初始化，添加到对应集合中
 			if (this.buildState.isInitializing()) {
 				this.configurersAddedInInitializing.add(configurer);
 			}
@@ -271,10 +292,10 @@ public abstract class AbstractConfiguredSecurityBuilder<O, B extends SecurityBui
 	}
 
 	/**
-	 * Performs post processing of an object. The default is to delegate to the
-	 * {@link ObjectPostProcessor}.
-	 * @param object the Object to post process
-	 * @return the possibly modified Object to use
+	 * 对bean执行后置处理方法
+	 * @param object bean
+	 * @param <P>
+	 * @return
 	 */
 	protected <P> P postProcess(P object) {
 		return this.objectPostProcessor.postProcess(object);
@@ -337,6 +358,8 @@ public abstract class AbstractConfiguredSecurityBuilder<O, B extends SecurityBui
 		for (SecurityConfigurer<O, B> configurer : configurers) {
 			configurer.init((B) this);
 		}
+		//一般情况都是没有这个的
+		//如果当前构建器是全局认证管理器构建器，那么会通过上面执行的configurer.init((B) this);新添加两个配类，但这两个配置类的init方法也没有干什么
 		for (SecurityConfigurer<O, B> configurer : this.configurersAddedInInitializing) {
 			configurer.init((B) this);
 		}
@@ -369,41 +392,32 @@ public abstract class AbstractConfiguredSecurityBuilder<O, B extends SecurityBui
 	}
 
 	/**
-	 * The build state for the application
-	 *
-	 * @author Rob Winch
-	 * @since 3.2
+	 * 构造器构建状态
 	 */
 	private enum BuildState {
 
 		/**
-		 * This is the state before the {@link Builder#build()} is invoked
+		 * 表明当前构建器还未进行构建
 		 */
 		UNBUILT(0),
 
 		/**
-		 * The state from when {@link Builder#build()} is first invoked until all the
-		 * {@link SecurityConfigurer#init(SecurityBuilder)} methods have been invoked.
+		 * 表明当前构建器正在执行初始化方法，具体规则在doBuild()方法中，下同
 		 */
 		INITIALIZING(1),
 
 		/**
-		 * The state from after all {@link SecurityConfigurer#init(SecurityBuilder)} have
-		 * been invoked until after all the
-		 * {@link SecurityConfigurer#configure(SecurityBuilder)} methods have been
-		 * invoked.
+		 * 表明当前构建器执行完初始化方法
 		 */
 		CONFIGURING(2),
 
 		/**
-		 * From the point after all the
-		 * {@link SecurityConfigurer#configure(SecurityBuilder)} have completed to just
-		 * after {@link AbstractConfiguredSecurityBuilder#performBuild()}.
+		 * 表明当前构建器已经执行完配置方法
 		 */
 		BUILDING(3),
 
 		/**
-		 * After the object has been completely built.
+		 * 表明当前构建器已经执行完构建方法
 		 */
 		BUILT(4);
 

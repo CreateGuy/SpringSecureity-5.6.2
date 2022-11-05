@@ -53,11 +53,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.util.Assert;
 
 /**
- * Exports the authentication {@link Configuration}
- *
- * @author Rob Winch
- * @since 3.2
- *
+ * 全局认证管理器的配置类
+ * 是通过SecurityAutoConfiguration->@Import(WebSecurityEnablerConfiguration.class)
+ * ->@EnableWebSecurity->@EnableGlobalAuthentication->@Import(AuthenticationConfiguration.class)才有的
  */
 @Configuration(proxyBeanMethods = false)
 @Import(ObjectPostProcessorConfiguration.class)
@@ -67,18 +65,42 @@ public class AuthenticationConfiguration {
 
 	private ApplicationContext applicationContext;
 
+	/**
+	 * 全局认证管理器
+	 */
 	private AuthenticationManager authenticationManager;
 
+	/**
+	 * 是否初始化过认证管理器
+	 */
 	private boolean authenticationManagerInitialized;
 
+	/**
+	 * 这个集合也是对全局认证管理器的参数的配置
+	 * 默认有三个，也是由当前类的@Bean方法进行注册的
+	 * 	{@link EnableGlobalAuthenticationAutowiredConfigurer}
+	 * 	{@link org.springframework.security.config.annotation.authentication.configuration.InitializeAuthenticationProviderBeanManagerConfigurer.InitializeAuthenticationProviderManagerConfigurer}
+	 *  {@link org.springframework.security.config.annotation.authentication.configuration.InitializeUserDetailsBeanManagerConfigurer.InitializeUserDetailsManagerConfigurer}
+	 */
 	private List<GlobalAuthenticationConfigurerAdapter> globalAuthConfigurers = Collections.emptyList();
 
+	/**
+	 * 默认只有{@link org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor}
+	 */
 	private ObjectPostProcessor<Object> objectPostProcessor;
 
+	/**
+	 * 往容器中注册一个全局认证管理器构建器
+	 * @param objectPostProcessor 默认就是{@link org.springframework.security.config.annotation.configuration.AutowireBeanFactoryObjectPostProcessor}
+	 * @param context
+	 * @return
+	 */
 	@Bean
 	public AuthenticationManagerBuilder authenticationManagerBuilder(ObjectPostProcessor<Object> objectPostProcessor,
 			ApplicationContext context) {
+		//是一个懒加载机制的，只有用到才会真正创建
 		LazyPasswordEncoder defaultPasswordEncoder = new LazyPasswordEncoder(context);
+		//获取认证事件推送器
 		AuthenticationEventPublisher authenticationEventPublisher = getBeanOrNull(context,
 				AuthenticationEventPublisher.class);
 		DefaultPasswordEncoderAuthenticationManagerBuilder result = new DefaultPasswordEncoderAuthenticationManagerBuilder(
@@ -111,17 +133,26 @@ public class AuthenticationConfiguration {
 		if (this.authenticationManagerInitialized) {
 			return this.authenticationManager;
 		}
+		//这个全局认证管理器是当前类的@Bean方法创建的
 		AuthenticationManagerBuilder authBuilder = this.applicationContext.getBean(AuthenticationManagerBuilder.class);
+		//说是为了防止在初始化AuthenticationManager时发生无限递归
+		//要到这的条件：必须没有初始化，而且buildingAuthenticationManager为true
+		//而buildingAuthenticationManager为true的时候必须要是第二次进入当前方法，第二次应该已经为初始化成功了呀？？，没懂
 		if (this.buildingAuthenticationManager.getAndSet(true)) {
 			return new AuthenticationManagerDelegator(authBuilder);
 		}
+		//将配置类加入到authBuilder中去
 		for (GlobalAuthenticationConfigurerAdapter config : this.globalAuthConfigurers) {
 			authBuilder.apply(config);
 		}
+		//重点：开始构建全局认证管理器
 		this.authenticationManager = authBuilder.build();
+		//如果没有构建成功
 		if (this.authenticationManager == null) {
+			//尝试从容器中获得
 			this.authenticationManager = getAuthenticationManagerBean();
 		}
+		//标志位已经初始化完毕
 		this.authenticationManagerInitialized = true;
 		return this.authenticationManager;
 	}
@@ -208,6 +239,10 @@ public class AuthenticationConfiguration {
 			this.context = context;
 		}
 
+		/**
+		 * 拿到容器中使用了@EnableGlobalAuthentication注解的bean，然后什么都没有干？？，搞不懂
+		 * @param auth
+		 */
 		@Override
 		public void init(AuthenticationManagerBuilder auth) {
 			Map<String, Object> beansWithAnnotation = this.context
@@ -220,11 +255,7 @@ public class AuthenticationConfiguration {
 	}
 
 	/**
-	 * Prevents infinite recursion in the event that initializing the
-	 * AuthenticationManager.
-	 *
-	 * @author Rob Winch
-	 * @since 4.1.1
+	 * 防止在初始化认证管理器时发生无限递归
 	 */
 	static final class AuthenticationManagerDelegator implements AuthenticationManager {
 
@@ -260,6 +291,9 @@ public class AuthenticationConfiguration {
 
 	}
 
+	/**
+	 * 是SpringSecurity创建的全局认证管理器，还携带了密码编码器
+	 */
 	static class DefaultPasswordEncoderAuthenticationManagerBuilder extends AuthenticationManagerBuilder {
 
 		private PasswordEncoder defaultPasswordEncoder;
@@ -293,6 +327,9 @@ public class AuthenticationConfiguration {
 
 	}
 
+	/**
+	 * 是SpringSecurity创建的全局认证管理器的时候，创建的懒加载机制的密码编码器
+	 */
 	static class LazyPasswordEncoder implements PasswordEncoder {
 
 		private ApplicationContext applicationContext;
