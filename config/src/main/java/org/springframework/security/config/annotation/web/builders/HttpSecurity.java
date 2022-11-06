@@ -136,10 +136,16 @@ import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
 public final class HttpSecurity extends AbstractConfiguredSecurityBuilder<DefaultSecurityFilterChain, HttpSecurity>
 		implements SecurityBuilder<DefaultSecurityFilterChain>, HttpSecurityBuilder<HttpSecurity> {
 
+	/**
+	 * 请求匹配器配置类
+	 */
 	private final RequestMatcherConfigurer requestMatcherConfigurer;
 
 	private List<OrderedFilter> filters = new ArrayList<>();
 
+	/**
+	 * 通过请求匹配器配置类设置的请求匹配器
+	 */
 	private RequestMatcher requestMatcher = AnyRequestMatcher.INSTANCE;
 
 	private FilterOrderRegistration filterOrders = new FilterOrderRegistration();
@@ -159,7 +165,9 @@ public final class HttpSecurity extends AbstractConfiguredSecurityBuilder<Defaul
 			AuthenticationManagerBuilder authenticationBuilder, Map<Class<?>, Object> sharedObjects) {
 		super(objectPostProcessor);
 		Assert.notNull(authenticationBuilder, "authenticationBuilder cannot be null");
+		//重点：此时放入的是局部认证管理器构建器(内部包含了全局认证管理器)
 		setSharedObject(AuthenticationManagerBuilder.class, authenticationBuilder);
+		//将后面创建的sharedObjects的数据合并到本地
 		for (Map.Entry<Class<?>, Object> entry : sharedObjects.entrySet()) {
 			setSharedObject((Class<Object>) entry.getKey(), entry.getValue());
 		}
@@ -3258,16 +3266,16 @@ public final class HttpSecurity extends AbstractConfiguredSecurityBuilder<Defaul
 	}
 
 	/**
-	 * If the {@link SecurityConfigurer} has already been specified get the original,
-	 * otherwise apply the new {@link SecurityConfigurerAdapter}.
-	 * @param configurer the {@link SecurityConfigurer} to apply if one is not found for
-	 * this {@link SecurityConfigurer} class.
-	 * @return the current {@link SecurityConfigurer} for the configurer passed in
+	 * 如果配置类已经有了，获取原始的，否则添加新的配置类
+	 * @param configurer
+	 * @param <C>
+	 * @return
 	 * @throws Exception
 	 */
 	@SuppressWarnings("unchecked")
 	private <C extends SecurityConfigurerAdapter<DefaultSecurityFilterChain, HttpSecurity>> C getOrApply(C configurer)
 			throws Exception {
+		//看能否找到相同配置类
 		C existingConfig = (C) getConfigurer(configurer.getClass());
 		if (existingConfig != null) {
 			return existingConfig;
@@ -3276,10 +3284,7 @@ public final class HttpSecurity extends AbstractConfiguredSecurityBuilder<Defaul
 	}
 
 	/**
-	 * An extension to {@link RequestMatcherConfigurer} that allows optionally configuring
-	 * the servlet path.
-	 *
-	 * @author Rob Winch
+	 * MvcRequestMatcher的配置类
 	 */
 	public final class MvcMatchersRequestMatcherConfigurer extends RequestMatcherConfigurer {
 
@@ -3294,6 +3299,11 @@ public final class HttpSecurity extends AbstractConfiguredSecurityBuilder<Defaul
 			this.matchers = new ArrayList<>(matchers);
 		}
 
+		/**
+		 * 设置servletPath，MvcRequestMatcher会校验这个参数的
+		 * @param servletPath
+		 * @return
+		 */
 		public RequestMatcherConfigurer servletPath(String servletPath) {
 			for (RequestMatcher matcher : this.matchers) {
 				((MvcRequestMatcher) matcher).setServletPath(servletPath);
@@ -3304,21 +3314,31 @@ public final class HttpSecurity extends AbstractConfiguredSecurityBuilder<Defaul
 	}
 
 	/**
-	 * Allows mapping HTTP requests that this {@link HttpSecurity} will be used for
-	 *
-	 * @author Rob Winch
-	 * @since 3.2
+	 * 请求匹配器配置类
+	 * 比如可以通过http.requestMatchers().anyRequest()设置所有请求都需要执行过滤器
+	 * 比如可以通过http.requestMatchers().mvcMatchers(HttpMethod.GET, "/hello");设置哪种请求方式和url需要执行过滤器
 	 */
 	public class RequestMatcherConfigurer extends AbstractRequestMatcherRegistry<RequestMatcherConfigurer> {
 
+		/**
+		 * 存放所有通过RequestMatcherConfigurer设置过的请求匹配器
+		 */
 		protected List<RequestMatcher> matchers = new ArrayList<>();
 
 		RequestMatcherConfigurer(ApplicationContext context) {
 			setApplicationContext(context);
 		}
 
+		/**
+		 * 设置哪种请求方式加url需要执行过滤器
+		 * @param method the HTTP method to match on
+		 * @param mvcPatterns the patterns to match on. The rules for matching are defined by
+		 * Spring MVC
+		 * @return
+		 */
 		@Override
 		public MvcMatchersRequestMatcherConfigurer mvcMatchers(HttpMethod method, String... mvcPatterns) {
+			//为请求方式和模式创建MvcRequestMatcher
 			List<MvcRequestMatcher> mvcMatchers = createMvcMatchers(method, mvcPatterns);
 			setMatchers(mvcMatchers);
 			return new MvcMatchersRequestMatcherConfigurer(getContext(), mvcMatchers);
@@ -3337,6 +3357,7 @@ public final class HttpSecurity extends AbstractConfiguredSecurityBuilder<Defaul
 
 		private void setMatchers(List<? extends RequestMatcher> requestMatchers) {
 			this.matchers.addAll(requestMatchers);
+			//重点就是这里
 			requestMatcher(new OrRequestMatcher(this.matchers));
 		}
 

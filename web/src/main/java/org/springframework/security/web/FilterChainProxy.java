@@ -152,6 +152,9 @@ public class FilterChainProxy extends GenericFilterBean {
 
 	private HttpFirewall firewall = new StrictHttpFirewall();
 
+	/**
+	 * 执行过滤器抛出异常的时候，执行的策略
+	 */
 	private RequestRejectedHandler requestRejectedHandler = new DefaultRequestRejectedHandler();
 
 	public FilterChainProxy() {

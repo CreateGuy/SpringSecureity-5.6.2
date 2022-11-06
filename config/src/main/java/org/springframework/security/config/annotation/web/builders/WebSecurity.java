@@ -76,12 +76,25 @@ public final class WebSecurity extends AbstractConfiguredSecurityBuilder<Filter,
 
 	private final Log logger = LogFactory.getLog(getClass());
 
+	/**
+	 * 通过WebSecurity配置的不需要经过过滤器的请求匹配器
+	 */
 	private final List<RequestMatcher> ignoredRequests = new ArrayList<>();
 
+	/**
+	 * 默认就只有SpringSecurity的配置类生产的httpSecurity
+	 * 注意：是可以有多个SpringSecurity的配置类的
+	 */
 	private final List<SecurityBuilder<? extends SecurityFilterChain>> securityFilterChainBuilders = new ArrayList<>();
 
+	/**
+	 * 不需要进行SpringSecurity过滤器的请求匹配器 配置类
+	 */
 	private IgnoredRequestConfigurer ignoredRequestRegistry;
 
+	/**
+	 * filterSecurityInterceptor按理来说是进行权限验证的，但是这里的默认是空的
+	 */
 	private FilterSecurityInterceptor filterSecurityInterceptor;
 
 	/**
@@ -351,6 +364,7 @@ public final class WebSecurity extends AbstractConfiguredSecurityBuilder<Filter,
 		}
 		catch (NoSuchBeanDefinitionException ex) {
 		}
+		//创建
 		this.ignoredRequestRegistry = new IgnoredRequestConfigurer(applicationContext);
 		try {
 			this.httpFirewall = applicationContext.getBean(HttpFirewall.class);
@@ -370,10 +384,7 @@ public final class WebSecurity extends AbstractConfiguredSecurityBuilder<Filter,
 	}
 
 	/**
-	 * An {@link IgnoredRequestConfigurer} that allows optionally configuring the
-	 * {@link MvcRequestMatcher#setMethod(HttpMethod)}
-	 *
-	 * @author Rob Winch
+	 * mvc不需要进行SpringSecurity过滤器的请求匹配器的配置类
 	 */
 	public final class MvcMatchersIgnoredRequestConfigurer extends IgnoredRequestConfigurer {
 
@@ -394,8 +405,7 @@ public final class WebSecurity extends AbstractConfiguredSecurityBuilder<Filter,
 	}
 
 	/**
-	 * Allows registering {@link RequestMatcher} instances that should be ignored by
-	 * Spring Security.
+	 * 允许注册应该被Spring Security忽略的请求匹配器的配置类
 	 *
 	 * @author Rob Winch
 	 * @since 3.2
@@ -406,6 +416,13 @@ public final class WebSecurity extends AbstractConfiguredSecurityBuilder<Filter,
 			setApplicationContext(context);
 		}
 
+		/**
+		 * 也支持mvc的匹配：满足条件不需要进入springSecurity过滤器
+		 * @param method the HTTP method to match on
+		 * @param mvcPatterns the patterns to match on. The rules for matching are defined by
+		 * Spring MVC
+		 * @return
+		 */
 		@Override
 		public MvcMatchersIgnoredRequestConfigurer mvcMatchers(HttpMethod method, String... mvcPatterns) {
 			List<MvcRequestMatcher> mvcMatchers = createMvcMatchers(method, mvcPatterns);
@@ -418,6 +435,11 @@ public final class WebSecurity extends AbstractConfiguredSecurityBuilder<Filter,
 			return mvcMatchers(null, mvcPatterns);
 		}
 
+		/**
+		 * 注册一个不需要进入springSecurity过滤器的请求匹配器
+		 * @param requestMatchers the {@link RequestMatcher} instances that were created
+		 * @return
+		 */
 		@Override
 		protected IgnoredRequestConfigurer chainRequestMatchers(List<RequestMatcher> requestMatchers) {
 			WebSecurity.this.ignoredRequests.addAll(requestMatchers);

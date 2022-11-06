@@ -31,29 +31,28 @@ import org.springframework.web.servlet.handler.RequestMatchResult;
 import org.springframework.web.util.UrlPathHelper;
 
 /**
- * A {@link RequestMatcher} that uses Spring MVC's {@link HandlerMappingIntrospector} to
- * match the path and extract variables.
- *
- * <p>
- * It is important to understand that Spring MVC's matching is relative to the servlet
- * path. This means if you have mapped any servlet to a path that starts with "/" and is
- * greater than one, you should also specify the {@link #setServletPath(String)} attribute
- * to differentiate mappings.
- * </p>
- *
- * @author Rob Winch
- * @author Eddú Meléndez
- * @author Evgeniy Cheban
- * @since 4.1.1
+ * 一个使用Spring MVC的HandlerMappingIntrospector来匹配路径和提取变量的RequestMatcher
+ * 了解Spring MVC的匹配是相对于servlet路径的是很重要的
+ * 这意味着，如果将任何servlet映射到以“/”开头且大于1的路径，您还应该指定setServletPath (String)属性来区分映射。
  */
 public class MvcRequestMatcher implements RequestMatcher, RequestVariablesExtractor {
 
 	private final DefaultMatcher defaultMatcher = new DefaultMatcher();
 
+	/**
+	 * Spring MVC的 HandlerMappingIntrospector
+	 * 里面有全部的HandlerMapping
+	 */
 	private final HandlerMappingIntrospector introspector;
 
+	/**
+	 * 匹配的请求url
+	 */
 	private final String pattern;
 
+	/**
+	 * 请求方式
+	 */
 	private HttpMethod method;
 
 	private String servletPath;
@@ -65,6 +64,7 @@ public class MvcRequestMatcher implements RequestMatcher, RequestVariablesExtrac
 
 	@Override
 	public boolean matches(HttpServletRequest request) {
+		//判断请求方式和servletPath是否相同
 		if (notMatchMethodOrServletPath(request)) {
 			return false;
 		}
@@ -73,6 +73,7 @@ public class MvcRequestMatcher implements RequestMatcher, RequestVariablesExtrac
 			return this.defaultMatcher.matches(request);
 		}
 		RequestMatchResult matchResult = mapping.match(request, this.pattern);
+		//必须要存在这个url对应的方法
 		return matchResult != null;
 	}
 
@@ -95,6 +96,11 @@ public class MvcRequestMatcher implements RequestMatcher, RequestVariablesExtrac
 		return (result != null) ? MatchResult.match(result.extractUriTemplateVariables()) : MatchResult.notMatch();
 	}
 
+	/**
+	 * 判断请求方式和servletPath是否相同
+	 * @param request
+	 * @return
+	 */
 	private boolean notMatchMethodOrServletPath(HttpServletRequest request) {
 		return this.method != null && !this.method.name().equals(request.getMethod())
 				|| this.servletPath != null && !this.servletPath.equals(request.getServletPath());
@@ -143,6 +149,9 @@ public class MvcRequestMatcher implements RequestMatcher, RequestVariablesExtrac
 		return sb.toString();
 	}
 
+	/**
+	 * 默认的请求匹配器
+	 */
 	private class DefaultMatcher implements RequestMatcher {
 
 		private final UrlPathHelper pathHelper = new UrlPathHelper();

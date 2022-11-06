@@ -154,14 +154,15 @@ public abstract class AbstractRequestMatcherRegistry<C> {
 	public abstract C mvcMatchers(HttpMethod method, String... mvcPatterns);
 
 	/**
-	 * Creates {@link MvcRequestMatcher} instances for the method and patterns passed in
-	 * @param method the HTTP method to use or null if any should be used
-	 * @param mvcPatterns the Spring MVC patterns to match on
-	 * @return a List of {@link MvcRequestMatcher} instances
+	 * 为请求方式和模式创建MvcRequestMatcher
+	 * @param method
+	 * @param mvcPatterns
+	 * @return
 	 */
 	protected final List<MvcRequestMatcher> createMvcMatchers(HttpMethod method, String... mvcPatterns) {
 		Assert.state(!this.anyRequestConfigured, "Can't configure mvcMatchers after anyRequest");
 		ObjectPostProcessor<Object> opp = this.context.getBean(ObjectPostProcessor.class);
+		//必须保证有SpringMvc的环境
 		if (!this.context.containsBean(HANDLER_MAPPING_INTROSPECTOR_BEAN_NAME)) {
 			throw new NoSuchBeanDefinitionException("A Bean named " + HANDLER_MAPPING_INTROSPECTOR_BEAN_NAME
 					+ " of type " + HandlerMappingIntrospector.class.getName()

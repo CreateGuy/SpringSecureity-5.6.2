@@ -23,8 +23,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 /**
- * Default implementation of {@link RequestRejectedHandler} that simply rethrows the
- * exception.
+ * RequestRejectedHandler的默认实现)，它只是重新抛出*异常
+ * 通常用于SpringSecurity执行过滤器抛出异常的时候，执行的测试
  *
  * @author Leonard Brünings
  * @since 5.4

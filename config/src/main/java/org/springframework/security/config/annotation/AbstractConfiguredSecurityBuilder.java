@@ -59,6 +59,7 @@ public abstract class AbstractConfiguredSecurityBuilder<O, B extends SecurityBui
 	 * 需要构建的配置类（包含了初始化过程中添加的配置类）
 	 * 例子1：如果构建器是WebSecurity那么这里就是通常是WebSecurityConfigurerAdapter的实现类
 	 * 例子2：如果构建器是AuthenticationConfiguration那么这里就是GlobalAuthenticationConfigurerAdapter
+	 * 注意：由于可能支持添加一样类型的配置类，所以value是一个list
 	 */
 	private final LinkedHashMap<Class<? extends SecurityConfigurer<O, B>>, List<SecurityConfigurer<O, B>>> configurers = new LinkedHashMap<>();
 
@@ -129,15 +130,16 @@ public abstract class AbstractConfiguredSecurityBuilder<O, B extends SecurityBui
 	}
 
 	/**
-	 * Applies a {@link SecurityConfigurerAdapter} to this {@link SecurityBuilder} and
-	 * invokes {@link SecurityConfigurerAdapter#setBuilder(SecurityBuilder)}.
+	 * 添加指定配置类
 	 * @param configurer
-	 * @return the {@link SecurityConfigurerAdapter} for further customizations
+	 * @param <C>
+	 * @return
 	 * @throws Exception
 	 */
 	@SuppressWarnings("unchecked")
 	public <C extends SecurityConfigurerAdapter<O, B>> C apply(C configurer) throws Exception {
 		configurer.addObjectPostProcessor(this.objectPostProcessor);
+		//这里设置的构建器，这也是为什么可以通过and()回到上一级
 		configurer.setBuilder((B) this);
 		add(configurer);
 		return configurer;
@@ -246,8 +248,7 @@ public abstract class AbstractConfiguredSecurityBuilder<O, B extends SecurityBui
 	}
 
 	/**
-	 * Gets the {@link SecurityConfigurer} by its class name or <code>null</code> if not
-	 * found. Note that object hierarchies are not considered.
+	 * 通过类名获取SecurityConfigurer，如果没有找到则为空
 	 * @param clazz
 	 * @return the {@link SecurityConfigurer} for further customizations
 	 */
