@@ -96,6 +96,9 @@ public abstract class WebSecurityConfigurerAdapter implements WebSecurityConfigu
 
 	private ApplicationContext context;
 
+	/**
+	 * 内容协商管理器，检查'Accept'请求头的
+	 */
 	private ContentNegotiationStrategy contentNegotiationStrategy = new HeaderContentNegotiationStrategy();
 
 	/**
@@ -198,19 +201,28 @@ public abstract class WebSecurityConfigurerAdapter implements WebSecurityConfigu
 		//创建sharedObjects
 		Map<Class<?>, Object> sharedObjects = createSharedObjects();
 		this.http = new HttpSecurity(this.objectPostProcessor, this.authenticationBuilder, sharedObjects);
+		//是否注册默认的SpringSecurity配置类
 		if (!this.disableDefaults) {
+			//注册默认配置类
 			applyDefaultConfiguration(this.http);
 			ClassLoader classLoader = this.context.getClassLoader();
+			//从spring.factories文件中读取AbstractHttpConfigurer类型的bean加入到配置类中
 			List<AbstractHttpConfigurer> defaultHttpConfigurers = SpringFactoriesLoader
 					.loadFactories(AbstractHttpConfigurer.class, classLoader);
 			for (AbstractHttpConfigurer configurer : defaultHttpConfigurers) {
 				this.http.apply(configurer);
 			}
 		}
+		//重点：针对HttpSecurity配置，一般都会重写这个方法
 		configure(this.http);
 		return this.http;
 	}
 
+	/**
+	 * 注册默认配置类
+	 * @param http
+	 * @throws Exception
+	 */
 	private void applyDefaultConfiguration(HttpSecurity http) throws Exception {
 		http.csrf();
 		http.addFilter(new WebAsyncManagerIntegrationFilter());
@@ -260,6 +272,8 @@ public abstract class WebSecurityConfigurerAdapter implements WebSecurityConfigu
 			}
 			else {
 				//用 用户设置过属性的全局认证管理器构建器
+				//如果走到这就说明不用SpringSecurity提供的AuthenticationConfiguration去创建全局认证管理器
+				// 也就不会检测认证提供者，用户详情服务等等之类的，需要自己加入
 				this.authenticationManager = this.localConfigureAuthenticationBldr.build();
 			}
 			//标记为已经初始化过
@@ -307,7 +321,10 @@ public abstract class WebSecurityConfigurerAdapter implements WebSecurityConfigu
 
 	@Override
 	public void init(WebSecurity web) throws Exception {
+		//重点
 		HttpSecurity http = getHttp();
+		//将HttpSecurity中的FilterSecurityInterceptor加入到WebSecurity中
+		//FilterSecurityInterceptor是用来做配置类中的权限校验的，不懂应用场景
 		web.addSecurityFilterChainBuilder(http).postBuildAction(() -> {
 			FilterSecurityInterceptor securityInterceptor = http.getSharedObject(FilterSecurityInterceptor.class);
 			web.securityInterceptor(securityInterceptor);
@@ -330,9 +347,7 @@ public abstract class WebSecurityConfigurerAdapter implements WebSecurityConfigu
 	}
 
 	/**
-	 * Override this method to configure the {@link HttpSecurity}. Typically subclasses
-	 * should not invoke this method by calling super as it may override their
-	 * configuration. The default configuration is:
+	 * 重写此方法来配置{@link HttpSecurity}
 	 *
 	 * <pre>
 	 * http.authorizeRequests().anyRequest().authenticated().and().formLogin().and().httpBasic();
@@ -360,6 +375,10 @@ public abstract class WebSecurityConfigurerAdapter implements WebSecurityConfigu
 		return this.context;
 	}
 
+	/**
+	 * 创建用户全局认证管理器构建器和用户局部认证管理器构建器
+	 * @param context
+	 */
 	@Autowired
 	public void setApplicationContext(ApplicationContext context) {
 		this.context = context;
@@ -410,6 +429,10 @@ public abstract class WebSecurityConfigurerAdapter implements WebSecurityConfigu
 		this.contentNegotiationStrategy = contentNegotiationStrategy;
 	}
 
+	/**
+	 * 默认的{@link org.springframework.security.config.annotation.configuration.AutowireBeanFactoryObjectPostProcessor}
+	 * @param objectPostProcessor
+	 */
 	@Autowired
 	public void setObjectPostProcessor(ObjectPostProcessor<Object> objectPostProcessor) {
 		this.objectPostProcessor = objectPostProcessor;
