@@ -102,16 +102,28 @@ public final class WebSecurity extends AbstractConfiguredSecurityBuilder<Filter,
 	 */
 	private HttpFirewall httpFirewall;
 
+	/**
+	 * 执行过滤器抛出异常的时候，执行的策略
+	 */
 	private RequestRejectedHandler requestRejectedHandler;
 
+	/**
+	 * 是否打印debug级别日志
+	 */
 	private boolean debugEnabled;
 
+	/**
+	 * 默认为空，不懂
+	 */
 	private WebInvocationPrivilegeEvaluator privilegeEvaluator;
 
 	private DefaultWebSecurityExpressionHandler defaultWebSecurityExpressionHandler = new DefaultWebSecurityExpressionHandler();
 
 	private SecurityExpressionHandler<FilterInvocation> expressionHandler = this.defaultWebSecurityExpressionHandler;
 
+	/**
+	 * 在创建httpSecurity的时候会注入
+	 */
 	private Runnable postBuildAction = () -> {
 	};
 
@@ -287,9 +299,12 @@ public final class WebSecurity extends AbstractConfiguredSecurityBuilder<Filter,
 						+ "or by adding a @Configuration that extends WebSecurityConfigurerAdapter. "
 						+ "More advanced users can invoke " + WebSecurity.class.getSimpleName()
 						+ ".addSecurityFilterChainBuilder directly");
+		//需要设置过滤器链的数量
 		int chainSize = this.ignoredRequests.size() + this.securityFilterChainBuilders.size();
 		List<SecurityFilterChain> securityFilterChains = new ArrayList<>(chainSize);
+		//5.2.2没有
 		List<RequestMatcherEntry<List<WebInvocationPrivilegeEvaluator>>> requestMatcherPrivilegeEvaluatorsEntries = new ArrayList<>();
+		//将通过WebSecurity创建需要放行的URL转为DefaultSecurityFilterChain
 		for (RequestMatcher ignoredRequest : this.ignoredRequests) {
 			WebSecurity.this.logger.warn("You are asking Spring Security to ignore " + ignoredRequest
 					+ ". This is not recommended -- please use permitAll via HttpSecurity#authorizeHttpRequests instead.");
@@ -298,9 +313,11 @@ public final class WebSecurity extends AbstractConfiguredSecurityBuilder<Filter,
 			requestMatcherPrivilegeEvaluatorsEntries
 					.add(getRequestMatcherPrivilegeEvaluatorsEntry(securityFilterChain));
 		}
+		//重点：将构建httpSecurity中的过滤器链了
 		for (SecurityBuilder<? extends SecurityFilterChain> securityFilterChainBuilder : this.securityFilterChainBuilders) {
 			SecurityFilterChain securityFilterChain = securityFilterChainBuilder.build();
 			securityFilterChains.add(securityFilterChain);
+
 			requestMatcherPrivilegeEvaluatorsEntries
 					.add(getRequestMatcherPrivilegeEvaluatorsEntry(securityFilterChain));
 		}
@@ -308,10 +325,13 @@ public final class WebSecurity extends AbstractConfiguredSecurityBuilder<Filter,
 			this.privilegeEvaluator = new RequestMatcherDelegatingWebInvocationPrivilegeEvaluator(
 					requestMatcherPrivilegeEvaluatorsEntries);
 		}
+		//创建FilterChainProxy，这也是SpringSecurity过滤器链的入口
 		FilterChainProxy filterChainProxy = new FilterChainProxy(securityFilterChains);
+		//加入防火墙
 		if (this.httpFirewall != null) {
 			filterChainProxy.setFirewall(this.httpFirewall);
 		}
+		//加入执行过滤器抛出异常的时候，执行的策略
 		if (this.requestRejectedHandler != null) {
 			filterChainProxy.setRequestRejectedHandler(this.requestRejectedHandler);
 		}
@@ -326,6 +346,7 @@ public final class WebSecurity extends AbstractConfiguredSecurityBuilder<Filter,
 					+ "********************************************************************\n\n");
 			result = new DebugFilter(filterChainProxy);
 		}
+		//默认只有一个把httpSecurity中的FilterSecurityInterceptor放入webSecurity中
 		this.postBuildAction.run();
 		return result;
 	}
@@ -354,19 +375,22 @@ public final class WebSecurity extends AbstractConfiguredSecurityBuilder<Filter,
 	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
 		this.defaultWebSecurityExpressionHandler.setApplicationContext(applicationContext);
 		try {
+			//从容器中获得角色继承器
 			this.defaultWebSecurityExpressionHandler.setRoleHierarchy(applicationContext.getBean(RoleHierarchy.class));
 		}
 		catch (NoSuchBeanDefinitionException ex) {
 		}
 		try {
+			//从容器中获得权限评估器
 			this.defaultWebSecurityExpressionHandler
 					.setPermissionEvaluator(applicationContext.getBean(PermissionEvaluator.class));
 		}
 		catch (NoSuchBeanDefinitionException ex) {
 		}
-		//创建
+		//创建忽略过滤器配置类
 		this.ignoredRequestRegistry = new IgnoredRequestConfigurer(applicationContext);
 		try {
+			//从容器中获得防火墙
 			this.httpFirewall = applicationContext.getBean(HttpFirewall.class);
 		}
 		catch (NoSuchBeanDefinitionException ex) {

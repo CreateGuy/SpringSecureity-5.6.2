@@ -22,13 +22,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.SpringSecurityCoreVersion;
 
 /**
- * Represents a remembered <code>Authentication</code>.
- * <p>
- * A remembered <code>Authentication</code> must provide a fully valid
- * <code>Authentication</code>, including the <code>GrantedAuthority</code>s that apply.
- *
- * @author Ben Alex
- * @author Luke Taylor
+ * 表明是进行RememberMe方式创建的认证对象
  */
 public class RememberMeAuthenticationToken extends AbstractAuthenticationToken {
 

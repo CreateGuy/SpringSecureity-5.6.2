@@ -36,48 +36,40 @@ import org.springframework.security.web.util.matcher.RequestMatcherEditor;
 import org.springframework.util.Assert;
 
 /**
- * An {@code AuthenticationEntryPoint} which selects a concrete
- * {@code AuthenticationEntryPoint} based on a {@link RequestMatcher} evaluation.
- *
- * <p>
- * A configuration might look like this:
- * </p>
- *
- * <pre>
- * &lt;bean id=&quot;daep&quot; class=&quot;org.springframework.security.web.authentication.DelegatingAuthenticationEntryPoint&quot;&gt;
- *     &lt;constructor-arg&gt;
- *         &lt;map&gt;
- *             &lt;entry key=&quot;hasIpAddress('192.168.1.0/24') and hasHeader('User-Agent','Mozilla')&quot; value-ref=&quot;firstAEP&quot; /&gt;
- *             &lt;entry key=&quot;hasHeader('User-Agent','MSIE')&quot; value-ref=&quot;secondAEP&quot; /&gt;
- *         &lt;/map&gt;
- *     &lt;/constructor-arg&gt;
- *     &lt;property name=&quot;defaultEntryPoint&quot; ref=&quot;defaultAEP&quot;/&gt;
- * &lt;/bean&gt;
- * </pre>
- *
- * This example uses the {@link RequestMatcherEditor} which creates a
- * {@link ELRequestMatcher} instances for the map keys.
- *
- * @author Mike Wiesner
- * @since 3.0.2
+ * 代表性的身份认证入口点，它通过请求匹配器择一个具体的身份认证入口点
  */
 public class DelegatingAuthenticationEntryPoint implements AuthenticationEntryPoint, InitializingBean {
 
 	private static final Log logger = LogFactory.getLog(DelegatingAuthenticationEntryPoint.class);
 
+	/**
+	 * 所有的身份认证入口点
+	 */
 	private final LinkedHashMap<RequestMatcher, AuthenticationEntryPoint> entryPoints;
 
+	/**
+	 * 默认的身份认证入口点
+	 */
 	private AuthenticationEntryPoint defaultEntryPoint;
 
 	public DelegatingAuthenticationEntryPoint(LinkedHashMap<RequestMatcher, AuthenticationEntryPoint> entryPoints) {
 		this.entryPoints = entryPoints;
 	}
 
+	/**
+	 * 遍历所有身份认证入口点，选择执行某一个身份认证入口点
+	 * @param request that resulted in an <code>AuthenticationException</code>
+	 * @param response so that the user agent can begin authentication
+	 * @param authException 权限判断的时候抛出的异常
+	 * @throws IOException
+	 * @throws ServletException
+	 */
 	@Override
 	public void commence(HttpServletRequest request, HttpServletResponse response,
 			AuthenticationException authException) throws IOException, ServletException {
 		for (RequestMatcher requestMatcher : this.entryPoints.keySet()) {
 			logger.debug(LogMessage.format("Trying to match using %s", requestMatcher));
+			//进行匹配
 			if (requestMatcher.matches(request)) {
 				AuthenticationEntryPoint entryPoint = this.entryPoints.get(requestMatcher);
 				logger.debug(LogMessage.format("Match found! Executing %s", entryPoint));
@@ -86,7 +78,7 @@ public class DelegatingAuthenticationEntryPoint implements AuthenticationEntryPo
 			}
 		}
 		logger.debug(LogMessage.format("No match found. Using default entry point %s", this.defaultEntryPoint));
-		// No EntryPoint matched, use defaultEntryPoint
+		//无法通过请求匹配器匹配身份认证入口点，就用默认的
 		this.defaultEntryPoint.commence(request, response, authException);
 	}
 

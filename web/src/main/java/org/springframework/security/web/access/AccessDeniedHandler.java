@@ -25,10 +25,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.springframework.security.access.AccessDeniedException;
 
 /**
- * Used by {@link ExceptionTranslationFilter} to handle an
- * <code>AccessDeniedException</code>.
- *
- * @author Ben Alex
+ * 通常用于ExceptionTranslationFilter去处理AccessDeniedException
  */
 public interface AccessDeniedHandler {
 

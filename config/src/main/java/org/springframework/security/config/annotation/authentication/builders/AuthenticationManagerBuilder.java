@@ -63,6 +63,8 @@ public class AuthenticationManagerBuilder
 
 	/**
 	 * 认证提供者集合
+	 * 如果当前是局部认证管理器构建器，那么就会被放入ShardObject中
+	 * 那么当匿名用户配置类就会放入一个认证提供者，其他的配置类也有可能
 	 */
 	private List<AuthenticationProvider> authenticationProviders = new ArrayList<>();
 
@@ -233,7 +235,7 @@ public class AuthenticationManagerBuilder
 	}
 
 	/**
-	 * 创建认证管理器
+	 * 创建认证管理器（全局和局部都会有构建流程）
 	 * @return
 	 * @throws Exception
 	 */

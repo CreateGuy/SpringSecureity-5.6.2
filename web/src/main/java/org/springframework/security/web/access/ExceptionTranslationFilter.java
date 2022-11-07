@@ -82,16 +82,37 @@ import org.springframework.web.filter.GenericFilterBean;
  */
 public class ExceptionTranslationFilter extends GenericFilterBean implements MessageSourceAware {
 
+	/**
+	 * 访问被拒绝处理器
+	 */
 	private AccessDeniedHandler accessDeniedHandler = new AccessDeniedHandlerImpl();
 
+	/**
+	 * 因为认证异常而需要执行的身份认证入口点
+	 * 不懂为什么会出现认证异常
+	 */
 	private AuthenticationEntryPoint authenticationEntryPoint;
 
+	/**
+	 * 认证对象解析器
+	 */
 	private AuthenticationTrustResolver authenticationTrustResolver = new AuthenticationTrustResolverImpl();
 
+	/**
+	 * 异常分析器
+	 */
 	private ThrowableAnalyzer throwableAnalyzer = new DefaultThrowableAnalyzer();
 
+	/**
+	 * 请求缓冲器
+	 * 虽然这里是new的，但实际上ExceptionTranslationFilter被ExceptionHandlingConfigurer创建出来的时候
+	 * 会从sharedObject中获取的，如果没有就会创建{@link HttpSessionRequestCache}
+	 */
 	private RequestCache requestCache = new HttpSessionRequestCache();
 
+	/**
+	 * 用于解析消息的。支持国际化
+	 */
 	protected MessageSourceAccessor messages = SpringSecurityMessageSource.getAccessor();
 
 	public ExceptionTranslationFilter(AuthenticationEntryPoint authenticationEntryPoint) {
@@ -125,14 +146,17 @@ public class ExceptionTranslationFilter extends GenericFilterBean implements Mes
 			throw ex;
 		}
 		catch (Exception ex) {
-			// Try to extract a SpringSecurityException from the stacktrace
+			//尝试从堆栈跟踪中提取SpringSecurityException，不懂
 			Throwable[] causeChain = this.throwableAnalyzer.determineCauseChain(ex);
+			//拿到认证异常
 			RuntimeException securityException = (AuthenticationException) this.throwableAnalyzer
 					.getFirstThrowableOfType(AuthenticationException.class, causeChain);
+			//不是一个认证异常
 			if (securityException == null) {
 				securityException = (AccessDeniedException) this.throwableAnalyzer
 						.getFirstThrowableOfType(AccessDeniedException.class, causeChain);
 			}
+			//既不是认证异常也不是访问被拒绝异常，那就继续抛
 			if (securityException == null) {
 				rethrow(ex);
 			}
@@ -140,10 +164,16 @@ public class ExceptionTranslationFilter extends GenericFilterBean implements Mes
 				throw new ServletException("Unable to handle the Spring Security Exception "
 						+ "because the response is already committed.", ex);
 			}
+			//处理SpringSecurity异常
 			handleSpringSecurityException(request, response, chain, securityException);
 		}
 	}
 
+	/**
+	 * 抛出异常
+	 * @param ex
+	 * @throws ServletException
+	 */
 	private void rethrow(Exception ex) throws ServletException {
 		// Rethrow ServletExceptions and RuntimeExceptions as-is
 		if (ex instanceof ServletException) {
@@ -165,31 +195,63 @@ public class ExceptionTranslationFilter extends GenericFilterBean implements Mes
 		return this.authenticationTrustResolver;
 	}
 
+	/**
+	 * 处理SpringSecurity异常
+	 * @param request
+	 * @param response
+	 * @param chain
+	 * @param exception
+	 * @throws IOException
+	 * @throws ServletException
+	 */
 	private void handleSpringSecurityException(HttpServletRequest request, HttpServletResponse response,
 			FilterChain chain, RuntimeException exception) throws IOException, ServletException {
+		//是一个认证异常
 		if (exception instanceof AuthenticationException) {
 			handleAuthenticationException(request, response, chain, (AuthenticationException) exception);
 		}
+		//是一个访问被拒绝异常
 		else if (exception instanceof AccessDeniedException) {
 			handleAccessDeniedException(request, response, chain, (AccessDeniedException) exception);
 		}
 	}
 
+	/**
+	 * 处理认证异常
+	 * @param request
+	 * @param response
+	 * @param chain
+	 * @param exception
+	 * @throws ServletException
+	 * @throws IOException
+	 */
 	private void handleAuthenticationException(HttpServletRequest request, HttpServletResponse response,
 			FilterChain chain, AuthenticationException exception) throws ServletException, IOException {
 		this.logger.trace("Sending to authentication entry point since authentication failed", exception);
 		sendStartAuthentication(request, response, chain, exception);
 	}
 
+	/**
+	 * 处理访问被拒绝异常
+	 * @param request
+	 * @param response
+	 * @param chain
+	 * @param exception
+	 * @throws ServletException
+	 * @throws IOException
+	 */
 	private void handleAccessDeniedException(HttpServletRequest request, HttpServletResponse response,
 			FilterChain chain, AccessDeniedException exception) throws ServletException, IOException {
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 		boolean isAnonymous = this.authenticationTrustResolver.isAnonymous(authentication);
+		//当是匿名用户和记住我用户
 		if (isAnonymous || this.authenticationTrustResolver.isRememberMe(authentication)) {
 			if (logger.isTraceEnabled()) {
 				logger.trace(LogMessage.format("Sending %s to authentication entry point since access is denied",
 						authentication), exception);
 			}
+			//还是当成一个认证异常处理
+			//表示需要完整登录(用用户名和密码登录)
 			sendStartAuthentication(request, response, chain,
 					new InsufficientAuthenticationException(
 							this.messages.getMessage("ExceptionTranslationFilter.insufficientAuthentication",
@@ -201,17 +263,30 @@ public class ExceptionTranslationFilter extends GenericFilterBean implements Mes
 						LogMessage.format("Sending %s to access denied handler since access is denied", authentication),
 						exception);
 			}
+			//调用访问被拒绝处理器，进行处理
 			this.accessDeniedHandler.handle(request, response, exception);
 		}
 	}
 
+	/**
+	 * 处理认证异常
+	 * @param request
+	 * @param response
+	 * @param chain
+	 * @param reason
+	 * @throws ServletException
+	 * @throws IOException
+	 */
 	protected void sendStartAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain,
 			AuthenticationException reason) throws ServletException, IOException {
-		// SEC-112: Clear the SecurityContextHolder's Authentication, as the
-		// existing Authentication is no longer considered valid
+		//清除存储在SpringSeucurity上下文的认证信息
+		//因为现有的认证不再被认为有效
 		SecurityContext context = SecurityContextHolder.createEmptyContext();
 		SecurityContextHolder.setContext(context);
+		//将当前的请求放入请求缓存器
+		//这样当重新登录后，还能将请求包装为这一次请求
 		this.requestCache.saveRequest(request, response);
+		//执行认证异常处理器
 		this.authenticationEntryPoint.commence(request, response, reason);
 	}
 
@@ -240,8 +315,7 @@ public class ExceptionTranslationFilter extends GenericFilterBean implements Mes
 	}
 
 	/**
-	 * Default implementation of <code>ThrowableAnalyzer</code> which is capable of also
-	 * unwrapping <code>ServletException</code>s.
+	 * ThrowableAnalyzer的默认实现，它也能够解开ServletException
 	 */
 	private static final class DefaultThrowableAnalyzer extends ThrowableAnalyzer {
 

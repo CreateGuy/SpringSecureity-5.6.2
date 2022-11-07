@@ -141,6 +141,9 @@ public final class HttpSecurity extends AbstractConfiguredSecurityBuilder<Defaul
 	 */
 	private final RequestMatcherConfigurer requestMatcherConfigurer;
 
+	/**
+	 * 通过配置类创建过滤器
+	 */
 	private List<OrderedFilter> filters = new ArrayList<>();
 
 	/**
@@ -148,8 +151,14 @@ public final class HttpSecurity extends AbstractConfiguredSecurityBuilder<Defaul
 	 */
 	private RequestMatcher requestMatcher = AnyRequestMatcher.INSTANCE;
 
+	/**
+	 * 用于对过滤器进行排序的
+	 */
 	private FilterOrderRegistration filterOrders = new FilterOrderRegistration();
 
+	/**
+	 * 可直接由用户创建局部认证管理器
+	 */
 	private AuthenticationManager authenticationManager;
 
 	/**
@@ -2887,16 +2896,26 @@ public final class HttpSecurity extends AbstractConfiguredSecurityBuilder<Defaul
 		super.setSharedObject(sharedType, object);
 	}
 
+	/**
+	 * 拿到局部认证管理器构建器创建 局部认证管理器
+	 * @throws Exception
+	 */
 	@Override
 	protected void beforeConfigure() throws Exception {
+		//当有用户设置过局部认证管理器，那么就直接设置
 		if (this.authenticationManager != null) {
 			setSharedObject(AuthenticationManager.class, this.authenticationManager);
 		}
 		else {
+			//从SharedObject中获得局部认证管理器构建器，然后进行构建，最后将局部认证器放入SharedObject
 			setSharedObject(AuthenticationManager.class, getAuthenticationRegistry().build());
 		}
 	}
 
+	/**
+	 * 对应用程序需要的过滤器进行排序
+	 * @return
+	 */
 	@Override
 	protected DefaultSecurityFilterChain performBuild() {
 		this.filters.sort(OrderComparator.INSTANCE);
@@ -2904,6 +2923,8 @@ public final class HttpSecurity extends AbstractConfiguredSecurityBuilder<Defaul
 		for (Filter filter : this.filters) {
 			sortedFilters.add(((OrderedFilter) filter).filter);
 		}
+		//可以看出最终放入FilterChainProxy中的DefaultSecurityFilterChain内部存放的是原始过滤器
+		//而不是经过包装的OrderedFilter
 		return new DefaultSecurityFilterChain(this.requestMatcher, sortedFilters);
 	}
 
@@ -2940,8 +2961,14 @@ public final class HttpSecurity extends AbstractConfiguredSecurityBuilder<Defaul
 		return this;
 	}
 
+	/**
+	 * 将过滤器添加到httpSecurity中
+	 * @param filter 过滤器
+	 * @return
+	 */
 	@Override
 	public HttpSecurity addFilter(Filter filter) {
+		//获得用于排序的值
 		Integer order = this.filterOrders.getOrder(filter.getClass());
 		if (order == null) {
 			throw new IllegalArgumentException("The Filter class " + filter.getClass().getName()
@@ -3372,13 +3399,19 @@ public final class HttpSecurity extends AbstractConfiguredSecurityBuilder<Defaul
 	}
 
 	/**
-	 * A Filter that implements Ordered to be sorted. After sorting occurs, the original
-	 * filter is what is used by FilterChainProxy
+	 * 对Filter的包装，它实现了Ordered的排序
+	 * 排序发生后，FilterChainProxy依旧使用的是原始过滤器
 	 */
 	private static final class OrderedFilter implements Ordered, Filter {
 
+		/**
+		 * 过滤器
+		 */
 		private final Filter filter;
 
+		/**
+		 * 过滤器的排序值
+		 */
 		private final int order;
 
 		private OrderedFilter(Filter filter, int order) {
@@ -3386,6 +3419,14 @@ public final class HttpSecurity extends AbstractConfiguredSecurityBuilder<Defaul
 			this.order = order;
 		}
 
+		/**
+		 * 依旧使用的原始过滤器
+		 * @param servletRequest
+		 * @param servletResponse
+		 * @param filterChain
+		 * @throws IOException
+		 * @throws ServletException
+		 */
 		@Override
 		public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain)
 				throws IOException, ServletException {

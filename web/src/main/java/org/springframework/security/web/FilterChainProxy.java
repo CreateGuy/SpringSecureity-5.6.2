@@ -150,6 +150,9 @@ public class FilterChainProxy extends GenericFilterBean {
 
 	private FilterChainValidator filterChainValidator = new NullFilterChainValidator();
 
+	/**
+	 * 防火墙
+	 */
 	private HttpFirewall firewall = new StrictHttpFirewall();
 
 	/**

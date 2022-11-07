@@ -45,6 +45,9 @@ public class DaoAuthenticationProvider extends AbstractUserDetailsAuthentication
 	 */
 	private static final String USER_NOT_FOUND_PASSWORD = "userNotFoundPassword";
 
+	/**
+	 * 密码编码器
+	 */
 	private PasswordEncoder passwordEncoder;
 
 	/**

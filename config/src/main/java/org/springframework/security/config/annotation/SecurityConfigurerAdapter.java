@@ -44,6 +44,7 @@ public abstract class SecurityConfigurerAdapter<O, B extends SecurityBuilder<O>>
 
 	/**
 	 * 这是一个混合型的ObjectPostProcessor
+	 * 最开始只有{@link org.springframework.security.config.annotation.configuration.AutowireBeanFactoryObjectPostProcessor}
 	 */
 	private CompositeObjectPostProcessor objectPostProcessor = new CompositeObjectPostProcessor();
 

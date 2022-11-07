@@ -339,10 +339,7 @@ public abstract class AbstractConfiguredSecurityBuilder<O, B extends SecurityBui
 	}
 
 	/**
-	 * Invoked prior to invoking each
-	 * {@link SecurityConfigurer#configure(SecurityBuilder)} method. Subclasses may
-	 * override this method to hook into the lifecycle without using a
-	 * {@link SecurityConfigurer}.
+	 * 默认只有HttpSecurity重写了这个
 	 */
 	protected void beforeConfigure() throws Exception {
 	}

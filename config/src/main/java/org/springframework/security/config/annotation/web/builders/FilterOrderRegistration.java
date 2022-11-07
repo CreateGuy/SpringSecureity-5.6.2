@@ -49,11 +49,7 @@ import org.springframework.security.web.session.SessionManagementFilter;
 import org.springframework.web.filter.CorsFilter;
 
 /**
- * An internal use only {@link Comparator} that sorts the Security {@link Filter}
- * instances to ensure they are in the correct order.
- *
- * @author Rob Winch
- * @since 3.2
+ * 一个只用于内部的比较器，它对Security Filter实例进行排序，以确保它们的顺序正确
  */
 
 @SuppressWarnings("serial")
@@ -63,9 +59,13 @@ final class FilterOrderRegistration {
 
 	private static final int ORDER_STEP = 100;
 
+	/**
+	 * SpringSecurity过滤器顺序
+	 */
 	private final Map<String, Integer> filterToOrder = new HashMap<>();
 
 	FilterOrderRegistration() {
+		//可以看出第一个过滤器是100，往后递增100
 		Step order = new Step(INITIAL_ORDER, ORDER_STEP);
 		put(ChannelProcessingFilter.class, order.next());
 		order.next(); // gh-8105
@@ -130,10 +130,9 @@ final class FilterOrderRegistration {
 	}
 
 	/**
-	 * Gets the order of a particular {@link Filter} class taking into consideration
-	 * superclasses.
-	 * @param clazz the {@link Filter} class to determine the sort order
-	 * @return the sort order or null if not defined
+	 * 获得过滤器的排序值
+	 * @param clazz
+	 * @return
 	 */
 	Integer getOrder(Class<?> clazz) {
 		while (clazz != null) {

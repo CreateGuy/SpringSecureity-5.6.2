@@ -31,14 +31,9 @@ import org.springframework.security.web.util.matcher.AnyRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 
 /**
- * {@code RequestCache} which stores the {@code SavedRequest} in the HttpSession.
- *
- * The {@link DefaultSavedRequest} class is used as the implementation.
- *
- * @author Luke Taylor
- * @author Eddú Meléndez
- * @since 3.0
- */
+ * 在HttpSession中存储SavedRequest的请求缓冲器
+ * 	也是SpringSecurity默认的请求缓存器策略
+ * */
 public class HttpSessionRequestCache implements RequestCache {
 
 	static final String SAVED_REQUEST = "SPRING_SECURITY_SAVED_REQUEST";
