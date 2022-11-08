@@ -40,8 +40,7 @@ import org.springframework.util.Assert;
 import org.springframework.web.util.WebUtils;
 
 /**
- * A {@code SecurityContextRepository} implementation which stores the security context in
- * the {@code HttpSession} between requests.
+ * 安全上下文放在{@link HttpSession}中的策略
  * <p>
  * The {@code HttpSession} will be queried to retrieve the {@code SecurityContext} in the
  * <tt>loadContext</tt> method (using the key {@link #SPRING_SECURITY_CONTEXT_KEY} by
@@ -84,45 +83,58 @@ import org.springframework.web.util.WebUtils;
 public class HttpSessionSecurityContextRepository implements SecurityContextRepository {
 
 	/**
-	 * The default key under which the security context will be stored in the session.
+	 * 安全上下文放在HttpSession中的默认key
 	 */
 	public static final String SPRING_SECURITY_CONTEXT_KEY = "SPRING_SECURITY_CONTEXT";
 
 	protected final Log logger = LogFactory.getLog(this.getClass());
 
 	/**
-	 * SecurityContext instance used to check for equality with default (unauthenticated)
-	 * content
+	 * 用于比较是否是空安全上下文的
 	 */
 	private final Object contextObject = SecurityContextHolder.createEmptyContext();
 
+	/**
+	 * 是否允许创建HttpSession
+	 */
 	private boolean allowSessionCreation = true;
 
+	/**
+	 * 不懂
+	 */
 	private boolean disableUrlRewriting = false;
 
+	/**
+	 * 安全上下文放在HttpSession中的key
+	 */
 	private String springSecurityContextKey = SPRING_SECURITY_CONTEXT_KEY;
 
+	/**
+	 * 认证对象解析器
+	 */
 	private AuthenticationTrustResolver trustResolver = new AuthenticationTrustResolverImpl();
 
 	/**
-	 * Gets the security context for the current request (if available) and returns it.
-	 * <p>
-	 * If the session is null, the context object is null or the context object stored in
-	 * the session is not an instance of {@code SecurityContext}, a new context object
-	 * will be generated and returned.
+	 * 从HttpSession加载安全上下文
+	 * @param requestResponseHolder
+	 * @return
 	 */
 	@Override
 	public SecurityContext loadContext(HttpRequestResponseHolder requestResponseHolder) {
 		HttpServletRequest request = requestResponseHolder.getRequest();
 		HttpServletResponse response = requestResponseHolder.getResponse();
+		//false表示有就获取，没有就返回空HttpSession
 		HttpSession httpSession = request.getSession(false);
+		//从HttpSession获取安全存储上下文
 		SecurityContext context = readSecurityContextFromSession(httpSession);
 		if (context == null) {
+			//如果没有找到安全上下文，那就创建一个空安全上下文
 			context = generateNewContext();
 			if (this.logger.isTraceEnabled()) {
 				this.logger.trace(LogMessage.format("Created %s", context));
 			}
 		}
+		//创建response包装类，目的是为了更新安全上下文
 		SaveToSessionResponseWrapper wrappedResponse = new SaveToSessionResponseWrapper(response, request,
 				httpSession != null, context);
 		requestResponseHolder.setResponse(wrappedResponse);
@@ -149,14 +161,14 @@ public class HttpSessionSecurityContextRepository implements SecurityContextRepo
 	}
 
 	/**
-	 * @param httpSession the session obtained from the request.
+	 * 从HttpSession获取安全存储上下文
 	 */
 	private SecurityContext readSecurityContextFromSession(HttpSession httpSession) {
 		if (httpSession == null) {
 			this.logger.trace("No HttpSession currently exists");
 			return null;
 		}
-		// Session exists, so try to obtain a context from it.
+		//HttpSession已经存在，因此尝试从中获取安全上下文。
 		Object contextFromSession = httpSession.getAttribute(this.springSecurityContextKey);
 		if (contextFromSession == null) {
 			if (this.logger.isTraceEnabled()) {
@@ -166,7 +178,9 @@ public class HttpSessionSecurityContextRepository implements SecurityContextRepo
 			return null;
 		}
 
-		// We now have the security context object from the session.
+		//到这就表示当前会话确实存储了的安全上下文对象
+		//要确保保存的安全上下文是正确类型的
+		//比如说可能其他地方用了相同的key
 		if (!(contextFromSession instanceof SecurityContext)) {
 			this.logger.warn(LogMessage.format(
 					"%s did not contain a SecurityContext but contained: '%s'; are you improperly "
@@ -183,7 +197,7 @@ public class HttpSessionSecurityContextRepository implements SecurityContextRepo
 		else if (this.logger.isDebugEnabled()) {
 			this.logger.debug(LogMessage.format("Retrieved %s", contextFromSession));
 		}
-		// Everything OK. The only non-null return from this method.
+		//准备好了，返回安全上下文
 		return (SecurityContext) contextFromSession;
 	}
 
@@ -232,6 +246,12 @@ public class HttpSessionSecurityContextRepository implements SecurityContextRepo
 		this.springSecurityContextKey = springSecurityContextKey;
 	}
 
+	/**
+	 * 如果是即时的认证对象
+	 * 我理解是即时的，很快就用完了，那么就没必要去保存了
+	 * @param authentication
+	 * @return
+	 */
 	private boolean isTransientAuthentication(Authentication authentication) {
 		return AnnotationUtils.getAnnotation(authentication.getClass(), Transient.class) != null;
 	}
@@ -272,12 +292,8 @@ public class HttpSessionSecurityContextRepository implements SecurityContextRepo
 	}
 
 	/**
-	 * Wrapper that is applied to every request/response to update the
-	 * <code>HttpSession</code> with the <code>SecurityContext</code> when a
-	 * <code>sendError()</code> or <code>sendRedirect</code> happens. See SEC-398.
-	 * <p>
-	 * Stores the necessary state from the start of the request in order to make a
-	 * decision about whether the security context has changed before saving it.
+	 * 对于Response的包装器：以便在发生sendError()或sendRedirect等等时候之前。如果更新了线程级别的安全存储上下文
+	 * 那就更新HttpSession级别的安全上下文的
 	 */
 	final class SaveToSessionResponseWrapper extends SaveContextOnUpdateOrErrorResponseWrapper {
 
@@ -285,12 +301,25 @@ public class HttpSessionSecurityContextRepository implements SecurityContextRepo
 
 		private final HttpServletRequest request;
 
+		/**
+		 * 在创建包装器的时候，是否存在HttpSession的标志位
+		 * 存在即为true
+		 */
 		private final boolean httpSessionExistedAtStartOfRequest;
 
+		/**
+		 * 当前用户的安全上下文
+		 */
 		private final SecurityContext contextBeforeExecution;
 
+		/**
+		 * 在创建当前包装器的时候，就已经存在的认证对象
+		 */
 		private final Authentication authBeforeExecution;
 
+		/**
+		 * 是否已经更新过安全上下文了
+		 */
 		private boolean isSaveContextInvoked;
 
 		/**
@@ -314,27 +343,23 @@ public class HttpSessionSecurityContextRepository implements SecurityContextRepo
 		}
 
 		/**
-		 * Stores the supplied security context in the session (if available) and if it
-		 * has changed since it was set at the start of the request. If the
-		 * AuthenticationTrustResolver identifies the current user as anonymous, then the
-		 * context will not be stored.
-		 * @param context the context object obtained from the SecurityContextHolder after
-		 * the request has been processed by the filter chain.
-		 * SecurityContextHolder.getContext() cannot be used to obtain the context as it
-		 * has already been cleared by the time this method is called.
-		 *
+		 * 更新存储在HttpSession中的安全上下文
+		 * 如果AuthenticationTrustResolver将当前用户识别为匿名用户，则不会存储上下文
+		 * @param context 线程级别的安全上下文
 		 */
 		@Override
 		protected void saveContext(SecurityContext context) {
+			//首先获得认证对象
 			final Authentication authentication = context.getAuthentication();
 			HttpSession httpSession = this.request.getSession(false);
 			String springSecurityContextKey = HttpSessionSecurityContextRepository.this.springSecurityContextKey;
-			// See SEC-776
+			//如果没有认证对象或者是匿名用户
 			if (authentication == null
 					|| HttpSessionSecurityContextRepository.this.trustResolver.isAnonymous(authentication)) {
+
+				//如果是匿名用户和空认证对象那么安全上下文其实已经没有任何意义，如果存在就删除它
 				if (httpSession != null && this.authBeforeExecution != null) {
-					// SEC-1587 A non-anonymous context may still be in the session
-					// SEC-1735 remove if the contextBeforeExecution was not anonymous
+					//删除存储在HttpSession中的安全上下文
 					httpSession.removeAttribute(springSecurityContextKey);
 					this.isSaveContextInvoked = true;
 				}
@@ -348,12 +373,12 @@ public class HttpSessionSecurityContextRepository implements SecurityContextRepo
 				}
 				return;
 			}
+			//如果为空就创建新的HttpSession
 			httpSession = (httpSession != null) ? httpSession : createNewSessionIfAllowed(context, authentication);
-			// If HttpSession exists, store current SecurityContext but only if it has
-			// actually changed in this thread (see SEC-37, SEC-1307, SEC-1528)
+			//如果HttpSession存在，存储当前的安全上下文
+			//但仅当它在此线程中发生了变化
 			if (httpSession != null) {
-				// We may have a new session, so check also whether the context attribute
-				// is set SEC-1561
+				//可能是一个新的会话，所以还要检查上下文属性
 				if (contextChanged(context) || httpSession.getAttribute(springSecurityContextKey) == null) {
 					httpSession.setAttribute(springSecurityContextKey, context);
 					this.isSaveContextInvoked = true;
@@ -364,20 +389,34 @@ public class HttpSessionSecurityContextRepository implements SecurityContextRepo
 			}
 		}
 
+		/**
+		 * 是否和原来的安全上下文已经不一样了
+		 * @param context
+		 * @return
+		 */
 		private boolean contextChanged(SecurityContext context) {
 			return this.isSaveContextInvoked || context != this.contextBeforeExecution
 					|| context.getAuthentication() != this.authBeforeExecution;
 		}
 
+		/**
+		 * 创建一个新HttpSession
+		 * @param context
+		 * @param authentication
+		 * @return
+		 */
 		private HttpSession createNewSessionIfAllowed(SecurityContext context, Authentication authentication) {
+			//判断是否是即时的认证对象
 			if (isTransientAuthentication(authentication)) {
 				return null;
 			}
+			//如果在创建包装类的时候存在HttpSession，那就不用创建新的了
 			if (this.httpSessionExistedAtStartOfRequest) {
 				this.logger.debug("HttpSession is now null, but was not null at start of request; "
 						+ "session was invalidated, so do not create a new session");
 				return null;
 			}
+			//如果不允许创建HttpSession
 			if (!HttpSessionSecurityContextRepository.this.allowSessionCreation) {
 				this.logger.debug("The HttpSession is currently null, and the "
 						+ HttpSessionSecurityContextRepository.class.getSimpleName()
@@ -386,7 +425,8 @@ public class HttpSessionSecurityContextRepository implements SecurityContextRepo
 						+ "stored for next request");
 				return null;
 			}
-			// Generate a HttpSession only if we need to
+
+			//传入的安全上下文是空上下文，那么就没必要创建和放入HttpSession中了
 			if (HttpSessionSecurityContextRepository.this.contextObject.equals(context)) {
 				this.logger.debug(LogMessage.format(
 						"HttpSession is null, but SecurityContext has not changed from "
@@ -395,6 +435,7 @@ public class HttpSessionSecurityContextRepository implements SecurityContextRepo
 				return null;
 			}
 			try {
+				//创建新的HttpSession
 				HttpSession session = this.request.getSession(true);
 				this.logger.debug("Created HttpSession as SecurityContext is non-default");
 				return session;

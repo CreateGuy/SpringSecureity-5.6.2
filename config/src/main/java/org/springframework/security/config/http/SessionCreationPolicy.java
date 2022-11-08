@@ -21,32 +21,28 @@ import javax.servlet.http.HttpSession;
 import org.springframework.security.core.context.SecurityContext;
 
 /**
- * Specifies the various session creation policies for Spring Security.
- *
- * @author Luke Taylor
- * @since 3.1
+ * Spring Security的会话创建策略
  */
 public enum SessionCreationPolicy {
 
 	/**
-	 * Always create an {@link HttpSession}
+	 * 总是 {@link HttpSession}
 	 */
 	ALWAYS,
 
 	/**
-	 * Spring Security will never create an {@link HttpSession}, but will use the
-	 * {@link HttpSession} if it already exists
+	 * 永远不会创建 {@link HttpSession}, 除非他已经存在
+	 * 应该是不会由Spring Security创建
 	 */
 	NEVER,
 
 	/**
-	 * Spring Security will only create an {@link HttpSession} if required
+	 * 在需要的时候创建 {@link HttpSession}
 	 */
 	IF_REQUIRED,
 
 	/**
-	 * Spring Security will never create an {@link HttpSession} and it will never use it
-	 * to obtain the {@link SecurityContext}
+	 * Spring Security永远不会创建 {@link HttpSession}，也永远不会使用它获取 {@link HttpSession}
 	 */
 	STATELESS
 

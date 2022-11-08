@@ -61,42 +61,11 @@ import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 
 /**
- * Allows configuring session management.
- *
- * <h2>Security Filters</h2>
- *
- * The following Filters are populated
- *
+ * 配置会话管理。
+ * 安全过滤器填充以下过滤器
  * <ul>
  * <li>{@link SessionManagementFilter}</li>
  * <li>{@link ConcurrentSessionFilter} if there are restrictions on how many concurrent
- * sessions a user can have</li>
- * </ul>
- *
- * <h2>Shared Objects Created</h2>
- *
- * The following shared objects are created:
- *
- * <ul>
- * <li>{@link RequestCache}</li>
- * <li>{@link SecurityContextRepository}</li>
- * <li>{@link SessionManagementConfigurer}</li>
- * <li>{@link InvalidSessionStrategy}</li>
- * </ul>
- *
- * <h2>Shared Objects Used</h2>
- *
- * <ul>
- * <li>{@link SecurityContextRepository}</li>
- * <li>{@link AuthenticationTrustResolver} is optionally used to populate the
- * {@link HttpSessionSecurityContextRepository} and {@link SessionManagementFilter}</li>
- * </ul>
- *
- * @author Rob Winch
- * @author Onur Kagan Ozcan
- * @since 3.2
- * @see SessionManagementFilter
- * @see ConcurrentSessionFilter
  */
 public final class SessionManagementConfigurer<H extends HttpSecurityBuilder<H>>
 		extends AbstractHttpConfigurer<SessionManagementConfigurer<H>, H> {
@@ -123,6 +92,9 @@ public final class SessionManagementConfigurer<H extends HttpSecurityBuilder<H>>
 
 	private boolean maxSessionsPreventsLogin;
 
+	/**
+	 * SpringSecurity创建session的策略
+	 */
 	private SessionCreationPolicy sessionPolicy;
 
 	private boolean enableSessionUrlRewriting;
@@ -212,12 +184,9 @@ public final class SessionManagementConfigurer<H extends HttpSecurityBuilder<H>>
 	}
 
 	/**
-	 * Allows specifying the {@link SessionCreationPolicy}
-	 * @param sessionCreationPolicy the {@link SessionCreationPolicy} to use. Cannot be
-	 * null.
-	 * @return the {@link SessionManagementConfigurer} for further customizations
-	 * @throws IllegalArgumentException if {@link SessionCreationPolicy} is null.
-	 * @see SessionCreationPolicy
+	 * 设置SpringSecurity创建session的策略
+	 * @param sessionCreationPolicy
+	 * @return
 	 */
 	public SessionManagementConfigurer<H> sessionCreationPolicy(SessionCreationPolicy sessionCreationPolicy) {
 		Assert.notNull(sessionCreationPolicy, "sessionCreationPolicy cannot be null");
@@ -314,13 +283,19 @@ public final class SessionManagementConfigurer<H extends HttpSecurityBuilder<H>>
 
 	@Override
 	public void init(H http) {
+		//获得安全上下文存储库
 		SecurityContextRepository securityContextRepository = http.getSharedObject(SecurityContextRepository.class);
+		//判断是否完全不需要创建session
 		boolean stateless = isStateless();
 		if (securityContextRepository == null) {
 			if (stateless) {
+				//如果没有安全上下文存储库，又不需要创建session
+				//那么就将安全上下文存储库设置为NullSecurityContextRepository
+				//那么程序在执行的时候就无法判断当前用户的认证信息了
 				http.setSharedObject(SecurityContextRepository.class, new NullSecurityContextRepository());
 			}
 			else {
+				//默认安全上下文存储库的策略是基于HttpSession的
 				HttpSessionSecurityContextRepository httpSecurityRepository = new HttpSessionSecurityContextRepository();
 				httpSecurityRepository.setDisableUrlRewriting(!this.enableSessionUrlRewriting);
 				httpSecurityRepository.setAllowSessionCreation(isAllowSessionCreation());
@@ -429,14 +404,15 @@ public final class SessionManagementConfigurer<H extends HttpSecurityBuilder<H>>
 	}
 
 	/**
-	 * Gets the {@link SessionCreationPolicy}. Can not be null.
-	 * @return the {@link SessionCreationPolicy}
+	 * 获得创建session的策略
 	 */
 	SessionCreationPolicy getSessionCreationPolicy() {
 		if (this.sessionPolicy != null) {
 			return this.sessionPolicy;
 		}
+		//尝试从构建器的sharedObjects获取创建session策略
 		SessionCreationPolicy sessionPolicy = getBuilder().getSharedObject(SessionCreationPolicy.class);
+		//如果没有设置就设置为需要就创建
 		return (sessionPolicy != null) ? sessionPolicy : SessionCreationPolicy.IF_REQUIRED;
 	}
 
@@ -451,11 +427,12 @@ public final class SessionManagementConfigurer<H extends HttpSecurityBuilder<H>>
 	}
 
 	/**
-	 * Returns true if the {@link SessionCreationPolicy} is stateless
-	 * @return
+	 * 如果完全不需要创建session就返回true
 	 */
 	private boolean isStateless() {
+		//获得创建session的策略
 		SessionCreationPolicy sessionPolicy = getSessionCreationPolicy();
+		//判断是否是完全不需要
 		return SessionCreationPolicy.STATELESS == sessionPolicy;
 	}
 

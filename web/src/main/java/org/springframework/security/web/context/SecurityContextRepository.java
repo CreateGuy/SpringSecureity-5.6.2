@@ -22,44 +22,21 @@ import javax.servlet.http.HttpServletResponse;
 import org.springframework.security.core.context.SecurityContext;
 
 /**
- * Strategy used for persisting a {@link SecurityContext} between requests.
- * <p>
- * Used by {@link SecurityContextPersistenceFilter} to obtain the context which should be
- * used for the current thread of execution and to store the context once it has been
- * removed from thread-local storage and the request has completed.
- * <p>
- * The persistence mechanism used will depend on the implementation, but most commonly the
- * <tt>HttpSession</tt> will be used to store the context.
- *
- * @author Luke Taylor
- * @since 3.0
- * @see SecurityContextPersistenceFilter
- * @see HttpSessionSecurityContextRepository
- * @see SaveContextOnUpdateOrErrorResponseWrapper
+ * 安全上下文存储库：
+ * 	用于在请求之间持久化SecurityContext的策略。
+ * 	由SecurityContextPersistenceFilter使用，
+ * 	以获取应该用于当前执行线程的上下文，并在从线程本地存储中删除上下文且请求完成后存储上下文。
+ * 	使用的持久性机制将取决于实现，但最常见的情况是使用HttpSession来存储上下文。
  */
 public interface SecurityContextRepository {
 
 	/**
-	 * Obtains the security context for the supplied request. For an unauthenticated user,
-	 * an empty context implementation should be returned. This method should not return
-	 * null.
-	 * <p>
-	 * The use of the <tt>HttpRequestResponseHolder</tt> parameter allows implementations
-	 * to return wrapped versions of the request or response (or both), allowing them to
-	 * access implementation-specific state for the request. The values obtained from the
-	 * holder will be passed on to the filter chain and also to the <tt>saveContext</tt>
-	 * method when it is finally called. Implementations may wish to return a subclass of
-	 * {@link SaveContextOnUpdateOrErrorResponseWrapper} as the response object, which
-	 * guarantees that the context is persisted when an error or redirect occurs.
-	 * @param requestResponseHolder holder for the current request and response for which
-	 * the context should be loaded.
-	 * @return The security context which should be used for the current request, never
-	 * null.
+	 * 获得当前安全上下文
 	 */
 	SecurityContext loadContext(HttpRequestResponseHolder requestResponseHolder);
 
 	/**
-	 * Stores the security context on completion of a request.
+	 * 存储安全上下文
 	 * @param context the non-null context which was obtained from the holder.
 	 * @param request
 	 * @param response
@@ -67,7 +44,7 @@ public interface SecurityContextRepository {
 	void saveContext(SecurityContext context, HttpServletRequest request, HttpServletResponse response);
 
 	/**
-	 * Allows the repository to be queried as to whether it contains a security context
+	 * 查看安全存储库是否包含当前用户的安全上下文
 	 * for the current request.
 	 * @param request the current request
 	 * @return true if a context is found for the request, false otherwise
