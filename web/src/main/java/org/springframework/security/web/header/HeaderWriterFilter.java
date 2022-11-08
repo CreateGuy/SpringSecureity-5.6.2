@@ -33,25 +33,18 @@ import org.springframework.util.Assert;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * Filter implementation to add headers to the current response. Can be useful to add
- * certain headers which enable browser protection. Like X-Frame-Options, X-XSS-Protection
- * and X-Content-Type-Options.
- *
- * @author Marten Deinum
- * @author Josh Cummings
- * @author Ankur Pathak
- * @since 3.2
+ * 向响应头写入消息
+ * 比如：添加启用浏览器保护的某些头是很有用的。比如X-Frame-Options, X-XSS-Protection和X-Content-Type-Options。
  */
 public class HeaderWriterFilter extends OncePerRequestFilter {
 
 	/**
-	 * The {@link HeaderWriter} to write headers to the response.
-	 * {@see CompositeHeaderWriter}
+	 * 头部写入器
 	 */
 	private final List<HeaderWriter> headerWriters;
 
 	/**
-	 * Indicates whether to write the headers at the beginning of the request.
+	 * 是否在请求的开始就写入请求头
 	 */
 	private boolean shouldWriteHeadersEagerly = false;
 
@@ -68,6 +61,7 @@ public class HeaderWriterFilter extends OncePerRequestFilter {
 	@Override
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
 			throws ServletException, IOException {
+		//是否在请求的开始就写请求头
 		if (this.shouldWriteHeadersEagerly) {
 			doHeadersBefore(request, response, filterChain);
 		}
@@ -76,14 +70,31 @@ public class HeaderWriterFilter extends OncePerRequestFilter {
 		}
 	}
 
+	/**
+	 * 在请求开始就往响应消息写响应头
+	 * @param request
+	 * @param response
+	 * @param filterChain
+	 * @throws IOException
+	 * @throws ServletException
+	 */
 	private void doHeadersBefore(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
 			throws IOException, ServletException {
 		writeHeaders(request, response);
 		filterChain.doFilter(request, response);
 	}
 
+	/**
+	 * 在请求结束后才往响应消息写响应头
+	 * @param request
+	 * @param response
+	 * @param filterChain
+	 * @throws IOException
+	 * @throws ServletException
+	 */
 	private void doHeadersAfter(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
 			throws IOException, ServletException {
+		//将response包装为HeaderWriterResponse是为了在执行过程中就可以进行头部写入
 		HeaderWriterResponse headerWriterResponse = new HeaderWriterResponse(request, response);
 		HeaderWriterRequest headerWriterRequest = new HeaderWriterRequest(request, headerWriterResponse);
 		try {
@@ -110,6 +121,9 @@ public class HeaderWriterFilter extends OncePerRequestFilter {
 		this.shouldWriteHeadersEagerly = shouldWriteHeadersEagerly;
 	}
 
+	/**
+	 * 对Response进行包装，其目的是为了在请求在执行过程中就可以进行头部写入
+	 */
 	class HeaderWriterResponse extends OnCommittedResponseWrapper {
 
 		private final HttpServletRequest request;
@@ -119,6 +133,10 @@ public class HeaderWriterFilter extends OncePerRequestFilter {
 			this.request = request;
 		}
 
+		/**
+		 * 此方法可以直接调用
+		 * 比如说Controller中执行response.(include,sendError, redirect, flushBuffer)的时候，此方法就会执行
+		 */
 		@Override
 		protected void onResponseCommitted() {
 			writeHeaders();

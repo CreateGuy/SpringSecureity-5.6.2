@@ -32,10 +32,7 @@ import org.springframework.util.Assert;
 import org.springframework.web.util.WebUtils;
 
 /**
- * A base class for performing session fixation protection.
- *
- * @author Rob Winch
- * @since 3.2
+ * 防止会话固定保护的基类
  */
 public abstract class AbstractSessionFixationProtectionStrategy
 		implements SessionAuthenticationStrategy, ApplicationEventPublisherAware {

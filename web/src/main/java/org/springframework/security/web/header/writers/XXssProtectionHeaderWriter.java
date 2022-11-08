@@ -22,13 +22,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.springframework.security.web.header.HeaderWriter;
 
 /**
- * Renders the <a href=
- * "https://blogs.msdn.com/b/ieinternals/archive/2011/01/31/controlling-the-internet-explorer-xss-filter-with-the-x-xss-protection-http-header.aspx"
- * >X-XSS-Protection header</a>.
- *
- * @author Rob Winch
- * @author Ankur Pathak
- * @since 3.2
+ * 为了防止XSS(跨域脚本攻击)，而向响应头写入X-XSS-Protection
  */
 public final class XXssProtectionHeaderWriter implements HeaderWriter {
 

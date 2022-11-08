@@ -98,12 +98,26 @@ public class ReferrerPolicyHeaderWriter implements HeaderWriter {
 		}
 	}
 
+	/**
+	 * Referrer：用以指定该请求是从哪个页面跳转页来的
+	 * 这个枚举是用来表示什么样的请求才会传递Referrer
+	 * 参考链接：https://www.jianshu.com/p/074d8261a1d7
+	 */
 	public enum ReferrerPolicy {
 
+		/**
+		 * 不传递 Referrer 报头的值
+		 */
 		NO_REFERRER("no-referrer"),
 
+		/**
+		 * 当发生降级（比如从 https:// 跳转到 http:// ）时，不传递 Referrer 报头
+		 */
 		NO_REFERRER_WHEN_DOWNGRADE("no-referrer-when-downgrade"),
 
+		/**
+		 * 同源才传递 Referrer 报头
+		 */
 		SAME_ORIGIN("same-origin"),
 
 		ORIGIN("origin"),
