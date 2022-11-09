@@ -34,6 +34,9 @@ public final class CsrfAuthenticationStrategy implements SessionAuthenticationSt
 
 	private final Log logger = LogFactory.getLog(getClass());
 
+	/**
+	 * CsrfToken的存储策略
+	 */
 	private final CsrfTokenRepository csrfTokenRepository;
 
 	/**
@@ -45,14 +48,26 @@ public final class CsrfAuthenticationStrategy implements SessionAuthenticationSt
 		this.csrfTokenRepository = csrfTokenRepository;
 	}
 
+	/**
+	 * 认证成功后，更换新的csrfToken
+	 * @param authentication 创建的正确的认证对象，而不是由用户输入的用户名和密码构建的
+	 * @param request
+	 * @param response
+	 * @throws SessionAuthenticationException
+	 */
 	@Override
 	public void onAuthentication(Authentication authentication, HttpServletRequest request,
 			HttpServletResponse response) throws SessionAuthenticationException {
 		boolean containsToken = this.csrfTokenRepository.loadToken(request) != null;
+		//如果原来没有csrfToken，那也就不需要换新的csrfToken
 		if (containsToken) {
+			//清空原csrfToken
 			this.csrfTokenRepository.saveToken(null, request, response);
 			CsrfToken newToken = this.csrfTokenRepository.generateToken(request);
+			//保存新csrfToken
 			this.csrfTokenRepository.saveToken(newToken, request, response);
+			//将CsrfToken给调用方
+			//request中的属性会被SpringMvc的Model操作
 			request.setAttribute(CsrfToken.class.getName(), newToken);
 			request.setAttribute(newToken.getParameterName(), newToken);
 			this.logger.debug("Replaced CSRF Token");

@@ -26,24 +26,12 @@ import org.springframework.util.Assert;
 
 /**
  * 在身份认证成功后，用于向SessionInformation注册中心 注册一个对应的SessionInformation
- * <p>
- * {@link RegisterSessionAuthenticationStrategy} is typically used in combination with
- * {@link CompositeSessionAuthenticationStrategy} and
- * {@link ConcurrentSessionControlAuthenticationStrategy}, but can be used on its own if
- * tracking of sessions is desired but no need to control concurrency.
- *
- * <p>
- * NOTE: When using a {@link SessionRegistry} it is important that all sessions (including
- * timed out sessions) are removed. This is typically done by adding
- * {@link HttpSessionEventPublisher}.
- *
- * @author Luke Taylor
- * @author Rob Winch
- * @since 3.2
- * @see CompositeSessionAuthenticationStrategy
  */
 public class RegisterSessionAuthenticationStrategy implements SessionAuthenticationStrategy {
 
+	/**
+	 * SessionInformation注册中心
+	 */
 	private final SessionRegistry sessionRegistry;
 
 	/**
@@ -56,8 +44,7 @@ public class RegisterSessionAuthenticationStrategy implements SessionAuthenticat
 	}
 
 	/**
-	 * In addition to the steps from the superclass, the sessionRegistry will be updated
-	 * with the new session information.
+	 * 为当前会话注册一个新的SessionInformation
 	 */
 	@Override
 	public void onAuthentication(Authentication authentication, HttpServletRequest request,

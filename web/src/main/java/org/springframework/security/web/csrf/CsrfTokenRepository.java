@@ -21,13 +21,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
 /**
- * An API to allow changing the method in which the expected {@link CsrfToken} is
- * associated to the {@link HttpServletRequest}. For example, it may be stored in
- * {@link HttpSession}.
- *
- * @author Rob Winch
- * @since 3.2
- * @see HttpSessionCsrfTokenRepository
+ * CsrfToken的存储策略，有HttpSession和Cookie两种，但默认用的lazy+Session
  */
 public interface CsrfTokenRepository {
 
