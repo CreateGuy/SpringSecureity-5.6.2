@@ -25,9 +25,7 @@ import org.springframework.security.web.session.HttpSessionEventPublisher;
 import org.springframework.util.Assert;
 
 /**
- * Strategy used to register a user with the {@link SessionRegistry} after successful
- * {@link Authentication}.
- *
+ * 在身份认证成功后，用于向SessionInformation注册中心 注册一个对应的SessionInformation
  * <p>
  * {@link RegisterSessionAuthenticationStrategy} is typically used in combination with
  * {@link CompositeSessionAuthenticationStrategy} and

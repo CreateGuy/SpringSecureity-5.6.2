@@ -26,8 +26,7 @@ import javax.servlet.http.HttpSession;
 import org.springframework.core.log.LogMessage;
 
 /**
- * Uses {@code HttpServletRequest.invalidate()} to protect against session fixation
- * attacks.
+ * 使用HttpServletRequest.invalidate()来防止会话固定攻击
  * <p>
  * Creates a new session for the newly authenticated user if they already have a session
  * (as a defence against session-fixation protection attacks), and copies their session
@@ -60,8 +59,7 @@ import org.springframework.core.log.LogMessage;
 public class SessionFixationProtectionStrategy extends AbstractSessionFixationProtectionStrategy {
 
 	/**
-	 * Indicates that the session attributes of an existing session should be migrated to
-	 * the new session. Defaults to <code>true</code>.
+	 * 是否将现有Session的属性迁移至新Session
 	 */
 	boolean migrateSessionAttributes = true;
 
@@ -124,15 +122,6 @@ public class SessionFixationProtectionStrategy extends AbstractSessionFixationPr
 		return attributesToMigrate;
 	}
 
-	/**
-	 * Defines whether attributes should be migrated to a new session or not. Has no
-	 * effect if you override the {@code extractAttributes} method.
-	 * <p>
-	 * Attributes used by Spring Security (to store cached requests, for example) will
-	 * still be retained by default, even if you set this value to {@code false}.
-	 * @param migrateSessionAttributes whether the attributes from the session should be
-	 * transferred to the new, authenticated session.
-	 */
 	public void setMigrateSessionAttributes(boolean migrateSessionAttributes) {
 		this.migrateSessionAttributes = migrateSessionAttributes;
 	}

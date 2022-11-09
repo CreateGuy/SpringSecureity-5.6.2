@@ -31,8 +31,8 @@ import org.springframework.security.web.util.matcher.AnyRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 
 /**
- * 在HttpSession中存储SavedRequest的请求缓冲器
- * 	也是SpringSecurity默认的请求缓存器策略
+ * 在HttpSession中存储某次请求的缓冲器
+ * 也是SpringSecurity默认的请求缓存器策略
  * */
 public class HttpSessionRequestCache implements RequestCache {
 

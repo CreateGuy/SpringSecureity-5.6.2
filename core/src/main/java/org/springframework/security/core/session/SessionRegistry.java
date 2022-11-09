@@ -19,9 +19,8 @@ package org.springframework.security.core.session;
 import java.util.List;
 
 /**
- * Maintains a registry of <code>SessionInformation</code> instances.
- *
- * @author Ben Alex
+ * SessionInformation注册中心
+ * @see SessionRegistryImpl
  */
 public interface SessionRegistry {
 

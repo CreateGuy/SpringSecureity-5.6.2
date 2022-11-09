@@ -29,12 +29,22 @@ public class SessionInformation implements Serializable {
 
 	private static final long serialVersionUID = SpringSecurityCoreVersion.SERIAL_VERSION_UID;
 
+	/**
+	 * 最后一次操作时间
+	 */
 	private Date lastRequest;
 
+	/**
+	 * 用户的主题，一般是User对象
+	 */
 	private final Object principal;
 
 	private final String sessionId;
 
+	/**
+	 * 标记当前SessionInformation是否已经过期
+	 * 一般是由于并发处理session的{@link ConcurrentSessionControlAuthenticationStrategy}设置的
+	 */
 	private boolean expired = false;
 
 	public SessionInformation(Object principal, String sessionId, Date lastRequest) {
@@ -67,7 +77,7 @@ public class SessionInformation implements Serializable {
 	}
 
 	/**
-	 * Refreshes the internal lastRequest to the current date and time.
+	 * 更新最后一次操作时间
 	 */
 	public void refreshLastRequest() {
 		this.lastRequest = new Date();

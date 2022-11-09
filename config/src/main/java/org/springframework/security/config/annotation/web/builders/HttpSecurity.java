@@ -2962,7 +2962,14 @@ public final class HttpSecurity extends AbstractConfiguredSecurityBuilder<Defaul
 	}
 
 	/**
-	 * 将过滤器添加到httpSecurity中
+	 * <ul>
+	 *     <li>
+	 *        将过滤器添加到httpSecurity中
+	 *     </li>
+	 *     <li>
+	 *         最终是会根据这个过滤器集合创建{@link DefaultSecurityFilterChain}
+	 *     </li>
+	 * </ul>
 	 * @param filter 过滤器
 	 * @return
 	 */

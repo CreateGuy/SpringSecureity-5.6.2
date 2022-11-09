@@ -191,11 +191,9 @@ public class User implements UserDetails, CredentialsContainer {
 	}
 
 	/**
-	 * Returns {@code true} if the supplied object is a {@code User} instance with the
-	 * same {@code username} value.
-	 * <p>
-	 * In other words, the objects are equal if they have the same username, representing
-	 * the same principal.
+	 * 判断两个用户名是否相同
+	 * 比如说在SessionRegistryImpl(session注册中心)中有一个叫principals的map，key正是User，value是SessionId
+	 * 而map比较key就会用equals方法，所以这样principals就能存储某个用户对应的所有sessionId了
 	 */
 	@Override
 	public boolean equals(Object obj) {
