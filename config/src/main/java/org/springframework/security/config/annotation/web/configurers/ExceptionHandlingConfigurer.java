@@ -50,10 +50,21 @@ public final class ExceptionHandlingConfigurer<H extends HttpSecurityBuilder<H>>
 	 */
 	private AccessDeniedHandler accessDeniedHandler;
 
+	/**
+	 * 存放不同请求路径的的身份入口点，通常是由于认证过滤器的配置类放入的，比如说 LoginUrlAuthenticationEntryPoint
+	 * <ul>
+	 *     <li>
+	 *         key：请求匹配器，比如说匹配/user
+	 *     </li>
+	 *     <li>
+	 *         value：对应的访问被拒绝的处理器
+	 *     </li>
+	 * </ul>
+	 */
 	private LinkedHashMap<RequestMatcher, AuthenticationEntryPoint> defaultEntryPointMappings = new LinkedHashMap<>();
 
 	/**
-	 * 存放不同请求路径的的访问被拒绝的多个处理器，上同，不过是存放身份验证入口点
+	 * 存放不同请求路径的的访问被拒绝的多个处理器
 	 * key：请求匹配器，比如说匹配/user
 	 * value：对应的访问被拒绝的处理器
 	 */

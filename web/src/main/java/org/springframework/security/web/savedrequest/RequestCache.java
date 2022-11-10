@@ -48,7 +48,7 @@ public interface RequestCache {
 	HttpServletRequest getMatchingRequest(HttpServletRequest request, HttpServletResponse response);
 
 	/**
-	 * 删除缓存的reguest。
+	 * 删除缓存的请求缓存
 	 * @param request the current request, allowing access to the cache.
 	 */
 	void removeRequest(HttpServletRequest request, HttpServletResponse response);

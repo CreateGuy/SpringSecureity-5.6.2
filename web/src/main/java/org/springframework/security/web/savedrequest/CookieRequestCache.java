@@ -35,20 +35,25 @@ import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.web.util.WebUtils;
 
 /**
- * An Implementation of {@code RequestCache} which saves the original request URI in a
- * cookie.
- *
- * @author Zeeshan Adnan
- * @since 5.4
+ * 请求缓存器的一个实现，是将请求保存到Cookie中
  */
 public class CookieRequestCache implements RequestCache {
 
+	/**
+	 * 请求缓存器
+	 */
 	private RequestMatcher requestMatcher = AnyRequestMatcher.INSTANCE;
 
 	protected final Log logger = LogFactory.getLog(this.getClass());
 
+	/**
+	 * 请求缓存放在Cookie中的key
+	 */
 	private static final String COOKIE_NAME = "REDIRECT_URI";
 
+	/**
+	 * Cookie过期时间
+	 */
 	private static final int COOKIE_MAX_AGE = -1;
 
 	@Override
@@ -57,25 +62,33 @@ public class CookieRequestCache implements RequestCache {
 			this.logger.debug("Request not saved as configured RequestMatcher did not match");
 			return;
 		}
+		//构建重定向之前的URL
 		String redirectUrl = UrlUtils.buildFullRequestUrl(request);
+		//可以看出保存的是一个Base64
 		Cookie savedCookie = new Cookie(COOKIE_NAME, encodeCookie(redirectUrl));
 		savedCookie.setMaxAge(COOKIE_MAX_AGE);
 		savedCookie.setSecure(request.isSecure());
 		savedCookie.setPath(getCookiePath(request));
+		//设置客户端不能访问当前Cookie
 		savedCookie.setHttpOnly(true);
 		response.addCookie(savedCookie);
 	}
 
 	@Override
 	public SavedRequest getRequest(HttpServletRequest request, HttpServletResponse response) {
+		//获得保存的指定Cookie
 		Cookie savedRequestCookie = WebUtils.getCookie(request, COOKIE_NAME);
 		if (savedRequestCookie == null) {
 			return null;
 		}
+		//获得重定向前的原URL
 		String originalURI = decodeCookie(savedRequestCookie.getValue());
+		//注意：Cookie是没办法像HttpSession一样保存其他Cookie，local，header等等参数
+		//因为Cookie只能根据URL构建原请求
 		UriComponents uriComponents = UriComponentsBuilder.fromUriString(originalURI).build();
 		DefaultSavedRequest.Builder builder = new DefaultSavedRequest.Builder();
 		int port = getPort(uriComponents);
+		//包装为新的Request
 		return builder.setScheme(uriComponents.getScheme()).setServerName(uriComponents.getHost())
 				.setRequestURI(uriComponents.getPath()).setQueryString(uriComponents.getQuery()).setServerPort(port)
 				.setMethod(request.getMethod()).build();
@@ -126,6 +139,16 @@ public class CookieRequestCache implements RequestCache {
 		return (!StringUtils.isEmpty(contextPath)) ? contextPath : "/";
 	}
 
+	/**
+	 * 确定当前请求是否匹配缓存的请求
+	 * <li>
+	 *     与HttpSessionRequestCache的matchesSavedRequest方法相比，没有那么严格
+	 *     只匹配了URL
+	 * </li>
+	 * @param request
+	 * @param savedRequest
+	 * @return
+	 */
 	private boolean matchesSavedRequest(HttpServletRequest request, SavedRequest savedRequest) {
 		if (savedRequest == null) {
 			return false;

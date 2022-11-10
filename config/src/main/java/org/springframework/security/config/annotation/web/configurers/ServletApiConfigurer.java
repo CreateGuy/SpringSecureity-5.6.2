@@ -33,30 +33,7 @@ import org.springframework.security.web.authentication.logout.LogoutHandler;
 import org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter;
 
 /**
- * Implements select methods from the {@link HttpServletRequest} using the
- * {@link SecurityContext} from the {@link SecurityContextHolder}.
- *
- * <h2>Security Filters</h2>
- *
- * The following Filters are populated
- *
- * <ul>
- * <li>{@link SecurityContextHolderAwareRequestFilter}</li>
- * </ul>
- *
- * <h2>Shared Objects Created</h2>
- *
- * No shared objects are created.
- *
- * <h2>Shared Objects Used</h2>
- *
- * <ul>
- * <li>{@link AuthenticationTrustResolver} is optionally used to populate the
- * {@link SecurityContextHolderAwareRequestFilter}</li>
- * </ul>
- *
- * @author Rob Winch
- * @since 3.2
+ * 请求包装配置类
  */
 public final class ServletApiConfigurer<H extends HttpSecurityBuilder<H>>
 		extends AbstractHttpConfigurer<ServletApiConfigurer<H>, H> {
@@ -78,18 +55,27 @@ public final class ServletApiConfigurer<H extends HttpSecurityBuilder<H>>
 	@Override
 	@SuppressWarnings("unchecked")
 	public void configure(H http) {
+		//设置局部认证管理器
 		this.securityContextRequestFilter.setAuthenticationManager(http.getSharedObject(AuthenticationManager.class));
+
+		//设置身份认证入口点
 		ExceptionHandlingConfigurer<H> exceptionConf = http.getConfigurer(ExceptionHandlingConfigurer.class);
 		AuthenticationEntryPoint authenticationEntryPoint = (exceptionConf != null)
 				? exceptionConf.getAuthenticationEntryPoint(http) : null;
 		this.securityContextRequestFilter.setAuthenticationEntryPoint(authenticationEntryPoint);
+
+		//设置登出处理器
 		LogoutConfigurer<H> logoutConf = http.getConfigurer(LogoutConfigurer.class);
 		List<LogoutHandler> logoutHandlers = (logoutConf != null) ? logoutConf.getLogoutHandlers() : null;
 		this.securityContextRequestFilter.setLogoutHandlers(logoutHandlers);
+
+		//设置认证对象解析器
 		AuthenticationTrustResolver trustResolver = http.getSharedObject(AuthenticationTrustResolver.class);
 		if (trustResolver != null) {
 			this.securityContextRequestFilter.setTrustResolver(trustResolver);
 		}
+
+		//设置角色前缀
 		ApplicationContext context = http.getSharedObject(ApplicationContext.class);
 		if (context != null) {
 			String[] grantedAuthorityDefaultsBeanNames = context.getBeanNamesForType(GrantedAuthorityDefaults.class);

@@ -31,6 +31,9 @@ public class AnonymousAuthenticationToken extends AbstractAuthenticationToken im
 
 	private final Object principal;
 
+	/**
+	 * key的hash，通常用于判断是否是内部创建的匿名认证对象
+	 */
 	private final int keyHash;
 
 	/**

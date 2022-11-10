@@ -50,11 +50,13 @@ import org.springframework.util.Assert;
  */
 public class SecurityContextHolderAwareRequestWrapper extends HttpServletRequestWrapper {
 
+	/**
+	 * 认证对象解析器
+	 */
 	private final AuthenticationTrustResolver trustResolver;
 
 	/**
-	 * The prefix passed by the filter. It will be prepended to any supplied role values
-	 * before comparing it with the roles obtained from the security context.
+	 * 角色前缀
 	 */
 	private final String rolePrefix;
 
@@ -84,8 +86,8 @@ public class SecurityContextHolderAwareRequestWrapper extends HttpServletRequest
 	}
 
 	/**
-	 * Obtain the current active <code>Authentication</code>
-	 * @return the authentication object or <code>null</code>
+	 * 获得认证对象
+	 * 注意：匿名用户视为未登陆
 	 */
 	private Authentication getAuthentication() {
 		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -93,10 +95,8 @@ public class SecurityContextHolderAwareRequestWrapper extends HttpServletRequest
 	}
 
 	/**
-	 * Returns the principal's name, as obtained from the
-	 * <code>SecurityContextHolder</code>. Properly handles both <code>String</code>-based
-	 * and <code>UserDetails</code>-based principals.
-	 * @return the username or <code>null</code> if unavailable
+	 * 返回用户名称
+	 * 一般情况Principal是UserDetails或者其子类
 	 */
 	@Override
 	public String getRemoteUser() {
@@ -114,9 +114,8 @@ public class SecurityContextHolderAwareRequestWrapper extends HttpServletRequest
 	}
 
 	/**
-	 * Returns the <code>Authentication</code> (which is a subclass of
-	 * <code>Principal</code>), or <code>null</code> if unavailable.
-	 * @return the <code>Authentication</code>, or <code>null</code>
+	 * 获得认证对象中主体(Principal)
+	 * 一般情况都是User或者其子类
 	 */
 	@Override
 	public Principal getUserPrincipal() {
@@ -127,8 +126,14 @@ public class SecurityContextHolderAwareRequestWrapper extends HttpServletRequest
 		return auth;
 	}
 
+	/**
+	 * 判断当前用户是否拥有某个角色
+	 * @param role
+	 * @return
+	 */
 	private boolean isGranted(String role) {
 		Authentication auth = getAuthentication();
+		//添加角色前缀
 		if (this.rolePrefix != null && role != null && !role.startsWith(this.rolePrefix)) {
 			role = this.rolePrefix + role;
 		}

@@ -37,21 +37,32 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.util.Assert;
 import org.springframework.web.filter.GenericFilterBean;
 
+
 /**
- * Detects if there is no {@code Authentication} object in the
- * {@code SecurityContextHolder}, and populates it with one if needed.
- *
- * @author Ben Alex
- * @author Luke Taylor
+ * 匿名认证过滤器
+ * 判断是否存在认证对象，如果没有就创建一个
  */
 public class AnonymousAuthenticationFilter extends GenericFilterBean implements InitializingBean {
 
+	/**
+	 * 认证信息详情源
+	 * 主要是构建详细信息的，默认这个就是获取远程地址+SessionId的
+	 */
 	private AuthenticationDetailsSource<HttpServletRequest, ?> authenticationDetailsSource = new WebAuthenticationDetailsSource();
 
+	/**
+	 * 创建匿名认证对象所需的key
+	 */
 	private String key;
 
+	/**
+	 * 匿名认证对象的principal，默认是一个字符串
+	 */
 	private Object principal;
 
+	/**
+	 * 匿名认证对象的权限
+	 */
 	private List<GrantedAuthority> authorities;
 
 	/**
@@ -87,10 +98,14 @@ public class AnonymousAuthenticationFilter extends GenericFilterBean implements 
 	@Override
 	public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain)
 			throws IOException, ServletException {
+		//当前会话没有认证对象的时候，创建一个匿名认证对象
 		if (SecurityContextHolder.getContext().getAuthentication() == null) {
+			//创建匿名认证对象
 			Authentication authentication = createAuthentication((HttpServletRequest) req);
+			//创建安全上下文
 			SecurityContext context = SecurityContextHolder.createEmptyContext();
 			context.setAuthentication(authentication);
+			//设置到线程级别的安全上下文策略中
 			SecurityContextHolder.setContext(context);
 			if (this.logger.isTraceEnabled()) {
 				this.logger.trace(LogMessage.of(() -> "Set SecurityContextHolder to "
@@ -109,6 +124,11 @@ public class AnonymousAuthenticationFilter extends GenericFilterBean implements 
 		chain.doFilter(req, res);
 	}
 
+	/**
+	 * 创建匿名认证对象
+	 * @param request
+	 * @return
+	 */
 	protected Authentication createAuthentication(HttpServletRequest request) {
 		AnonymousAuthenticationToken token = new AnonymousAuthenticationToken(this.key, this.principal,
 				this.authorities);

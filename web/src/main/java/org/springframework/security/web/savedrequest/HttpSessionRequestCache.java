@@ -81,6 +81,11 @@ public class HttpSessionRequestCache implements RequestCache {
 		return (session != null) ? (SavedRequest) session.getAttribute(this.sessionAttrName) : null;
 	}
 
+	/**
+	 * 从HttpSession中删除请求缓存
+	 * @param currentRequest
+	 * @param response
+	 */
 	@Override
 	public void removeRequest(HttpServletRequest currentRequest, HttpServletResponse response) {
 		HttpSession session = currentRequest.getSession(false);
@@ -90,13 +95,22 @@ public class HttpSessionRequestCache implements RequestCache {
 		}
 	}
 
+	/**
+	 * 如果与当前请求匹配，则返回保存的请求的包装器，保存的请求应该从缓存中删除。
+	 * @param request
+	 * @param response
+	 * @return
+	 */
 	@Override
 	public HttpServletRequest getMatchingRequest(HttpServletRequest request, HttpServletResponse response) {
+		//获得保存的请求缓存
 		SavedRequest saved = getRequest(request, response);
+		//为空就不包装
 		if (saved == null) {
 			this.logger.trace("No saved request");
 			return null;
 		}
+		//确定当前请求是否匹配缓存的请求
 		if (!matchesSavedRequest(request, saved)) {
 			if (this.logger.isTraceEnabled()) {
 				this.logger.trace(LogMessage.format("Did not match request %s to the saved one %s",
@@ -104,18 +118,29 @@ public class HttpSessionRequestCache implements RequestCache {
 			}
 			return null;
 		}
+		//移除缓存的请求
 		removeRequest(request, response);
 		if (this.logger.isDebugEnabled()) {
 			this.logger.debug(LogMessage.format("Loaded matching saved request %s", saved.getRedirectUrl()));
 		}
+		//进行包装
 		return new SavedRequestAwareWrapper(saved, request);
 	}
 
+	/**
+	 * 确定当前请求是否匹配缓存的请求
+	 * @param request
+	 * @param savedRequest
+	 * @return
+	 */
 	private boolean matchesSavedRequest(HttpServletRequest request, SavedRequest savedRequest) {
+		//一般保存的就是这个类型
 		if (savedRequest instanceof DefaultSavedRequest) {
 			DefaultSavedRequest defaultSavedRequest = (DefaultSavedRequest) savedRequest;
+			//确定当前请求是否匹配缓存的请求
 			return defaultSavedRequest.doesRequestMatch(request, this.portResolver);
 		}
+		//构建完整的请求
 		String currentUrl = UrlUtils.buildFullRequestUrl(request);
 		return savedRequest.getRedirectUrl().equals(currentUrl);
 	}
