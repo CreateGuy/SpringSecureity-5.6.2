@@ -68,34 +68,81 @@ public abstract class AbstractRememberMeServices
 
 	public static final String DEFAULT_PARAMETER = "remember-me";
 
+	/**
+	 * 默认记住我令牌过期时间
+	 */
 	public static final int TWO_WEEKS_S = 1209600;
 
+	/**
+	 * 记住我令牌中的几个参数的分隔符
+	 */
 	private static final String DELIMITER = ":";
 
 	protected final Log logger = LogFactory.getLog(getClass());
 
 	protected MessageSourceAccessor messages = SpringSecurityMessageSource.getAccessor();
 
+	/**
+	 * 用户详情服务
+	 */
 	private UserDetailsService userDetailsService;
 
+	/**
+	 * UserDetails的检查器
+	 */
 	private UserDetailsChecker userDetailsChecker = new AccountStatusUserDetailsChecker();
 
+	/**
+	 * 认证信息详情源
+	 */
 	private AuthenticationDetailsSource<HttpServletRequest, ?> authenticationDetailsSource = new WebAuthenticationDetailsSource();
 
+	/**
+	 * 记住我令牌名称
+	 */
 	private String cookieName = SPRING_SECURITY_REMEMBER_ME_COOKIE_KEY;
 
+	/**
+	 * 指定记住我参令牌可访问的域名
+	 */
 	private String cookieDomain;
 
+	/**
+	 * 一般情况是登录页中的是否开启记住我功能的标志位
+	 */
 	private String parameter = DEFAULT_PARAMETER;
 
+	/**
+	 * 是否需要携带记住我令牌
+	 * <url>
+	 *     <li>
+	 *         true：都携带记住我令牌
+	 *     </li>
+	 *     <li>
+	 *         false：看是否携带了记住我参数
+	 *     </li>
+	 * </url>
+	 */
 	private boolean alwaysRemember;
 
+	/**
+	 * 生成记住我令牌的秘钥
+	 */
 	private String key;
 
+	/**
+	 * 记住我令牌过期时间
+	 */
 	private int tokenValiditySeconds = TWO_WEEKS_S;
 
+	/**
+	 * 为true时必须通过https请求才能携带cookie中的信息
+	 */
 	private Boolean useSecureCookie = null;
 
+	/**
+	 * 权限映射接口
+	 */
 	private GrantedAuthoritiesMapper authoritiesMapper = new NullAuthoritiesMapper();
 
 	protected AbstractRememberMeServices(String key, UserDetailsService userDetailsService) {
@@ -112,22 +159,21 @@ public abstract class AbstractRememberMeServices
 	}
 
 	/**
-	 * Template implementation which locates the Spring Security cookie, decodes it into a
-	 * delimited array of tokens and submits it to subclasses for processing via the
-	 * <tt>processAutoLoginCookie</tt> method.
-	 * <p>
-	 * The returned username is then used to load the UserDetails object for the user,
-	 * which in turn is used to create a valid authentication token.
+	 * 模板实现，它定位Spring Security cookie，将其解码为带分隔符的令牌数组
+	 * 并通过processAutoLoginCookie方法将其提交给子类进行处理。然后使用返回的用户名为用户加载UserDetails对象，该对象又用于创建有效的身份验证令牌。
 	 */
 	@Override
 	public final Authentication autoLogin(HttpServletRequest request, HttpServletResponse response) {
+		//获取记住我令牌
 		String rememberMeCookie = extractRememberMeCookie(request);
 		if (rememberMeCookie == null) {
 			return null;
 		}
 		this.logger.debug("Remember-me cookie detected");
+		//记住我令牌不能为空
 		if (rememberMeCookie.length() == 0) {
 			this.logger.debug("Cookie was empty");
+			//将生存时间设置为0，以禁用记住我认证
 			cancelCookie(request, response);
 			return null;
 		}
@@ -159,11 +205,7 @@ public abstract class AbstractRememberMeServices
 	}
 
 	/**
-	 * Locates the Spring Security remember me cookie in the request and returns its
-	 * value. The cookie is searched for by name and also by matching the context path to
-	 * the cookie path.
-	 * @param request the submitted request which is to be authenticated
-	 * @return the cookie value (if present), null otherwise.
+	 * 获取记住我令牌
 	 */
 	protected String extractRememberMeCookie(HttpServletRequest request) {
 		Cookie[] cookies = request.getCookies();
@@ -198,26 +240,29 @@ public abstract class AbstractRememberMeServices
 	}
 
 	/**
-	 * Decodes the cookie and splits it into a set of token strings using the ":"
-	 * delimiter.
-	 * @param cookieValue the value obtained from the submitted cookie
-	 * @return the array of tokens.
-	 * @throws InvalidCookieException if the cookie was not base64 encoded.
+	 * 解码记住我令牌并使用 “:” 分隔符将其拆分为一组令牌字符串
+	 * @param cookieValue 记住我令牌，详情见encodeCookie()方法的介绍
+	 * @return
+	 * @throws InvalidCookieException
 	 */
 	protected String[] decodeCookie(String cookieValue) throws InvalidCookieException {
+		//默认都是能够整除4的，不懂
 		for (int j = 0; j < cookieValue.length() % 4; j++) {
 			cookieValue = cookieValue + "=";
 		}
 		String cookieAsPlainText;
 		try {
+			//先尝试按照Base64解码出来
 			cookieAsPlainText = new String(Base64.getDecoder().decode(cookieValue.getBytes()));
 		}
 		catch (IllegalArgumentException ex) {
 			throw new InvalidCookieException("Cookie token was not Base64 encoded; value was '" + cookieValue + "'");
 		}
+		//按照Base64解码出来,并用:作为分隔符
 		String[] tokens = StringUtils.delimitedListToStringArray(cookieAsPlainText, DELIMITER);
 		for (int i = 0; i < tokens.length; i++) {
 			try {
+				//防止中文乱码
 				tokens[i] = URLDecoder.decode(tokens[i], StandardCharsets.UTF_8.toString());
 			}
 			catch (UnsupportedEncodingException ex) {
@@ -228,24 +273,28 @@ public abstract class AbstractRememberMeServices
 	}
 
 	/**
-	 * Inverse operation of decodeCookie.
-	 * @param cookieTokens the tokens to be encoded.
-	 * @return base64 encoding of the tokens concatenated with the ":" delimiter.
+	 * 记住我令牌的加密
+	 * @param cookieTokens 是用户+过期时间戳+签名组成的数组
+	 *                     签名又是通过 用MD5将过期时间戳+用户名+密码+秘钥进行加密得到的
+	 * @return
 	 */
 	protected String encodeCookie(String[] cookieTokens) {
 		StringBuilder sb = new StringBuilder();
 		for (int i = 0; i < cookieTokens.length; i++) {
 			try {
+				//是为了解决中文乱码的问题
 				sb.append(URLEncoder.encode(cookieTokens[i], StandardCharsets.UTF_8.toString()));
 			}
 			catch (UnsupportedEncodingException ex) {
 				this.logger.error(ex.getMessage(), ex);
 			}
+			//加上分隔符
 			if (i < cookieTokens.length - 1) {
 				sb.append(DELIMITER);
 			}
 		}
 		String value = sb.toString();
+		//再进行Base64加密
 		sb = new StringBuilder(new String(Base64.getEncoder().encode(value.getBytes())));
 		while (sb.charAt(sb.length() - 1) == '=') {
 			sb.deleteCharAt(sb.length() - 1);
@@ -317,8 +366,7 @@ public abstract class AbstractRememberMeServices
 	}
 
 	/**
-	 * Called from autoLogin to process the submitted persistent login cookie. Subclasses
-	 * should validate the cookie and perform any additional management required.
+	 * 交由子类去将记住我令牌转换为用户对象
 	 * @param cookieTokens the decoded and tokenized cookie value
 	 * @param request the request
 	 * @param response the response, to allow the cookie to be modified if required.
@@ -334,8 +382,7 @@ public abstract class AbstractRememberMeServices
 			HttpServletResponse response) throws RememberMeAuthenticationException, UsernameNotFoundException;
 
 	/**
-	 * Sets a "cancel cookie" (with maxAge = 0) on the response to disable persistent
-	 * logins.
+	 * 将生存时间设置为0，以禁用记住我认证
 	 */
 	protected void cancelCookie(HttpServletRequest request, HttpServletResponse response) {
 		this.logger.debug("Cancelling cookie");

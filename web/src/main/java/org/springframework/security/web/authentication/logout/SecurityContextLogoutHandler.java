@@ -30,35 +30,32 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.util.Assert;
 
 /**
- * Performs a logout by modifying the
- * {@link org.springframework.security.core.context.SecurityContextHolder}.
- * <p>
- * Will also invalidate the {@link HttpSession} if {@link #isInvalidateHttpSession()} is
- * {@code true} and the session is not {@code null}.
- * <p>
- * Will also remove the {@link Authentication} from the current {@link SecurityContext} if
- * {@link #clearAuthentication} is set to true (default).
- *
- * @author Ben Alex
- * @author Rob Winch
+ * 清空线程级别上下文的登出处理器
  */
 public class SecurityContextLogoutHandler implements LogoutHandler {
 
 	protected final Log logger = LogFactory.getLog(this.getClass());
 
+	/**
+	 * 是否应该在登出时 使Session无效
+	 */
 	private boolean invalidateHttpSession = true;
 
+	/**
+	 * 是否应该在登出时 清除认证对象
+	 */
 	private boolean clearAuthentication = true;
 
 	/**
-	 * Requires the request to be passed in.
-	 * @param request from which to obtain a HTTP session (cannot be null)
-	 * @param response not used (can be <code>null</code>)
-	 * @param authentication not used (can be <code>null</code>)
+	 * 清空当前用户的安全上下文
+	 * @param request the HTTP request
+	 * @param response the HTTP response
+	 * @param authentication the current principal details
 	 */
 	@Override
 	public void logout(HttpServletRequest request, HttpServletResponse response, Authentication authentication) {
 		Assert.notNull(request, "HttpServletRequest required");
+		//是否使Session无效
 		if (this.invalidateHttpSession) {
 			HttpSession session = request.getSession(false);
 			if (session != null) {
@@ -68,8 +65,12 @@ public class SecurityContextLogoutHandler implements LogoutHandler {
 				}
 			}
 		}
+
+		//清空当前用户的 线程级别的安全上下文
+		//HttpSession级别的在SecurityContextPersistenceFilter中会被清除
 		SecurityContext context = SecurityContextHolder.getContext();
 		SecurityContextHolder.clearContext();
+		//清空认证对象
 		if (this.clearAuthentication) {
 			context.setAuthentication(null);
 		}
@@ -80,10 +81,7 @@ public class SecurityContextLogoutHandler implements LogoutHandler {
 	}
 
 	/**
-	 * Causes the {@link HttpSession} to be invalidated when this {@link LogoutHandler} is
-	 * invoked. Defaults to true.
-	 * @param invalidateHttpSession true if you wish the session to be invalidated
-	 * (default) or false if it should not be.
+	 *
 	 */
 	public void setInvalidateHttpSession(boolean invalidateHttpSession) {
 		this.invalidateHttpSession = invalidateHttpSession;

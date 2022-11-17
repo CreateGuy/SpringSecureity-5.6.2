@@ -29,27 +29,31 @@ import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 /**
- * A logout handler which clears either - A defined list of cookie names, using the
- * context path as the cookie path OR - A given list of Cookies
- *
- * @author Luke Taylor
- * @author Onur Kagan Ozcan
- * @since 3.1
+ * 专用清除指定Cookie的登出处理器
+ * 方式1：将指定Cookie的值设置为空
+ * 方式2：将指定Cookie的生存时间设置为0
  */
 public final class CookieClearingLogoutHandler implements LogoutHandler {
 
 	private final List<Function<HttpServletRequest, Cookie>> cookiesToClear;
 
+	/**
+	 * 将指定Cookie的值设置为空
+	 * @param cookiesToClear 需要清除Cookie的名称
+	 */
 	public CookieClearingLogoutHandler(String... cookiesToClear) {
 		Assert.notNull(cookiesToClear, "List of cookies cannot be null");
 		List<Function<HttpServletRequest, Cookie>> cookieList = new ArrayList<>();
 		for (String cookieName : cookiesToClear) {
+			//添加清除函数
 			cookieList.add((request) -> {
+				//这里将指定名称的Cookie的Value设置为空
 				Cookie cookie = new Cookie(cookieName, null);
 				String contextPath = request.getContextPath();
 				String cookiePath = StringUtils.hasText(contextPath) ? contextPath : "/";
 				cookie.setPath(cookiePath);
 				cookie.setMaxAge(0);
+				//表明只能使用Https或者SSL
 				cookie.setSecure(request.isSecure());
 				return cookie;
 			});
@@ -58,8 +62,8 @@ public final class CookieClearingLogoutHandler implements LogoutHandler {
 	}
 
 	/**
-	 * @param cookiesToClear - One or more Cookie objects that must have maxAge of 0
-	 * @since 5.2
+	 * 将指定Cookie的生存时间设置为0
+	 * @param cookiesToClear
 	 */
 	public CookieClearingLogoutHandler(Cookie... cookiesToClear) {
 		Assert.notNull(cookiesToClear, "List of cookies cannot be null");

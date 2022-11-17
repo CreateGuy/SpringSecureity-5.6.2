@@ -94,6 +94,7 @@ public class PersistentTokenBasedRememberMeServices extends AbstractRememberMeSe
 	@Override
 	protected UserDetails processAutoLoginCookie(String[] cookieTokens, HttpServletRequest request,
 			HttpServletResponse response) {
+		//使用当前记住我服务只会生成长度为2的记住我令牌
 		if (cookieTokens.length != 2) {
 			throw new InvalidCookieException("Cookie token did not contain " + 2 + " tokens, but contained '"
 					+ Arrays.asList(cookieTokens) + "'");

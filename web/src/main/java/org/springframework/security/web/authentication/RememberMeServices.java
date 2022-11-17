@@ -22,7 +22,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.springframework.security.core.Authentication;
 
 /**
- * Implement by a class that is capable of providing a remember-me service.
+ * 记住我服务，提供认证，认证成功，认证失败的方法
  *
  * <p>
  * Spring Security filters (namely

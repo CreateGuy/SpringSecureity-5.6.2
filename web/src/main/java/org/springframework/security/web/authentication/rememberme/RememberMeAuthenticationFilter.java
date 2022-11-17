@@ -65,12 +65,24 @@ import org.springframework.web.filter.GenericFilterBean;
  */
 public class RememberMeAuthenticationFilter extends GenericFilterBean implements ApplicationEventPublisherAware {
 
+	/**
+	 * 事件推送器
+	 */
 	private ApplicationEventPublisher eventPublisher;
 
+	/**
+	 * 认证成功处理器
+	 */
 	private AuthenticationSuccessHandler successHandler;
 
+	/**
+	 * 局部认证管理器
+	 */
 	private AuthenticationManager authenticationManager;
 
+	/**
+	 * 记住我服务
+	 */
 	private RememberMeServices rememberMeServices;
 
 	public RememberMeAuthenticationFilter(AuthenticationManager authenticationManager,
@@ -93,8 +105,19 @@ public class RememberMeAuthenticationFilter extends GenericFilterBean implements
 		doFilter((HttpServletRequest) request, (HttpServletResponse) response, chain);
 	}
 
+	/**
+	 * 进行记住我方式的认证
+	 * @param request
+	 * @param response
+	 * @param chain
+	 * @throws IOException
+	 * @throws ServletException
+	 */
 	private void doFilter(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
 			throws IOException, ServletException {
+		//如果HttpSession级别的安全上下文中有认证对象的话，那就说明已经认证过了，就不需要进行记住我方式认证了
+		//通常情况是因为Session过期了
+		//注意：匿名认证过滤器在这个过滤器的后面
 		if (SecurityContextHolder.getContext().getAuthentication() != null) {
 			this.logger.debug(LogMessage
 					.of(() -> "SecurityContextHolder not populated with remember-me token, as it already contained: '"
@@ -102,6 +125,7 @@ public class RememberMeAuthenticationFilter extends GenericFilterBean implements
 			chain.doFilter(request, response);
 			return;
 		}
+		//进行认证
 		Authentication rememberMeAuth = this.rememberMeServices.autoLogin(request, response);
 		if (rememberMeAuth != null) {
 			// Attempt authenticaton via AuthenticationManager

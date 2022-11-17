@@ -87,31 +87,40 @@ public class TokenBasedRememberMeServices extends AbstractRememberMeServices {
 		super(key, userDetailsService);
 	}
 
+	/**
+	 * 将记住我令牌转换为用户对象
+	 * @param cookieTokens 记住我令牌 <p>是用户+过期时间戳+签名组成的数组</p><p>
+	 *                     签名又是通过 用MD5将过期时间戳+用户名+密码+秘钥进行加密得到的
+	 * </p>
+	 * @param request the request
+	 * @param response the response, to allow the cookie to be modified if required.
+	 * @return
+	 */
 	@Override
 	protected UserDetails processAutoLoginCookie(String[] cookieTokens, HttpServletRequest request,
 			HttpServletResponse response) {
+		//使用当前记住我服务只会生成长度为3的记住我令牌
 		if (cookieTokens.length != 3) {
 			throw new InvalidCookieException(
 					"Cookie token did not contain 3" + " tokens, but contained '" + Arrays.asList(cookieTokens) + "'");
 		}
+		//获得过期时间
 		long tokenExpiryTime = getTokenExpiryTime(cookieTokens);
+		//判断记住我令牌是否已经过期
 		if (isTokenExpired(tokenExpiryTime)) {
 			throw new InvalidCookieException("Cookie token[1] has expired (expired on '" + new Date(tokenExpiryTime)
 					+ "'; current time is '" + new Date() + "')");
 		}
-		// Check the user exists. Defer lookup until after expiry time checked, to
-		// possibly avoid expensive database call.
+
+		//通过用户名加载UserDetails
 		UserDetails userDetails = getUserDetailsService().loadUserByUsername(cookieTokens[0]);
 		Assert.notNull(userDetails, () -> "UserDetailsService " + getUserDetailsService()
 				+ " returned null for username " + cookieTokens[0] + ". " + "This is an interface contract violation");
-		// Check signature of token matches remaining details. Must do this after user
-		// lookup, as we need the DAO-derived password. If efficiency was a major issue,
-		// just add in a UserCache implementation, but recall that this method is usually
-		// only called once per HttpSession - if the token is valid, it will cause
-		// SecurityContextHolder population, whilst if invalid, will cause the cookie to
-		// be cancelled.
+
+		//以固定的参数重新生成签名
 		String expectedTokenSignature = makeTokenSignature(tokenExpiryTime, userDetails.getUsername(),
 				userDetails.getPassword());
+		//如果不一样，就抛出异常
 		if (!equals(expectedTokenSignature, cookieTokens[2])) {
 			throw new InvalidCookieException("Cookie token[2] contained signature '" + cookieTokens[2]
 					+ "' but expected '" + expectedTokenSignature + "'");
@@ -119,6 +128,11 @@ public class TokenBasedRememberMeServices extends AbstractRememberMeServices {
 		return userDetails;
 	}
 
+	/**
+	 * 获得过期时间
+	 * @param cookieTokens
+	 * @return
+	 */
 	private long getTokenExpiryTime(String[] cookieTokens) {
 		try {
 			return new Long(cookieTokens[1]);
@@ -130,8 +144,7 @@ public class TokenBasedRememberMeServices extends AbstractRememberMeServices {
 	}
 
 	/**
-	 * Calculates the digital signature to be put in the cookie. Default value is MD5
-	 * ("username:tokenExpiryTime:password:key")
+	 * 生成签名，并通过MD5进行加密
 	 */
 	protected String makeTokenSignature(long tokenExpiryTime, String username, String password) {
 		String data = username + ":" + tokenExpiryTime + ":" + password + ":" + getKey();
@@ -144,6 +157,11 @@ public class TokenBasedRememberMeServices extends AbstractRememberMeServices {
 		}
 	}
 
+	/**
+	 * 判断记住我令牌是否已经过期
+	 * @param tokenExpiryTime
+	 * @return
+	 */
 	protected boolean isTokenExpired(long tokenExpiryTime) {
 		return tokenExpiryTime < System.currentTimeMillis();
 	}

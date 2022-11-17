@@ -279,7 +279,7 @@ public class ExceptionTranslationFilter extends GenericFilterBean implements Mes
 	 */
 	protected void sendStartAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain,
 			AuthenticationException reason) throws ServletException, IOException {
-		//清除存储在SpringSeucurity上下文的认证信息
+		//清除存储在线程级别的上下文策略的认证信息，HttpSession级别的会在SecurityContextPersistenceFilter的finally代码块中被更新
 		//因为现有的认证不再被认为有效
 		SecurityContext context = SecurityContextHolder.createEmptyContext();
 		SecurityContextHolder.setContext(context);

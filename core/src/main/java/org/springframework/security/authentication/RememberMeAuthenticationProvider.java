@@ -26,16 +26,15 @@ import org.springframework.security.core.SpringSecurityMessageSource;
 import org.springframework.util.Assert;
 
 /**
- * An {@link AuthenticationProvider} implementation that validates
- * {@link RememberMeAuthenticationToken}s.
- * <p>
- * To be successfully validated, the {@link RememberMeAuthenticationToken#getKeyHash()}
- * must match this class' {@link #getKey()}.
+ * 记住我登录的认证提供者
  */
 public class RememberMeAuthenticationProvider implements AuthenticationProvider, InitializingBean, MessageSourceAware {
 
 	protected MessageSourceAccessor messages = SpringSecurityMessageSource.getAccessor();
 
+	/**
+	 * 记住我秘钥
+	 */
 	private String key;
 
 	public RememberMeAuthenticationProvider(String key) {

@@ -24,8 +24,7 @@ import org.springframework.security.web.header.HeaderWriter;
 import org.springframework.util.Assert;
 
 /**
- * @author Rafiullah Hamedy
- * @since 5.2
+ * 将指定请求头写入响应头的登出处理器
  */
 public final class HeaderWriterLogoutHandler implements LogoutHandler {
 

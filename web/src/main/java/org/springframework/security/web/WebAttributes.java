@@ -30,7 +30,7 @@ public final class WebAttributes {
 	public static final String ACCESS_DENIED_403 = "SPRING_SECURITY_403_EXCEPTION";
 
 	/**
-	 * 用于缓存会话中的认证失败异常
+	 * 用于缓存会话中的认证失败异常，比如说认证失败继续跳转到登录页，填充错误原因
 	 * @see org.springframework.security.web.authentication.SimpleUrlAuthenticationFailureHandler
 	 */
 	public static final String AUTHENTICATION_EXCEPTION = "SPRING_SECURITY_LAST_EXCEPTION";

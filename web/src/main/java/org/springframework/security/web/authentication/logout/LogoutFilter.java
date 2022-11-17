@@ -52,10 +52,19 @@ import org.springframework.web.filter.GenericFilterBean;
  */
 public class LogoutFilter extends GenericFilterBean {
 
+	/**
+	 * 请求匹配器：用于判断是否是登出请求
+	 */
 	private RequestMatcher logoutRequestMatcher;
 
+	/**
+	 * 登出处理器
+	 */
 	private final LogoutHandler handler;
 
+	/**
+	 * 登出成功处理器
+	 */
 	private final LogoutSuccessHandler logoutSuccessHandler;
 
 	/**
@@ -77,6 +86,7 @@ public class LogoutFilter extends GenericFilterBean {
 				() -> logoutSuccessUrl + " isn't a valid redirect URL");
 		SimpleUrlLogoutSuccessHandler urlLogoutSuccessHandler = new SimpleUrlLogoutSuccessHandler();
 		if (StringUtils.hasText(logoutSuccessUrl)) {
+			//可以看到即使传入的是Url也会变成登出成功处理器
 			urlLogoutSuccessHandler.setDefaultTargetUrl(logoutSuccessUrl);
 		}
 		this.logoutSuccessHandler = urlLogoutSuccessHandler;
@@ -91,12 +101,15 @@ public class LogoutFilter extends GenericFilterBean {
 
 	private void doFilter(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
 			throws IOException, ServletException {
+		//判断是否是登出请求
 		if (requiresLogout(request, response)) {
 			Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 			if (this.logger.isDebugEnabled()) {
 				this.logger.debug(LogMessage.format("Logging out [%s]", auth));
 			}
+			//先执行登出处理器
 			this.handler.logout(request, response, auth);
+			//再执行登出成功处理器
 			this.logoutSuccessHandler.onLogoutSuccess(request, response, auth);
 			return;
 		}
@@ -104,10 +117,7 @@ public class LogoutFilter extends GenericFilterBean {
 	}
 
 	/**
-	 * Allow subclasses to modify when a logout should take place.
-	 * @param request the request
-	 * @param response the response
-	 * @return <code>true</code> if logout should occur, <code>false</code> otherwise
+	 * 判断是否是登出请求
 	 */
 	protected boolean requiresLogout(HttpServletRequest request, HttpServletResponse response) {
 		if (this.logoutRequestMatcher.matches(request)) {
