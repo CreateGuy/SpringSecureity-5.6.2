@@ -159,8 +159,18 @@ public abstract class AbstractRememberMeServices
 	}
 
 	/**
-	 * 模板实现，它定位Spring Security cookie，将其解码为带分隔符的令牌数组
-	 * 并通过processAutoLoginCookie方法将其提交给子类进行处理。然后使用返回的用户名为用户加载UserDetails对象，该对象又用于创建有效的身份验证令牌。
+	 * 获得记住我认证对象
+	 * <ul>
+	 *     <li>
+	 *         1、获得记住我令牌
+	 *     </li>
+	 *     <li>
+	 *         2、解析记住我令牌，变成用户对象
+	 *     </li>
+	 *     <li>
+	 *         3、根据用户对象，构建记住我认证对象
+	 *     </li>
+	 * </ul>
 	 */
 	@Override
 	public final Authentication autoLogin(HttpServletRequest request, HttpServletResponse response) {
@@ -178,10 +188,14 @@ public abstract class AbstractRememberMeServices
 			return null;
 		}
 		try {
+			//将记住我令牌进行Base64解码
 			String[] cookieTokens = decodeCookie(rememberMeCookie);
+			//记住我令牌转换为用户对象
 			UserDetails user = processAutoLoginCookie(cookieTokens, request, response);
+			//进行检查
 			this.userDetailsChecker.check(user);
 			this.logger.debug("Remember-me cookie accepted");
+			//创建记住我认证对象
 			return createSuccessfulAuthentication(request, user);
 		}
 		catch (CookieTheftException ex) {
@@ -221,20 +235,17 @@ public abstract class AbstractRememberMeServices
 	}
 
 	/**
-	 * Creates the final <tt>Authentication</tt> object returned from the
-	 * <tt>autoLogin</tt> method.
-	 * <p>
-	 * By default it will create a <tt>RememberMeAuthenticationToken</tt> instance.
-	 * @param request the original request. The configured
-	 * <tt>AuthenticationDetailsSource</tt> will use this to build the details property of
-	 * the returned object.
-	 * @param user the <tt>UserDetails</tt> loaded from the <tt>UserDetailsService</tt>.
-	 * This will be stored as the principal.
-	 * @return the <tt>Authentication</tt> for the remember-me authenticated user
+	 * 创建记住我认证对象
+	 * @param request
+	 * @param user
+	 * @return
 	 */
 	protected Authentication createSuccessfulAuthentication(HttpServletRequest request, UserDetails user) {
+		//key：作用是比较记住我认证对象是否是通过当前系统创建的
+		//authoritiesMapper: 是一个权限映射器
 		RememberMeAuthenticationToken auth = new RememberMeAuthenticationToken(this.key, user,
 				this.authoritiesMapper.mapAuthorities(user.getAuthorities()));
+		//构建详细信息
 		auth.setDetails(this.authenticationDetailsSource.buildDetails(request));
 		return auth;
 	}
@@ -274,7 +285,7 @@ public abstract class AbstractRememberMeServices
 
 	/**
 	 * 记住我令牌的加密
-	 * @param cookieTokens 是用户+过期时间戳+签名组成的数组
+	 * @param cookieTokens 是用户名+过期时间戳+签名组成的数组
 	 *                     签名又是通过 用MD5将过期时间戳+用户名+密码+秘钥进行加密得到的
 	 * @return
 	 */
@@ -397,18 +408,14 @@ public abstract class AbstractRememberMeServices
 	}
 
 	/**
-	 * Sets the cookie on the response.
-	 *
-	 * By default a secure cookie will be used if the connection is secure. You can set
-	 * the {@code useSecureCookie} property to {@code false} to override this. If you set
-	 * it to {@code true}, the cookie will always be flagged as secure. By default the
-	 * cookie will be marked as HttpOnly.
-	 * @param tokens the tokens which will be encoded to make the cookie value.
-	 * @param maxAge the value passed to {@link Cookie#setMaxAge(int)}
-	 * @param request the request
-	 * @param response the response to add the cookie to.
+	 * 将Cookie设置到响应中
+	 * @param tokens 新Cookie的值
+	 * @param maxAge 有效时间
+	 * @param request
+	 * @param response
 	 */
 	protected void setCookie(String[] tokens, int maxAge, HttpServletRequest request, HttpServletResponse response) {
+		//得到最终的记住我令牌
 		String cookieValue = encodeCookie(tokens);
 		Cookie cookie = new Cookie(this.cookieName, cookieValue);
 		cookie.setMaxAge(maxAge);
@@ -420,6 +427,7 @@ public abstract class AbstractRememberMeServices
 			cookie.setVersion(1);
 		}
 		cookie.setSecure((this.useSecureCookie != null) ? this.useSecureCookie : request.isSecure());
+		//设置无法访问Cookie
 		cookie.setHttpOnly(true);
 		response.addCookie(cookie);
 	}

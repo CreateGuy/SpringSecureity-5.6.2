@@ -48,40 +48,74 @@ import org.springframework.web.accept.ContentNegotiationStrategy;
 import org.springframework.web.accept.HeaderContentNegotiationStrategy;
 
 /**
- * Base class for configuring {@link AbstractAuthenticationFilterConfigurer}. This is
- * intended for internal use only.
- *
- * @param T refers to "this" for returning the current configurer
- * @param F refers to the {@link AbstractAuthenticationProcessingFilter} that is being
- * built
- * @author Rob Winch
- * @since 3.2
- * @see FormLoginConfigurer
- * @see OpenIDLoginConfigurer
+ * 认证过滤器的基类，比如说实现类有 FormLoginConfigurer
  */
 public abstract class AbstractAuthenticationFilterConfigurer<B extends HttpSecurityBuilder<B>, T extends AbstractAuthenticationFilterConfigurer<B, T, F>, F extends AbstractAuthenticationProcessingFilter>
 		extends AbstractHttpConfigurer<T, B> {
 
+	/**
+	 * 认证过滤器
+	 */
 	private F authFilter;
 
+	/**
+	 * 认证信息详情源
+	 */
 	private AuthenticationDetailsSource<HttpServletRequest, ?> authenticationDetailsSource;
 
+	/**
+	 * 默认认证成功处理器，是一个关于RequestCache的
+	 */
 	private SavedRequestAwareAuthenticationSuccessHandler defaultSuccessHandler = new SavedRequestAwareAuthenticationSuccessHandler();
 
 	private AuthenticationSuccessHandler successHandler = this.defaultSuccessHandler;
 
+	/**
+	 * 身份验证入口点
+	 * <ul>
+	 *     <li>
+	 *         通常是转发到登录页
+	 *     </li>
+	 *     <li>
+	 *         一般是都是在FilterSecurityInterceptor出现认证失败的时候，被ExceptionTranslationFilter捕获到时候调用
+	 *     </li>
+	 * </ul>
+	 */
 	private LoginUrlAuthenticationEntryPoint authenticationEntryPoint;
 
+	/**
+	 * 用户是否自定义了登录页
+	 */
 	private boolean customLoginPage;
 
+	/**
+	 * 登录页
+	 */
 	private String loginPage;
 
+	/**
+	 * 认证(登录)请求的地址
+	 */
 	private String loginProcessingUrl;
 
+	/**
+	 * 认证失败处理器
+	 */
 	private AuthenticationFailureHandler failureHandler;
 
+	/**
+	 * 是否放行登录请求
+	 * <ul>
+	 *     <li>
+	 *         实际上不设置这个属性为Ture也行, 因为登录页过滤器和表单登录过滤器都在权限验证过滤器(FilterSecurityInterceptor)前面,在这之前就已经做了处理了
+	 *     </li>
+	 * </ul>
+	 */
 	private boolean permitAll;
 
+	/**
+	 * 认证失败跳转的Url
+	 */
 	private String failureUrl;
 
 	/**
@@ -118,14 +152,10 @@ public abstract class AbstractAuthenticationFilterConfigurer<B extends HttpSecur
 	}
 
 	/**
-	 * Specifies where users will be redirected after authenticating successfully if they
-	 * have not visited a secured page prior to authenticating or {@code alwaysUse} is
-	 * true. This is a shortcut for calling
-	 * {@link #successHandler(AuthenticationSuccessHandler)}.
-	 * @param defaultSuccessUrl the default success url
-	 * @param alwaysUse true if the {@code defaultSuccesUrl} should be used after
-	 * authentication despite if a protected page had been previously visited
-	 * @return the {@link FormLoginConfigurer} for additional customization
+	 * 指定在身份认证成功后，如果用户在身份认证之前没有访问过页面，将被重定向到某个地方
+	 * @param defaultSuccessUrl
+	 * @param alwaysUse
+	 * @return
 	 */
 	public final T defaultSuccessUrl(String defaultSuccessUrl, boolean alwaysUse) {
 		SavedRequestAwareAuthenticationSuccessHandler handler = new SavedRequestAwareAuthenticationSuccessHandler();
@@ -136,9 +166,7 @@ public abstract class AbstractAuthenticationFilterConfigurer<B extends HttpSecur
 	}
 
 	/**
-	 * Specifies the URL to validate the credentials.
-	 * @param loginProcessingUrl the URL to validate username and password
-	 * @return the {@link FormLoginConfigurer} for additional customization
+	 * 设置认证请求的Url
 	 */
 	public T loginProcessingUrl(String loginProcessingUrl) {
 		this.loginProcessingUrl = loginProcessingUrl;
@@ -228,61 +256,91 @@ public abstract class AbstractAuthenticationFilterConfigurer<B extends HttpSecur
 
 	@Override
 	public void init(B http) throws Exception {
+		//更新一些默认值
 		updateAuthenticationDefaults();
+		//更新可直接访问的Url
 		updateAccessDefaults(http);
+		//注册一个身份认证入口点
 		registerDefaultAuthenticationEntryPoint(http);
 	}
 
+	/**
+	 * 注册一个身份认证入口点
+	 * @param http
+	 */
 	@SuppressWarnings("unchecked")
 	protected final void registerDefaultAuthenticationEntryPoint(B http) {
 		registerAuthenticationEntryPoint(http, this.authenticationEntryPoint);
 	}
 
+	/**
+	 * 注册一个身份认证入口点
+	 * @param http
+	 * @param authenticationEntryPoint
+	 */
 	@SuppressWarnings("unchecked")
 	protected final void registerAuthenticationEntryPoint(B http, AuthenticationEntryPoint authenticationEntryPoint) {
 		ExceptionHandlingConfigurer<B> exceptionHandling = http.getConfigurer(ExceptionHandlingConfigurer.class);
 		if (exceptionHandling == null) {
 			return;
 		}
+		//将身份认证入口点和对应的请求匹配器 放入异常处理配置类中
 		exceptionHandling.defaultAuthenticationEntryPointFor(postProcess(authenticationEntryPoint),
 				getAuthenticationEntryPointMatcher(http));
 	}
 
+	/**
+	 * 返回一个身份认证入口点的请求匹配器
+	 * @param http
+	 * @return
+	 */
 	protected final RequestMatcher getAuthenticationEntryPointMatcher(B http) {
 		ContentNegotiationStrategy contentNegotiationStrategy = http.getSharedObject(ContentNegotiationStrategy.class);
 		if (contentNegotiationStrategy == null) {
 			contentNegotiationStrategy = new HeaderContentNegotiationStrategy();
 		}
+		//第一个请求匹配器要求：媒体类型必须是下面这几种
 		MediaTypeRequestMatcher mediaMatcher = new MediaTypeRequestMatcher(contentNegotiationStrategy,
 				MediaType.APPLICATION_XHTML_XML, new MediaType("image", "*"), MediaType.TEXT_HTML,
 				MediaType.TEXT_PLAIN);
 		mediaMatcher.setIgnoredMediaTypes(Collections.singleton(MediaType.ALL));
+		//第二个请求匹配器要求 X-Requested-With 值不能是 XMLHttpRequest
 		RequestMatcher notXRequestedWith = new NegatedRequestMatcher(
 				new RequestHeaderRequestMatcher("X-Requested-With", "XMLHttpRequest"));
+		//是一个And的
 		return new AndRequestMatcher(Arrays.asList(notXRequestedWith, mediaMatcher));
 	}
 
 	@Override
 	public void configure(B http) throws Exception {
+		//设置端口映射器
 		PortMapper portMapper = http.getSharedObject(PortMapper.class);
 		if (portMapper != null) {
 			this.authenticationEntryPoint.setPortMapper(portMapper);
 		}
+		//设置请求缓存器
 		RequestCache requestCache = http.getSharedObject(RequestCache.class);
 		if (requestCache != null) {
 			this.defaultSuccessHandler.setRequestCache(requestCache);
 		}
+
+		//设置局部认证管理器，认证成功处理器，认证失败处理器
 		this.authFilter.setAuthenticationManager(http.getSharedObject(AuthenticationManager.class));
 		this.authFilter.setAuthenticationSuccessHandler(this.successHandler);
 		this.authFilter.setAuthenticationFailureHandler(this.failureHandler);
+
 		if (this.authenticationDetailsSource != null) {
 			this.authFilter.setAuthenticationDetailsSource(this.authenticationDetailsSource);
 		}
+
+		//当开启了会话管理的功能的时候，拿到Session认证策略
 		SessionAuthenticationStrategy sessionAuthenticationStrategy = http
 				.getSharedObject(SessionAuthenticationStrategy.class);
 		if (sessionAuthenticationStrategy != null) {
 			this.authFilter.setSessionAuthenticationStrategy(sessionAuthenticationStrategy);
 		}
+
+		//当开启了记住我的功能的时候，拿到记住我服务
 		RememberMeServices rememberMeServices = http.getSharedObject(RememberMeServices.class);
 		if (rememberMeServices != null) {
 			this.authFilter.setRememberMeServices(rememberMeServices);
@@ -368,16 +426,20 @@ public abstract class AbstractAuthenticationFilterConfigurer<B extends HttpSecur
 	}
 
 	/**
-	 * Updates the default values for authentication.
+	 * 更新一些默认值
 	 * @throws Exception
 	 */
 	protected final void updateAuthenticationDefaults() {
+		//当没有配认证请求的Url的时候，将登录页的URL + POST请求方式当做 认证请求
 		if (this.loginProcessingUrl == null) {
 			loginProcessingUrl(this.loginPage);
 		}
+		//当没有配认证失败处理器的时候，将登录页 + ?error当做 失败跳转的地址
 		if (this.failureHandler == null) {
 			failureUrl(this.loginPage + "?error");
 		}
+
+		//当开启了登出功能的时候，但是没有设置登出成功跳转的Url的时候，使用 登录页 + ?logout
 		LogoutConfigurer<B> logoutConfigurer = getBuilder().getConfigurer(LogoutConfigurer.class);
 		if (logoutConfigurer != null && !logoutConfigurer.isCustomLogoutSuccess()) {
 			logoutConfigurer.logoutSuccessUrl(this.loginPage + "?logout");
@@ -385,9 +447,10 @@ public abstract class AbstractAuthenticationFilterConfigurer<B extends HttpSecur
 	}
 
 	/**
-	 * Updates the default values for access.
+	 * 更新可直接访问的Url
 	 */
 	protected final void updateAccessDefaults(B http) {
+		//放行登录页，认证(登录)请求，认证失败跳转的Url
 		if (this.permitAll) {
 			PermitAllSupport.permitAll(http, this.loginPage, this.loginProcessingUrl, this.failureUrl);
 		}

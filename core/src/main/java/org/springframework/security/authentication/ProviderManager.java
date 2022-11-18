@@ -91,14 +91,26 @@ public class ProviderManager implements AuthenticationManager, MessageSourceAwar
 
 	private static final Log logger = LogFactory.getLog(ProviderManager.class);
 
+	/**
+	 * 认证事件推送器，内部也是借助了事件推送器({@link org.springframework.context.ApplicationEventPublisher})
+	 */
 	private AuthenticationEventPublisher eventPublisher = new NullEventPublisher();
 
+	/**
+	 * 当前认证管理器的认证提供者
+	 */
 	private List<AuthenticationProvider> providers = Collections.emptyList();
 
 	protected MessageSourceAccessor messages = SpringSecurityMessageSource.getAccessor();
 
+	/**
+	 * 全局认证管理器
+	 */
 	private AuthenticationManager parent;
 
+	/**
+	 * 是否在认证成功后清除密码
+	 */
 	private boolean eraseCredentialsAfterAuthentication = true;
 
 	/**
@@ -142,35 +154,27 @@ public class ProviderManager implements AuthenticationManager, MessageSourceAwar
 	}
 
 	/**
-	 * Attempts to authenticate the passed {@link Authentication} object.
-	 * <p>
-	 * The list of {@link AuthenticationProvider}s will be successively tried until an
-	 * <code>AuthenticationProvider</code> indicates it is capable of authenticating the
-	 * type of <code>Authentication</code> object passed. Authentication will then be
-	 * attempted with that <code>AuthenticationProvider</code>.
-	 * <p>
-	 * If more than one <code>AuthenticationProvider</code> supports the passed
-	 * <code>Authentication</code> object, the first one able to successfully authenticate
-	 * the <code>Authentication</code> object determines the <code>result</code>,
-	 * overriding any possible <code>AuthenticationException</code> thrown by earlier
-	 * supporting <code>AuthenticationProvider</code>s. On successful authentication, no
-	 * subsequent <code>AuthenticationProvider</code>s will be tried. If authentication
-	 * was not successful by any supporting <code>AuthenticationProvider</code> the last
-	 * thrown <code>AuthenticationException</code> will be rethrown.
-	 * @param authentication the authentication request object.
-	 * @return a fully authenticated object including credentials.
-	 * @throws AuthenticationException if authentication fails.
+	 * 对传入的认证对象进行认证
+	 * @param authentication 通常是由系统通过某些参数构建的，比如说前端传入的用户名和密码
+	 * @return
+	 * @throws AuthenticationException
 	 */
 	@Override
 	public Authentication authenticate(Authentication authentication) throws AuthenticationException {
+		//获得认证对象的类型
 		Class<? extends Authentication> toTest = authentication.getClass();
+		//通过局部和全局认证管理器认证出现的异常
 		AuthenticationException lastException = null;
 		AuthenticationException parentException = null;
+
+		//通过局部和全局认证管理器认证，最终保存到安全上下文的认证对象
 		Authentication result = null;
 		Authentication parentResult = null;
+
 		int currentPosition = 0;
 		int size = this.providers.size();
 		for (AuthenticationProvider provider : getProviders()) {
+			//判断当前认证提供者是否支持这个认证对象
 			if (!provider.supports(toTest)) {
 				continue;
 			}
@@ -179,26 +183,29 @@ public class ProviderManager implements AuthenticationManager, MessageSourceAwar
 						provider.getClass().getSimpleName(), ++currentPosition, size));
 			}
 			try {
+				//进行认证
 				result = provider.authenticate(authentication);
 				if (result != null) {
+					//复制详细信息到新的认证对象中
 					copyDetails(authentication, result);
 					break;
 				}
 			}
 			catch (AccountStatusException | InternalAuthenticationServiceException ex) {
 				prepareException(ex, authentication);
-				// SEC-546: Avoid polling additional providers if auth failure is due to
-				// invalid account status
+				//如果认证失败是由于无效的帐户状态导致的，则抛出异常，避免轮询执行其他认证提供者
 				throw ex;
 			}
 			catch (AuthenticationException ex) {
 				lastException = ex;
 			}
 		}
+		//到这就说明局部管理器无法认证，尝试调用父类(全局认证管理器)
 		if (result == null && this.parent != null) {
-			// Allow the parent to try.
 			try {
+				//进行认证
 				parentResult = this.parent.authenticate(authentication);
+				//两个都有了
 				result = parentResult;
 			}
 			catch (ProviderNotFoundException ex) {
@@ -212,16 +219,15 @@ public class ProviderManager implements AuthenticationManager, MessageSourceAwar
 				lastException = ex;
 			}
 		}
+		//如果认证成功
 		if (result != null) {
+			//是否在认证成功后清除敏感数据
 			if (this.eraseCredentialsAfterAuthentication && (result instanceof CredentialsContainer)) {
-				// Authentication is complete. Remove credentials and other secret data
-				// from authentication
+				//比如说清除密码
 				((CredentialsContainer) result).eraseCredentials();
 			}
-			// If the parent AuthenticationManager was attempted and successful then it
-			// will publish an AuthenticationSuccessEvent
-			// This check prevents a duplicate AuthenticationSuccessEvent if the parent
-			// AuthenticationManager already published it
+
+			//如果是局部自己就认证成功的，发布一个认证成功事件
 			if (parentResult == null) {
 				this.eventPublisher.publishAuthenticationSuccess(result);
 			}
@@ -229,31 +235,33 @@ public class ProviderManager implements AuthenticationManager, MessageSourceAwar
 			return result;
 		}
 
-		// Parent was null, or didn't authenticate (or throw an exception).
+		//如果中途抛出了异常
 		if (lastException == null) {
+			//统一包装成一个异常
 			lastException = new ProviderNotFoundException(this.messages.getMessage("ProviderManager.providerNotFound",
 					new Object[] { toTest.getName() }, "No AuthenticationProvider found for {0}"));
 		}
-		// If the parent AuthenticationManager was attempted and failed then it will
-		// publish an AbstractAuthenticationFailureEvent
-		// This check prevents a duplicate AbstractAuthenticationFailureEvent if the
-		// parent AuthenticationManager already published it
+		//如果只是局部抛出了，就发布一个认证失败异常
 		if (parentException == null) {
 			prepareException(lastException, authentication);
 		}
 		throw lastException;
 	}
 
+	/**
+	 * 推送一个认证失败的事件
+	 * @param ex
+	 * @param auth
+	 */
 	@SuppressWarnings("deprecation")
 	private void prepareException(AuthenticationException ex, Authentication auth) {
 		this.eventPublisher.publishAuthenticationFailure(ex, auth);
 	}
 
 	/**
-	 * Copies the authentication details from a source Authentication object to a
-	 * destination one, provided the latter does not already have one set.
-	 * @param source source authentication
-	 * @param dest the destination authentication object
+	 * 将身份验证详细信息从旧的认证对象复制到新认证对象中，前提是后者还没有一个集合。
+	 * @param source
+	 * @param dest
 	 */
 	private void copyDetails(Authentication source, Authentication dest) {
 		if ((dest instanceof AbstractAuthenticationToken) && (dest.getDetails() == null)) {

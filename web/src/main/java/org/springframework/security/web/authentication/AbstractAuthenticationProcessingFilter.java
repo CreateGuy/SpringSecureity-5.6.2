@@ -122,10 +122,16 @@ public abstract class AbstractAuthenticationProcessingFilter extends GenericFilt
 
 	private RememberMeServices rememberMeServices = new NullRememberMeServices();
 
+	/**
+	 * 认证请求匹配器
+	 */
 	private RequestMatcher requiresAuthenticationRequestMatcher;
 
 	private boolean continueChainBeforeSuccessfulAuthentication = false;
 
+	/**
+	 * Session认证策略
+	 */
 	private SessionAuthenticationStrategy sessionStrategy = new NullAuthenticatedSessionStrategy();
 
 	private boolean allowSessionCreation = true;
@@ -243,16 +249,7 @@ public abstract class AbstractAuthenticationProcessingFilter extends GenericFilt
 	}
 
 	/**
-	 * Indicates whether this filter should attempt to process a login request for the
-	 * current invocation.
-	 * <p>
-	 * It strips any parameters from the "path" section of the request URL (such as the
-	 * jsessionid parameter in <em>https://host/myapp/index.html;jsessionid=blah</em>)
-	 * before matching against the <code>filterProcessesUrl</code> property.
-	 * <p>
-	 * Subclasses may override for special requirements, such as Tapestry integration.
-	 * @return <code>true</code> if the filter should attempt authentication,
-	 * <code>false</code> otherwise.
+	 * 判断当前请求是否是一个认证请求
 	 */
 	protected boolean requiresAuthentication(HttpServletRequest request, HttpServletResponse response) {
 		if (this.requiresAuthenticationRequestMatcher.matches(request)) {

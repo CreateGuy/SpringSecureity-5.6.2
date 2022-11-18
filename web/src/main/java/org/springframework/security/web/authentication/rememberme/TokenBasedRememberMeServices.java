@@ -166,19 +166,26 @@ public class TokenBasedRememberMeServices extends AbstractRememberMeServices {
 		return tokenExpiryTime < System.currentTimeMillis();
 	}
 
+	/**
+	 * 为认证成功的请求新增一个记住我令牌
+	 * @param request
+	 * @param response
+	 * @param successfulAuthentication
+	 */
 	@Override
 	public void onLoginSuccess(HttpServletRequest request, HttpServletResponse response,
 			Authentication successfulAuthentication) {
+		//获得用户名和密码
 		String username = retrieveUserName(successfulAuthentication);
 		String password = retrievePassword(successfulAuthentication);
-		// If unable to find a username and password, just abort as
-		// TokenBasedRememberMeServices is
-		// unable to construct a valid token in this case.
+
+		//如若无法找到用户名和密码就终止创建记住我令牌
 		if (!StringUtils.hasLength(username)) {
 			this.logger.debug("Unable to retrieve username");
 			return;
 		}
 		if (!StringUtils.hasLength(password)) {
+			//尝试通过用户详情服务获取密码
 			UserDetails user = getUserDetailsService().loadUserByUsername(username);
 			password = user.getPassword();
 			if (!StringUtils.hasLength(password)) {
@@ -186,11 +193,15 @@ public class TokenBasedRememberMeServices extends AbstractRememberMeServices {
 				return;
 			}
 		}
+
+		//获得记住我令牌有效时间
 		int tokenLifetime = calculateLoginLifetime(request, successfulAuthentication);
 		long expiryTime = System.currentTimeMillis();
-		// SEC-949
+		//过期时间 = 令牌有效时间 + 当前时间
 		expiryTime += 1000L * ((tokenLifetime < 0) ? TWO_WEEKS_S : tokenLifetime);
+		//生成签名
 		String signatureValue = makeTokenSignature(expiryTime, username, password);
+		//将记住我令牌添加到Cookie中
 		setCookie(new String[] { username, Long.toString(expiryTime), signatureValue }, tokenLifetime, request,
 				response);
 		if (this.logger.isDebugEnabled()) {
@@ -200,28 +211,23 @@ public class TokenBasedRememberMeServices extends AbstractRememberMeServices {
 	}
 
 	/**
-	 * Calculates the validity period in seconds for a newly generated remember-me login.
-	 * After this period (from the current time) the remember-me login will be considered
-	 * expired. This method allows customization based on request parameters supplied with
-	 * the login or information in the <tt>Authentication</tt> object. The default value
-	 * is just the token validity period property, <tt>tokenValiditySeconds</tt>.
-	 * <p>
-	 * The returned value will be used to work out the expiry time of the token and will
-	 * also be used to set the <tt>maxAge</tt> property of the cookie.
-	 *
-	 * See SEC-485.
-	 * @param request the request passed to onLoginSuccess
-	 * @param authentication the successful authentication object.
-	 * @return the lifetime in seconds.
+	 * 返回记住我令牌有效时间
 	 */
 	protected int calculateLoginLifetime(HttpServletRequest request, Authentication authentication) {
 		return getTokenValiditySeconds();
 	}
 
+	/**
+	 * 获得用户名
+	 * @param authentication
+	 * @return
+	 */
 	protected String retrieveUserName(Authentication authentication) {
+		//校验主要信息是否是一个UserDetails
 		if (isInstanceOfUserDetails(authentication)) {
 			return ((UserDetails) authentication.getPrincipal()).getUsername();
 		}
+		//其他情况就是主要就是用户名了
 		return authentication.getPrincipal().toString();
 	}
 
@@ -235,6 +241,11 @@ public class TokenBasedRememberMeServices extends AbstractRememberMeServices {
 		return null;
 	}
 
+	/**
+	 * 校验主要信息是否是一个UserDetails
+	 * @param authentication
+	 * @return
+	 */
 	private boolean isInstanceOfUserDetails(Authentication authentication) {
 		return authentication.getPrincipal() instanceof UserDetails;
 	}

@@ -65,8 +65,19 @@ public abstract class AbstractAuthenticationTargetUrlRequestHandler {
 
 	private String targetUrlParameter = null;
 
+	/**
+	 * 是默认跳转的Url
+	 * <ul>
+	 *     <li>
+	 *         比如我是直接访问的登录页，然后认证成功后，由于在认证之前没有访问过其他请求，那就只有重定向到默认Url了
+	 *     </li>
+	 * </ul>
+	 */
 	private String defaultTargetUrl = "/";
 
+	/**
+	 * 是否认证成功后，永远跳转到 默认跳转的Url
+	 */
 	private boolean alwaysUseDefaultTargetUrl = false;
 
 	private boolean useReferer = false;

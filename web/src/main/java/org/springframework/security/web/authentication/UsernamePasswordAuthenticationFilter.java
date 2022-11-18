@@ -29,21 +29,7 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.util.Assert;
 
 /**
- * Processes an authentication form submission. Called
- * {@code AuthenticationProcessingFilter} prior to Spring Security 3.0.
- * <p>
- * Login forms must present two parameters to this filter: a username and password. The
- * default parameter names to use are contained in the static fields
- * {@link #SPRING_SECURITY_FORM_USERNAME_KEY} and
- * {@link #SPRING_SECURITY_FORM_PASSWORD_KEY}. The parameter names can also be changed by
- * setting the {@code usernameParameter} and {@code passwordParameter} properties.
- * <p>
- * This filter by default responds to the URL {@code /login}.
- *
- * @author Ben Alex
- * @author Colin Sampaleanu
- * @author Luke Taylor
- * @since 3.0
+ * 表单登录的过滤器
  */
 public class UsernamePasswordAuthenticationFilter extends AbstractAuthenticationProcessingFilter {
 
@@ -54,10 +40,19 @@ public class UsernamePasswordAuthenticationFilter extends AbstractAuthentication
 	private static final AntPathRequestMatcher DEFAULT_ANT_PATH_REQUEST_MATCHER = new AntPathRequestMatcher("/login",
 			"POST");
 
+	/**
+	 * 提交用户名的参数名
+	 */
 	private String usernameParameter = SPRING_SECURITY_FORM_USERNAME_KEY;
 
+	/**
+	 * 提交密码的参数名
+	 */
 	private String passwordParameter = SPRING_SECURITY_FORM_PASSWORD_KEY;
 
+	/**
+	 * 是否要求认证请求只能是Post方式
+	 */
 	private boolean postOnly = true;
 
 	public UsernamePasswordAuthenticationFilter() {
@@ -68,20 +63,34 @@ public class UsernamePasswordAuthenticationFilter extends AbstractAuthentication
 		super(DEFAULT_ANT_PATH_REQUEST_MATCHER, authenticationManager);
 	}
 
+	/**
+	 * 尝试进行身份认证
+	 * @param request from which to extract parameters and perform the authentication
+	 * @param response the response, which may be needed if the implementation has to do a
+	 * redirect as part of a multi-stage authentication process (such as OpenID).
+	 * @return
+	 * @throws AuthenticationException
+	 */
 	@Override
 	public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response)
 			throws AuthenticationException {
+		//是否必须是Post请求
 		if (this.postOnly && !request.getMethod().equals("POST")) {
 			throw new AuthenticationServiceException("Authentication method not supported: " + request.getMethod());
 		}
+
+		//将请求中的用户名和密码，封装成为一个认证对象
 		String username = obtainUsername(request);
 		username = (username != null) ? username : "";
 		username = username.trim();
 		String password = obtainPassword(request);
 		password = (password != null) ? password : "";
 		UsernamePasswordAuthenticationToken authRequest = new UsernamePasswordAuthenticationToken(username, password);
-		// Allow subclasses to set the "details" property
+
+		//设置详细信息
 		setDetails(request, authRequest);
+
+		//重点：开始认证
 		return this.getAuthenticationManager().authenticate(authRequest);
 	}
 

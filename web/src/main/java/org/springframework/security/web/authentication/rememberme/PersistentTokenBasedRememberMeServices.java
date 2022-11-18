@@ -32,36 +32,18 @@ import org.springframework.security.web.authentication.RememberMeServices;
 import org.springframework.util.Assert;
 
 /**
- * {@link RememberMeServices} implementation based on Barry Jaspan's
- * <a href="http://jaspan.com/improved_persistent_login_cookie_best_practice">Improved
- * Persistent Login Cookie Best Practice</a>.
- *
- * There is a slight modification to the described approach, in that the username is not
- * stored as part of the cookie but obtained from the persistent store via an
- * implementation of {@link PersistentTokenRepository}. The latter should place a unique
- * constraint on the series identifier, so that it is impossible for the same identifier
- * to be allocated to two different users.
- *
- * <p>
- * User management such as changing passwords, removing users and setting user status
- * should be combined with maintenance of the user's persistent tokens.
- * </p>
- *
- * <p>
- * Note that while this class will use the date a token was created to check whether a
- * presented cookie is older than the configured <tt>tokenValiditySeconds</tt> property
- * and deny authentication in this case, it will not delete these tokens from storage. A
- * suitable batch process should be run periodically to remove expired tokens from the
- * database.
- * </p>
- *
- * @author Luke Taylor
- * @since 2.0
+ * 支持持久化的记住我服务
  */
 public class PersistentTokenBasedRememberMeServices extends AbstractRememberMeServices {
 
+	/**
+	 * 持久化记住我令牌策略
+	 */
 	private PersistentTokenRepository tokenRepository = new InMemoryTokenRepositoryImpl();
 
+	/**
+	 * 生成Secure和Token值的
+	 */
 	private SecureRandom random;
 
 	public static final int DEFAULT_SERIES_LENGTH = 16;
@@ -80,16 +62,15 @@ public class PersistentTokenBasedRememberMeServices extends AbstractRememberMeSe
 	}
 
 	/**
-	 * Locates the presented cookie data in the token repository, using the series id. If
-	 * the data compares successfully with that in the persistent store, a new token is
-	 * generated and stored with the same series. The corresponding cookie value is set on
-	 * the response.
-	 * @param cookieTokens the series and token values
-	 * @throws RememberMeAuthenticationException if there is no stored token corresponding
-	 * to the submitted cookie, or if the token in the persistent store has expired.
-	 * @throws InvalidCookieException if the cookie doesn't have two tokens as expected.
-	 * @throws CookieTheftException if a presented series value is found, but the stored
-	 * token is different from the one presented.
+	 * 解密记住我令牌
+	 * <ul>
+	 *     <li>
+	 *         可以防止令牌泄露
+	 *     </li>
+	 *     <li>
+	 *         会生成新的令牌
+	 *     </li>
+	 * </ul>
 	 */
 	@Override
 	protected UserDetails processAutoLoginCookie(String[] cookieTokens, HttpServletRequest request,
@@ -99,33 +80,40 @@ public class PersistentTokenBasedRememberMeServices extends AbstractRememberMeSe
 			throw new InvalidCookieException("Cookie token did not contain " + 2 + " tokens, but contained '"
 					+ Arrays.asList(cookieTokens) + "'");
 		}
+		//生成记住我令牌的时候就已经固定了第一位是Series，第二位是Token
 		String presentedSeries = cookieTokens[0];
 		String presentedToken = cookieTokens[1];
+		//先通过持久化策略获得 保存的持久化记住我令牌
 		PersistentRememberMeToken token = this.tokenRepository.getTokenForSeries(presentedSeries);
 		if (token == null) {
-			// No series match, so we can't authenticate using this cookie
+			//没有保存，不能使用此cookie进行身份认证
 			throw new RememberMeAuthenticationException("No persistent token found for series id: " + presentedSeries);
 		}
-		// We have a match for this user/series combination
+		//当token值不等的时候，说明此记住我令牌已经泄露了
 		if (!presentedToken.equals(token.getTokenValue())) {
-			// Token doesn't match series value. Delete all logins for this user and throw
-			// an exception to warn them.
+			//删除用此用户名登录的所有 持久化记住我令牌
 			this.tokenRepository.removeUserTokens(token.getUsername());
+			//抛出异常，这样用户就知道了记住我令牌已经泄露了
 			throw new CookieTheftException(this.messages.getMessage(
 					"PersistentTokenBasedRememberMeServices.cookieStolen",
 					"Invalid remember-me token (Series/token) mismatch. Implies previous cookie theft attack."));
 		}
+		//判断是否过期
 		if (token.getDate().getTime() + getTokenValiditySeconds() * 1000L < System.currentTimeMillis()) {
 			throw new RememberMeAuthenticationException("Remember-me login has expired");
 		}
-		// Token also matches, so login is valid. Update the token value, keeping the
-		// *same* series number.
+
+
 		this.logger.debug(LogMessage.format("Refreshing persistent login token for user '%s', series '%s'",
 				token.getUsername(), token.getSeries()));
+
+		//此记住我令牌是有效的，更新token值和时间
 		PersistentRememberMeToken newToken = new PersistentRememberMeToken(token.getUsername(), token.getSeries(),
 				generateTokenData(), new Date());
 		try {
+			//更新
 			this.tokenRepository.updateToken(newToken.getSeries(), newToken.getTokenValue(), newToken.getDate());
+			//添加新的记住我令牌
 			addCookie(newToken, request, response);
 		}
 		catch (Exception ex) {
@@ -136,19 +124,21 @@ public class PersistentTokenBasedRememberMeServices extends AbstractRememberMeSe
 	}
 
 	/**
-	 * Creates a new persistent login token with a new series number, stores the data in
-	 * the persistent token repository and adds the corresponding cookie to the response.
-	 *
+	 * 创建具有新的持久话记住我令牌
+	 * 将数据存储在持久令牌存储库中，并将相应的cookie添加到响应中。
 	 */
 	@Override
 	protected void onLoginSuccess(HttpServletRequest request, HttpServletResponse response,
 			Authentication successfulAuthentication) {
 		String username = successfulAuthentication.getName();
 		this.logger.debug(LogMessage.format("Creating new persistent login for user %s", username));
+
 		PersistentRememberMeToken persistentToken = new PersistentRememberMeToken(username, generateSeriesData(),
 				generateTokenData(), new Date());
 		try {
+			//保存起来，一般情况是数据库
 			this.tokenRepository.createNewToken(persistentToken);
+			//添加记住我令牌到响应的Cookie中
 			addCookie(persistentToken, request, response);
 		}
 		catch (Exception ex) {
@@ -156,6 +146,17 @@ public class PersistentTokenBasedRememberMeServices extends AbstractRememberMeSe
 		}
 	}
 
+	/**
+	 * 登出策略
+	 * <ul>
+	 *     <li>
+	 *         这是因为登出的时候，需要删除保存的记录
+	 *     </li>
+	 * </ul>
+	 * @param request
+	 * @param response
+	 * @param authentication
+	 */
 	@Override
 	public void logout(HttpServletRequest request, HttpServletResponse response, Authentication authentication) {
 		super.logout(request, response, authentication);
@@ -164,19 +165,34 @@ public class PersistentTokenBasedRememberMeServices extends AbstractRememberMeSe
 		}
 	}
 
+	/**
+	 * 生成Series随机数
+	 * @return
+	 */
 	protected String generateSeriesData() {
 		byte[] newSeries = new byte[this.seriesLength];
 		this.random.nextBytes(newSeries);
 		return new String(Base64.getEncoder().encode(newSeries));
 	}
 
+	/**
+	 * 生成Token随机数
+	 * @return
+	 */
 	protected String generateTokenData() {
 		byte[] newToken = new byte[this.tokenLength];
 		this.random.nextBytes(newToken);
 		return new String(Base64.getEncoder().encode(newToken));
 	}
 
+	/**
+	 * 添加记住我令牌到添加到响应中
+	 * @param token
+	 * @param request
+	 * @param response
+	 */
 	private void addCookie(PersistentRememberMeToken token, HttpServletRequest request, HttpServletResponse response) {
+		//可以看出此时的记住我令牌是由 Series + TokenValue
 		setCookie(new String[] { token.getSeries(), token.getTokenValue() }, getTokenValiditySeconds(), request,
 				response);
 	}
