@@ -39,11 +39,7 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.util.Assert;
 
 /**
- * Expression-based {@code FilterInvocationSecurityMetadataSource}.
- *
- * @author Luke Taylor
- * @author Eddú Meléndez
- * @since 3.0
+ * 基于表达式的 {@code FilterInvocationSecurityMetadataSource}.
  */
 public final class ExpressionBasedFilterInvocationSecurityMetadataSource
 		extends DefaultFilterInvocationSecurityMetadataSource {

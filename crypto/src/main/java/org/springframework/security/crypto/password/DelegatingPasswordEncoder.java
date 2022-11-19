@@ -22,8 +22,8 @@ import java.util.Map;
 /**
  * 基于前缀标识符委托给另一个PasswordEncoder的密码编码器。
  * 好处1：兼容性
- * 好处1：便捷性
- * 好处1：稳定性
+ * 好处2：便捷性
+ * 好处3：稳定性
  *
  * <h2>Constructing an instance</h2>
  *

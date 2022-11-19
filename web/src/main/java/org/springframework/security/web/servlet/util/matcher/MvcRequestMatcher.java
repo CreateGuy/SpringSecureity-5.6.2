@@ -32,8 +32,14 @@ import org.springframework.web.util.UrlPathHelper;
 
 /**
  * 一个使用Spring MVC的HandlerMappingIntrospector来匹配路径和提取变量的RequestMatcher
- * 了解Spring MVC的匹配是相对于servlet路径的是很重要的
- * 这意味着，如果将任何servlet映射到以“/”开头且大于1的路径，您还应该指定setServletPath (String)属性来区分映射。
+ * <ul>
+ *     <li>
+ *         是基于Url+请求方式的
+ *     </li>
+ *     <li>
+ *         如果请求Url是/a, 与AntPathRequestMatcher的区别在于这个还能匹配/a.html,/a.abc之类的
+ *     </li>
+ * </ul>
  */
 public class MvcRequestMatcher implements RequestMatcher, RequestVariablesExtractor {
 

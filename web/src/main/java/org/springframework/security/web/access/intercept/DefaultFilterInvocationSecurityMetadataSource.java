@@ -33,7 +33,7 @@ import org.springframework.security.web.FilterInvocation;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 
 /**
- * Default implementation of <tt>FilterInvocationDefinitionSource</tt>.
+ * 默认FilterInvocationSecurityMetadataSource的实现
  * <p>
  * Stores an ordered map of {@link RequestMatcher}s to <tt>ConfigAttribute</tt>
  * collections and provides matching of {@code FilterInvocation}s against the items stored
@@ -56,6 +56,9 @@ public class DefaultFilterInvocationSecurityMetadataSource implements FilterInvo
 
 	protected final Log logger = LogFactory.getLog(getClass());
 
+	/**
+	 * 请求匹配器和权限表达式的映射关系
+	 */
 	private final Map<RequestMatcher, Collection<ConfigAttribute>> requestMap;
 
 	/**

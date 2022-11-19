@@ -23,9 +23,7 @@ import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 /**
- * Stores a {@link ConfigAttribute} as a <code>String</code>.
- *
- * @author Ben Alex
+ * 将ConfigAttribute存储为字符串
  */
 public class SecurityConfig implements ConfigAttribute {
 

@@ -64,8 +64,14 @@ import org.springframework.security.web.access.intercept.FilterSecurityIntercept
 public abstract class AbstractInterceptUrlConfigurer<C extends AbstractInterceptUrlConfigurer<C, H>, H extends HttpSecurityBuilder<H>>
 		extends AbstractHttpConfigurer<C, H> {
 
+	/**
+	 * 我理解是：FilterSecurityInterceptor过滤器可能会执行多次，那么这个就是决定后面的执行此过滤器是否需要跳过权限检查
+	 */
 	private Boolean filterSecurityInterceptorOncePerRequest;
 
+	/**
+	 * 访问决策管理器
+	 */
 	private AccessDecisionManager accessDecisionManager;
 
 	AbstractInterceptUrlConfigurer() {
@@ -73,22 +79,26 @@ public abstract class AbstractInterceptUrlConfigurer<C extends AbstractIntercept
 
 	@Override
 	public void configure(H http) throws Exception {
+		//获得安全元数据
 		FilterInvocationSecurityMetadataSource metadataSource = createMetadataSource(http);
 		if (metadataSource == null) {
 			return;
 		}
+		//创建对应过滤器
 		FilterSecurityInterceptor securityInterceptor = createFilterSecurityInterceptor(http, metadataSource,
 				http.getSharedObject(AuthenticationManager.class));
+
 		if (this.filterSecurityInterceptorOncePerRequest != null) {
 			securityInterceptor.setObserveOncePerRequest(this.filterSecurityInterceptorOncePerRequest);
 		}
+
 		securityInterceptor = postProcess(securityInterceptor);
 		http.addFilter(securityInterceptor);
 		http.setSharedObject(FilterSecurityInterceptor.class, securityInterceptor);
 	}
 
 	/**
-	 * Subclasses should implement this method to provide a
+	 * 获得安全元数据
 	 * {@link FilterInvocationSecurityMetadataSource} for the
 	 * {@link FilterSecurityInterceptor}.
 	 * @param http the builder to use
@@ -98,16 +108,14 @@ public abstract class AbstractInterceptUrlConfigurer<C extends AbstractIntercept
 	abstract FilterInvocationSecurityMetadataSource createMetadataSource(H http);
 
 	/**
-	 * Subclasses should implement this method to provide the {@link AccessDecisionVoter}
-	 * instances used to create the default {@link AccessDecisionManager}
-	 * @param http the builder to use
-	 * @return the {@link AccessDecisionVoter} instances used to create the default
-	 * {@link AccessDecisionManager}
+	 * 获得访问决策投票器
+	 * @param http
+	 * @return
 	 */
 	abstract List<AccessDecisionVoter<?>> getDecisionVoters(H http);
 
 	/**
-	 * Creates the default {@code AccessDecisionManager}
+	 * 创建默认的访问决策管理器
 	 * @return the default {@code AccessDecisionManager}
 	 */
 	private AccessDecisionManager createDefaultAccessDecisionManager(H http) {
@@ -116,24 +124,23 @@ public abstract class AbstractInterceptUrlConfigurer<C extends AbstractIntercept
 	}
 
 	/**
-	 * If currently null, creates a default {@link AccessDecisionManager} using
-	 * {@link #createDefaultAccessDecisionManager(HttpSecurityBuilder)}. Otherwise returns
-	 * the {@link AccessDecisionManager}.
-	 * @param http the builder to use
-	 * @return the {@link AccessDecisionManager} to use
+	 * 获得访问决策管理器
+	 * @param http
+	 * @return
 	 */
 	private AccessDecisionManager getAccessDecisionManager(H http) {
 		if (this.accessDecisionManager == null) {
+			//创建默认的访问决策管理器
 			this.accessDecisionManager = createDefaultAccessDecisionManager(http);
 		}
 		return this.accessDecisionManager;
 	}
 
 	/**
-	 * Creates the {@link FilterSecurityInterceptor}
+	 * 创建 {@link FilterSecurityInterceptor}过滤器
 	 * @param http the builder to use
-	 * @param metadataSource the {@link FilterInvocationSecurityMetadataSource} to use
-	 * @param authenticationManager the {@link AuthenticationManager} to use
+	 * @param metadataSource 安全元数据
+	 * @param authenticationManager 局部认证管理器
 	 * @return the {@link FilterSecurityInterceptor}
 	 * @throws Exception
 	 */
@@ -142,6 +149,7 @@ public abstract class AbstractInterceptUrlConfigurer<C extends AbstractIntercept
 			throws Exception {
 		FilterSecurityInterceptor securityInterceptor = new FilterSecurityInterceptor();
 		securityInterceptor.setSecurityMetadataSource(metadataSource);
+		//设置访问决策管理器
 		securityInterceptor.setAccessDecisionManager(getAccessDecisionManager(http));
 		securityInterceptor.setAuthenticationManager(authenticationManager);
 		securityInterceptor.afterPropertiesSet();

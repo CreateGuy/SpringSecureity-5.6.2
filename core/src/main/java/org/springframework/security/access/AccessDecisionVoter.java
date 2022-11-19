@@ -21,13 +21,7 @@ import java.util.Collection;
 import org.springframework.security.core.Authentication;
 
 /**
- * Indicates a class is responsible for voting on authorization decisions.
- * <p>
- * The coordination of voting (ie polling {@code AccessDecisionVoter}s, tallying their
- * responses, and making the final authorization decision) is performed by an
- * {@link org.springframework.security.access.AccessDecisionManager}.
- *
- * @author Ben Alex
+ * 访问决策投票器
  */
 public interface AccessDecisionVoter<S> {
 

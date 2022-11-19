@@ -28,18 +28,12 @@ import org.springframework.http.HttpMethod;
 import org.springframework.util.StringUtils;
 
 /**
- * Uses a regular expression to decide whether a supplied the URL of a supplied
- * {@code HttpServletRequest}.
- *
- * Can also be configured to match a specific HTTP method.
- *
- * The match is performed against the {@code servletPath + pathInfo + queryString} of the
- * request and is case-sensitive by default. Case-insensitive matching can be used by
- * using the constructor which takes the {@code caseInsensitive} argument.
- *
- * @author Luke Taylor
- * @author Rob Winch
- * @since 3.1
+ * 基于Url正则表达式和请求方式的请求匹配器
+ * <ul>
+ *     <li>可以配置为匹配特定的HTTP方法</li>
+ *     <li>匹配是针对请求的servletPath + pathInfo + queryString执行的</li>
+ *     <li>默认情况下是区分大小写的</li>
+ * </ul>
  */
 public final class RegexRequestMatcher implements RequestMatcher {
 

@@ -28,30 +28,18 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.util.UrlPathHelper;
 
 /**
- * Matcher which compares a pre-defined ant-style pattern against the URL (
- * {@code servletPath + pathInfo}) of an {@code HttpServletRequest}. The query string of
- * the URL is ignored and matching is case-insensitive or case-sensitive depending on the
- * arguments passed into the constructor.
- * <p>
- * Using a pattern value of {@code /**} or {@code **} is treated as a universal match,
- * which will match any request. Patterns which end with {@code /**} (and have no other
- * wildcards) are optimized by using a substring match &mdash; a pattern of
- * {@code /aaa/**} will match {@code /aaa}, {@code /aaa/} and any sub-directories, such as
- * {@code /aaa/bbb/ccc}.
- * </p>
- * <p>
- * For all other cases, Spring's {@link AntPathMatcher} is used to perform the match. See
- * the Spring documentation for this class for comprehensive information on the syntax
- * used.
- * </p>
- *
- * @author Luke Taylor
- * @author Rob Winch
- * @author Eddú Meléndez
- * @author Evgeniy Cheban
- * @author Manuel Jordan
- * @since 3.1
- * @see org.springframework.util.AntPathMatcher
+ * 基于Url通配符和请求方式的请求匹配器
+ * <ulr>
+ *     <li>
+ *         匹配不区分大小写或区分大小写。
+ *     </li>
+ *     <li>
+ *         使用模式值/**或**将被视为通用匹配，它将匹配任何请求。
+ *     </li>
+ *     <li>
+ *         以/**结尾(没有其他通配符)的模式通过使用子字符串匹配进行优化——/aaa/**的模式将匹配/aaa、/aaa/和任何子目录，如/aaa/bbb/ccc。
+ *     </li>
+ * </ulr>
  */
 public final class AntPathRequestMatcher implements RequestMatcher, RequestVariablesExtractor {
 

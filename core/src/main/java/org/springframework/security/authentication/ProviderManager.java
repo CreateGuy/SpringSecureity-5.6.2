@@ -36,8 +36,7 @@ import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 
 /**
- * Iterates an {@link Authentication} request through a list of
- * {@link AuthenticationProvider}s.
+ * 认证管理器，通过认证提供者进行认证
  *
  * <p>
  * <tt>AuthenticationProvider</tt>s are usually tried in order until one provides a

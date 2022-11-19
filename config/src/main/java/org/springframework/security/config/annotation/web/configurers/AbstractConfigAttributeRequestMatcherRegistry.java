@@ -39,8 +39,14 @@ import org.springframework.util.Assert;
  */
 public abstract class AbstractConfigAttributeRequestMatcherRegistry<C> extends AbstractRequestMatcherRegistry<C> {
 
+	/**
+	 * 已经指定了规则的请求匹配器
+	 */
 	private List<UrlMapping> urlMappings = new ArrayList<>();
 
+	/**
+	 * 还没指定规则的请求匹配器
+	 */
 	private List<RequestMatcher> unmappedMatchers;
 
 	/**
@@ -73,7 +79,9 @@ public abstract class AbstractConfigAttributeRequestMatcherRegistry<C> extends A
 	 */
 	@Override
 	protected final C chainRequestMatchers(List<RequestMatcher> requestMatchers) {
+		//标记为还未指定规则的请求匹配器
 		this.unmappedMatchers = requestMatchers;
+		//本质上就是将这些请求匹配器保存起来，通过返回类设置规则
 		return chainRequestMatchersInternal(requestMatchers);
 	}
 
@@ -96,11 +104,10 @@ public abstract class AbstractConfigAttributeRequestMatcherRegistry<C> extends A
 		this.urlMappings.add(index, urlMapping);
 	}
 
+
 	/**
-	 * Creates the mapping of {@link RequestMatcher} to {@link Collection} of
-	 * {@link ConfigAttribute} instances
-	 * @return the mapping of {@link RequestMatcher} to {@link Collection} of
-	 * {@link ConfigAttribute} instances. Cannot be null.
+	 * 创建请求表达式和权限表达式的映射关系
+	 * @return
 	 */
 	final LinkedHashMap<RequestMatcher, Collection<ConfigAttribute>> createRequestMap() {
 		Assert.state(this.unmappedMatchers == null, () -> "An incomplete mapping was found for " + this.unmappedMatchers
@@ -115,13 +122,15 @@ public abstract class AbstractConfigAttributeRequestMatcherRegistry<C> extends A
 	}
 
 	/**
-	 * A mapping of {@link RequestMatcher} to {@link Collection} of
-	 * {@link ConfigAttribute} instances
+	 * 请求匹配器 到 权限表达式 的映射
 	 */
 	static final class UrlMapping {
 
 		private final RequestMatcher requestMatcher;
 
+		/**
+		 * 比如说保存的就是 hasRole('ROLE_admin')
+		 */
 		private final Collection<ConfigAttribute> configAttrs;
 
 		UrlMapping(RequestMatcher requestMatcher, Collection<ConfigAttribute> configAttrs) {

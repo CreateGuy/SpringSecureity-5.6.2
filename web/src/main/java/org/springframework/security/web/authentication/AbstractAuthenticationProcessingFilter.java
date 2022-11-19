@@ -112,14 +112,23 @@ import org.springframework.web.filter.GenericFilterBean;
 public abstract class AbstractAuthenticationProcessingFilter extends GenericFilterBean
 		implements ApplicationEventPublisherAware, MessageSourceAware {
 
+	/**
+	 * 事件推送器
+	 */
 	protected ApplicationEventPublisher eventPublisher;
 
 	protected AuthenticationDetailsSource<HttpServletRequest, ?> authenticationDetailsSource = new WebAuthenticationDetailsSource();
 
+	/**
+	 * 局部认证管理器
+	 */
 	private AuthenticationManager authenticationManager;
 
 	protected MessageSourceAccessor messages = SpringSecurityMessageSource.getAccessor();
 
+	/**
+	 * 记住我服务，用于执行loginSuccess方法
+	 */
 	private RememberMeServices rememberMeServices = new NullRememberMeServices();
 
 	/**
@@ -127,6 +136,9 @@ public abstract class AbstractAuthenticationProcessingFilter extends GenericFilt
 	 */
 	private RequestMatcher requiresAuthenticationRequestMatcher;
 
+	/**
+	 * 是否先执行后续过滤器，在执行认证成功后续操作
+	 */
 	private boolean continueChainBeforeSuccessfulAuthentication = false;
 
 	/**
@@ -134,10 +146,19 @@ public abstract class AbstractAuthenticationProcessingFilter extends GenericFilt
 	 */
 	private SessionAuthenticationStrategy sessionStrategy = new NullAuthenticatedSessionStrategy();
 
+	/**
+	 * 是否允许创建Session
+	 */
 	private boolean allowSessionCreation = true;
 
+	/**
+	 * 认证成功处理器
+	 */
 	private AuthenticationSuccessHandler successHandler = new SavedRequestAwareAuthenticationSuccessHandler();
 
+	/**
+	 * 认证失败处理器
+	 */
 	private AuthenticationFailureHandler failureHandler = new SimpleUrlAuthenticationFailureHandler();
 
 	/**
@@ -165,22 +186,22 @@ public abstract class AbstractAuthenticationProcessingFilter extends GenericFilt
 	 * an {@link Authentication} object. Cannot be null.
 	 */
 	protected AbstractAuthenticationProcessingFilter(String defaultFilterProcessesUrl,
-			AuthenticationManager authenticationManager) {
-		setFilterProcessesUrl(defaultFilterProcessesUrl);
-		setAuthenticationManager(authenticationManager);
-	}
+				AuthenticationManager authenticationManager) {
+			setFilterProcessesUrl(defaultFilterProcessesUrl);
+			setAuthenticationManager(authenticationManager);
+		}
 
-	/**
-	 * Creates a new instance with a {@link RequestMatcher} and an
-	 * {@link AuthenticationManager}
-	 * @param requiresAuthenticationRequestMatcher the {@link RequestMatcher} used to
-	 * determine if authentication is required. Cannot be null.
-	 * @param authenticationManager the {@link AuthenticationManager} used to authenticate
-	 * an {@link Authentication} object. Cannot be null.
-	 */
+		/**
+		 * Creates a new instance with a {@link RequestMatcher} and an
+		 * {@link AuthenticationManager}
+		 * @param requiresAuthenticationRequestMatcher the {@link RequestMatcher} used to
+		 * determine if authentication is required. Cannot be null.
+		 * @param authenticationManager the {@link AuthenticationManager} used to authenticate
+		 * an {@link Authentication} object. Cannot be null.
+		 */
 	protected AbstractAuthenticationProcessingFilter(RequestMatcher requiresAuthenticationRequestMatcher,
-			AuthenticationManager authenticationManager) {
-		setRequiresAuthenticationRequestMatcher(requiresAuthenticationRequestMatcher);
+				AuthenticationManager authenticationManager) {
+			setRequiresAuthenticationRequestMatcher(requiresAuthenticationRequestMatcher);
 		setAuthenticationManager(authenticationManager);
 	}
 
@@ -221,21 +242,25 @@ public abstract class AbstractAuthenticationProcessingFilter extends GenericFilt
 
 	private void doFilter(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
 			throws IOException, ServletException {
+		//确定是否是认证请求
 		if (!requiresAuthentication(request, response)) {
 			chain.doFilter(request, response);
 			return;
 		}
 		try {
+			//进行认证
 			Authentication authenticationResult = attemptAuthentication(request, response);
 			if (authenticationResult == null) {
-				// return immediately as subclass has indicated that it hasn't completed
+				//立即返回，表明未完成认证
 				return;
 			}
+			//执行Session认证策略
 			this.sessionStrategy.onAuthentication(authenticationResult, request, response);
-			// Authentication success
+			//是否先执行后续过滤器，在执行认证成功后续操作
 			if (this.continueChainBeforeSuccessfulAuthentication) {
 				chain.doFilter(request, response);
 			}
+			//执行认证成功后续操作
 			successfulAuthentication(request, response, chain, authenticationResult);
 		}
 		catch (InternalAuthenticationServiceException failed) {
@@ -243,7 +268,7 @@ public abstract class AbstractAuthenticationProcessingFilter extends GenericFilt
 			unsuccessfulAuthentication(request, response, failed);
 		}
 		catch (AuthenticationException ex) {
-			// Authentication failed
+			//执行认证失败后续操作
 			unsuccessfulAuthentication(request, response, ex);
 		}
 	}
@@ -263,7 +288,7 @@ public abstract class AbstractAuthenticationProcessingFilter extends GenericFilt
 	}
 
 	/**
-	 * Performs actual authentication.
+	 * 尝试进行身份认证
 	 * <p>
 	 * The implementation should do one of the following:
 	 * <ol>
@@ -308,16 +333,24 @@ public abstract class AbstractAuthenticationProcessingFilter extends GenericFilt
 	 */
 	protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain,
 			Authentication authResult) throws IOException, ServletException {
+		//将认证对象保存到线程级别的线程上下文中
 		SecurityContext context = SecurityContextHolder.createEmptyContext();
 		context.setAuthentication(authResult);
 		SecurityContextHolder.setContext(context);
+
 		if (this.logger.isDebugEnabled()) {
 			this.logger.debug(LogMessage.format("Set SecurityContextHolder to %s", authResult));
 		}
+
+		//执行记住我服务的loginSuccess方法，是为了新增一个记住我令牌
 		this.rememberMeServices.loginSuccess(request, response, authResult);
+
+		//推送交互式认证成功事件
 		if (this.eventPublisher != null) {
 			this.eventPublisher.publishEvent(new InteractiveAuthenticationSuccessEvent(authResult, this.getClass()));
 		}
+
+		//执行认证成功处理器
 		this.successHandler.onAuthenticationSuccess(request, response, authResult);
 	}
 
@@ -338,7 +371,10 @@ public abstract class AbstractAuthenticationProcessingFilter extends GenericFilt
 		this.logger.trace("Failed to process authentication request", failed);
 		this.logger.trace("Cleared SecurityContextHolder");
 		this.logger.trace("Handling authentication failure");
+
+		//是为了清除记住我令牌，没懂具体常见
 		this.rememberMeServices.loginFail(request, response);
+		//执行认证失败处理器
 		this.failureHandler.onAuthenticationFailure(request, response, failed);
 	}
 

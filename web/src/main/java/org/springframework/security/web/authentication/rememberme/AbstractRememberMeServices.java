@@ -113,7 +113,7 @@ public abstract class AbstractRememberMeServices
 	private String parameter = DEFAULT_PARAMETER;
 
 	/**
-	 * 是否需要携带记住我令牌
+	 * 是否一直需要携带记住我令牌
 	 * <url>
 	 *     <li>
 	 *         true：都携带记住我令牌
@@ -361,9 +361,11 @@ public abstract class AbstractRememberMeServices
 	 * has been requested.
 	 */
 	protected boolean rememberMeRequested(HttpServletRequest request, String parameter) {
+		//是否一直需要携带记住我令牌
 		if (this.alwaysRemember) {
 			return true;
 		}
+		//通过参数值来判断是否需要携带记住我令牌
 		String paramValue = request.getParameter(parameter);
 		if (paramValue != null) {
 			if (paramValue.equalsIgnoreCase("true") || paramValue.equalsIgnoreCase("on")

@@ -222,7 +222,6 @@ public abstract class AbstractUserDetailsAuthenticationProvider
 	protected Authentication createSuccessAuthentication(Object principal, Authentication authentication,
 			UserDetails user) {
 		//创建认证对象
-
 		UsernamePasswordAuthenticationToken result = new UsernamePasswordAuthenticationToken(principal,
 				authentication.getCredentials(),
 				//这里还会进行权限的映射

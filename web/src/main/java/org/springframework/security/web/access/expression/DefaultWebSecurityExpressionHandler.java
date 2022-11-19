@@ -26,7 +26,7 @@ import org.springframework.security.web.FilterInvocation;
 import org.springframework.util.Assert;
 
 /**
- * Web安全表达式处理器
+ * Web安全表达式处理器，不懂
  * @author Luke Taylor
  * @author Eddú Meléndez
  * @since 3.0
