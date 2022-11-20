@@ -103,12 +103,24 @@ public class GlobalMethodSecurityConfiguration implements ImportAware, SmartInit
 
 	private DefaultMethodSecurityExpressionHandler defaultMethodExpressionHandler = new DefaultMethodSecurityExpressionHandler();
 
+	/**
+	 * 认证管理器
+	 */
 	private AuthenticationManager authenticationManager;
 
+	/**
+	 * 认证管理器构建器
+	 */
 	private AuthenticationManagerBuilder auth;
 
+	/**
+	 * 是否使用容器中的认证管理器，还是使用认证管理器构建器 构建出来的
+	 */
 	private boolean disableAuthenticationRegistry;
 
+	/**
+	 * 导入类上关于 @EnableGlobalMethodSecurity 注解的属性
+	 */
 	private AnnotationAttributes enableMethodSecurity;
 
 	private BeanFactory context;
@@ -140,8 +152,11 @@ public class GlobalMethodSecurityConfiguration implements ImportAware, SmartInit
 	public MethodInterceptor methodSecurityInterceptor(MethodSecurityMetadataSource methodSecurityMetadataSource) {
 		this.methodSecurityInterceptor = isAspectJ() ? new AspectJMethodSecurityInterceptor()
 				: new MethodSecurityInterceptor();
+		//设置访问决策管理器
 		this.methodSecurityInterceptor.setAccessDecisionManager(accessDecisionManager());
+		//设置执行后管理器
 		this.methodSecurityInterceptor.setAfterInvocationManager(afterInvocationManager());
+		//设置安全元数据源
 		this.methodSecurityInterceptor.setSecurityMetadataSource(methodSecurityMetadataSource);
 		RunAsManager runAsManager = runAsManager();
 		if (runAsManager != null) {
@@ -231,15 +246,7 @@ public class GlobalMethodSecurityConfiguration implements ImportAware, SmartInit
 	}
 
 	/**
-	 * Allows subclasses to provide a custom {@link AccessDecisionManager}. The default is
-	 * a {@link AffirmativeBased} with the following voters:
-	 *
-	 * <ul>
-	 * <li>{@link PreInvocationAuthorizationAdviceVoter}</li>
-	 * <li>{@link RoleVoter}</li>
-	 * <li>{@link AuthenticatedVoter}</li>
-	 * </ul>
-	 * @return the {@link AccessDecisionManager} to use
+	 * 创建访问决策管理器
 	 */
 	protected AccessDecisionManager accessDecisionManager() {
 		List<AccessDecisionVoter<?>> decisionVoters = new ArrayList<>();
@@ -252,6 +259,7 @@ public class GlobalMethodSecurityConfiguration implements ImportAware, SmartInit
 			decisionVoters.add(new Jsr250Voter());
 		}
 		RoleVoter roleVoter = new RoleVoter();
+		//获得角色前缀
 		GrantedAuthorityDefaults grantedAuthorityDefaults = getSingleBeanOrNull(GrantedAuthorityDefaults.class);
 		if (grantedAuthorityDefaults != null) {
 			roleVoter.setRolePrefix(grantedAuthorityDefaults.getRolePrefix());
@@ -333,11 +341,7 @@ public class GlobalMethodSecurityConfiguration implements ImportAware, SmartInit
 	}
 
 	/**
-	 * Provides the default {@link MethodSecurityMetadataSource} that will be used. It
-	 * creates a {@link DelegatingMethodSecurityMetadataSource} based upon
-	 * {@link #customMethodSecurityMetadataSource()} and the attributes on
-	 * {@link EnableGlobalMethodSecurity}.
-	 * @return the {@link MethodSecurityMetadataSource}
+	 * 注册安全元数据源
 	 */
 	@Bean
 	@Role(BeanDefinition.ROLE_INFRASTRUCTURE)
@@ -350,12 +354,16 @@ public class GlobalMethodSecurityConfiguration implements ImportAware, SmartInit
 			sources.add(customMethodSecurityMetadataSource);
 		}
 		boolean hasCustom = customMethodSecurityMetadataSource != null;
+
+		//是否开启了下面三种类型的注解
 		boolean isPrePostEnabled = prePostEnabled();
 		boolean isSecuredEnabled = securedEnabled();
 		boolean isJsr250Enabled = jsr250Enabled();
 		Assert.state(isPrePostEnabled || isSecuredEnabled || isJsr250Enabled || hasCustom,
 				"In the composition of all global method configuration, "
 						+ "no annotation support was actually activated");
+
+		//尝试添加下面三种安全元数据源
 		if (isPrePostEnabled) {
 			sources.add(new PrePostAnnotationSecurityMetadataSource(attributeFactory));
 		}
@@ -436,6 +444,10 @@ public class GlobalMethodSecurityConfiguration implements ImportAware, SmartInit
 		return enableMethodSecurity().getEnum("mode") == AdviceMode.ASPECTJ;
 	}
 
+	/**
+	 * 获得有关@EnableGlobalMethodSecurity注解的属性
+	 * @return
+	 */
 	private AnnotationAttributes enableMethodSecurity() {
 		if (this.enableMethodSecurity == null) {
 			// if it is null look at this instance (i.e. a subclass was used)

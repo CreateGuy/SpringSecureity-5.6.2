@@ -22,9 +22,7 @@ import org.springframework.security.authentication.InsufficientAuthenticationExc
 import org.springframework.security.core.Authentication;
 
 /**
- * Makes a final access control (authorization) decision.
- *
- * @author Ben Alex
+ * 访问决策管理器
  */
 public interface AccessDecisionManager {
 

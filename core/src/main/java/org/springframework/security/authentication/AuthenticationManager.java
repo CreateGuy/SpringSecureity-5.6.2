@@ -20,9 +20,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 
 /**
- * Processes an {@link Authentication} request.
- *
- * @author Ben Alex
+ * 认证管理器
  */
 public interface AuthenticationManager {
 

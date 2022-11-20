@@ -111,22 +111,43 @@ public abstract class AbstractSecurityInterceptor
 
 	protected MessageSourceAccessor messages = SpringSecurityMessageSource.getAccessor();
 
+	/**
+	 * 事件推送器
+	 */
 	private ApplicationEventPublisher eventPublisher;
 
+	/**
+	 * 访问决策管理器
+	 */
 	private AccessDecisionManager accessDecisionManager;
 
+	/**
+	 * 执行后管理器
+	 */
 	private AfterInvocationManager afterInvocationManager;
 
+	/**
+	 * 局部认证管理器
+	 */
 	private AuthenticationManager authenticationManager = new NoOpAuthenticationManager();
 
 	private RunAsManager runAsManager = new NullRunAsManager();
 
+	/**
+	 * 是否一直 通过局部认证管理器获得认证对象
+	 */
 	private boolean alwaysReauthenticate = false;
 
 	private boolean rejectPublicInvocations = false;
 
+	/**
+	 * 是否开启验证权限表达式(ConfigAttribute)
+	 */
 	private boolean validateConfigAttributes = true;
 
+	/**
+	 * 是否在权限判断成功后发布特定的事件
+	 */
 	private boolean publishAuthorizationSuccess = false;
 
 	@Override
@@ -147,17 +168,25 @@ public abstract class AbstractSecurityInterceptor
 			Assert.isTrue(this.afterInvocationManager.supports(getSecureObjectClass()),
 					() -> "AfterInvocationManager does not support secure object class: " + getSecureObjectClass());
 		}
+
+		//是否开启验证权限表达式
 		if (this.validateConfigAttributes) {
+			//通过安全元数据获得保存的所有权限表达式
 			Collection<ConfigAttribute> attributeDefs = this.obtainSecurityMetadataSource().getAllConfigAttributes();
 			if (attributeDefs == null) {
 				this.logger.warn("Could not validate configuration attributes as the "
 						+ "SecurityMetadataSource did not return any attributes from getAllConfigAttributes()");
 				return;
 			}
+			//验证权限表达式(ConfigAttribute)
 			validateAttributeDefs(attributeDefs);
 		}
 	}
 
+	/**
+	 * 验证权限表达式(ConfigAttribute)
+	 * @param attributeDefs
+	 */
 	private void validateAttributeDefs(Collection<ConfigAttribute> attributeDefs) {
 		Set<ConfigAttribute> unsupportedAttrs = new HashSet<>();
 		for (ConfigAttribute attr : attributeDefs) {
@@ -166,6 +195,8 @@ public abstract class AbstractSecurityInterceptor
 				unsupportedAttrs.add(attr);
 			}
 		}
+
+		//有任何一个不支持就抛出异常
 		if (unsupportedAttrs.size() != 0) {
 			this.logger
 					.trace("Did not validate configuration attributes since validateConfigurationAttributes is false");
@@ -176,14 +207,23 @@ public abstract class AbstractSecurityInterceptor
 		}
 	}
 
+	/**
+	 * 执行调用前的权限判断
+	 * @param object
+	 * @return
+	 */
 	protected InterceptorStatusToken beforeInvocation(Object object) {
 		Assert.notNull(object, "Object was null");
+		//不懂具体应用场景
 		if (!getSecureObjectClass().isAssignableFrom(object.getClass())) {
 			throw new IllegalArgumentException("Security invocation attempted for object " + object.getClass().getName()
 					+ " but AbstractSecurityInterceptor only configured to support secure objects of type: "
 					+ getSecureObjectClass());
 		}
+		//通过安全元数据获得接口所需权限
 		Collection<ConfigAttribute> attributes = this.obtainSecurityMetadataSource().getAttributes(object);
+
+		//当不需要任何权限的时候
 		if (CollectionUtils.isEmpty(attributes)) {
 			Assert.isTrue(!this.rejectPublicInvocations,
 					() -> "Secure object invocation " + object
@@ -193,28 +233,37 @@ public abstract class AbstractSecurityInterceptor
 			if (this.logger.isDebugEnabled()) {
 				this.logger.debug(LogMessage.format("Authorized public object %s", object));
 			}
+			//发布特定事件
 			publishEvent(new PublicInvocationEvent(object));
-			return null; // no further work post-invocation
+			return null;
 		}
+
+		//确定有认证对象
 		if (SecurityContextHolder.getContext().getAuthentication() == null) {
+			//发布认证对象未找到事件
 			credentialsNotFound(this.messages.getMessage("AbstractSecurityInterceptor.authenticationNotFound",
 					"An Authentication object was not found in the SecurityContext"), object, attributes);
 		}
+		//获得认对象
 		Authentication authenticated = authenticateIfRequired();
 		if (this.logger.isTraceEnabled()) {
 			this.logger.trace(LogMessage.format("Authorizing %s with attributes %s", object, attributes));
 		}
-		// Attempt authorization
+		//尝试进行权限判断
 		attemptAuthorization(object, attributes, authenticated);
 		if (this.logger.isDebugEnabled()) {
 			this.logger.debug(LogMessage.format("Authorized %s with attributes %s", object, attributes));
 		}
+
+		//发布特定的事件
 		if (this.publishAuthorizationSuccess) {
 			publishEvent(new AuthorizedEvent(object, attributes, authenticated));
 		}
 
-		// Attempt to run as a different user
+		//尝试以不同的用户执行
 		Authentication runAs = this.runAsManager.buildRunAs(authenticated, object, attributes);
+
+		//更新线程级别上下文策略中的认证对象
 		if (runAs != null) {
 			SecurityContext origCtx = SecurityContextHolder.getContext();
 			SecurityContext newCtx = SecurityContextHolder.createEmptyContext();
@@ -224,18 +273,25 @@ public abstract class AbstractSecurityInterceptor
 			if (this.logger.isDebugEnabled()) {
 				this.logger.debug(LogMessage.format("Switched to RunAs authentication %s", runAs));
 			}
-			// need to revert to token.Authenticated post-invocation
+			//第二个参数表示：需要恢复认证对象
 			return new InterceptorStatusToken(origCtx, true, attributes, object);
 		}
 		this.logger.trace("Did not switch RunAs authentication since RunAsManager returned null");
-		// no further work post-invocation
+		//第二个参数表示：需要不需要恢复认证对象
 		return new InterceptorStatusToken(SecurityContextHolder.getContext(), false, attributes, object);
 
 	}
 
+	/**
+	 * 尝试进行权限判断
+	 * @param object
+	 * @param attributes 接口所需权限
+	 * @param authenticated 认证对象
+	 */
 	private void attemptAuthorization(Object object, Collection<ConfigAttribute> attributes,
 			Authentication authenticated) {
 		try {
+			//调用访问决策管理器确定是否放行该请求
 			this.accessDecisionManager.decide(authenticated, object, attributes);
 		}
 		catch (AccessDeniedException ex) {
@@ -246,19 +302,22 @@ public abstract class AbstractSecurityInterceptor
 			else if (this.logger.isDebugEnabled()) {
 				this.logger.debug(LogMessage.format("Failed to authorize %s with attributes %s", object, attributes));
 			}
+			//推送对应的事件
 			publishEvent(new AuthorizationFailureEvent(object, attributes, authenticated, ex));
 			throw ex;
 		}
 	}
 
 	/**
-	 * Cleans up the work of the <tt>AbstractSecurityInterceptor</tt> after the secure
-	 * object invocation has been completed. This method should be invoked after the
-	 * secure object invocation and before afterInvocation regardless of the secure object
-	 * invocation returning successfully (i.e. it should be done in a finally block).
-	 * @param token as returned by the {@link #beforeInvocation(Object)} method
+	 * 是否需要将认证对象恢复到 判断权限之前
+	 * @param token
 	 */
 	protected void finallyInvocation(InterceptorStatusToken token) {
+		/*
+			这个if成立的情况一般都是RunAsUserToken的认证对象的情况
+			由于RunAsUserToken是新增了一些权限的，所以需要刷新回去
+			但是这样SecurityContextPersistenceFilter就无法更新Session级别的安全上下文了？？？
+		 */
 		if (token != null && token.isContextHolderRefreshRequired()) {
 			SecurityContextHolder.setContext(token.getSecurityContext());
 			if (this.logger.isDebugEnabled()) {
@@ -278,18 +337,20 @@ public abstract class AbstractSecurityInterceptor
 	 * caller (may be <tt>null</tt>)
 	 */
 	protected Object afterInvocation(InterceptorStatusToken token, Object returnedObject) {
+		//如果token为空，就说接口是一个公共接口，不需要权限，就直接返回
 		if (token == null) {
-			// public object
 			return returnedObject;
 		}
-		finallyInvocation(token); // continue to clean in this method for passivity
+		//是否需要将认证对象恢复到 判断权限之前
+		finallyInvocation(token);
 		if (this.afterInvocationManager != null) {
-			// Attempt after invocation handling
 			try {
+				//处理之后目标方法后的操作
 				returnedObject = this.afterInvocationManager.decide(token.getSecurityContext().getAuthentication(),
 						token.getSecureObject(), token.getAttributes(), returnedObject);
 			}
 			catch (AccessDeniedException ex) {
+				//发布授权失败异常
 				publishEvent(new AuthorizationFailureEvent(token.getSecureObject(), token.getAttributes(),
 						token.getSecurityContext().getAuthentication(), ex));
 				throw ex;
@@ -299,24 +360,26 @@ public abstract class AbstractSecurityInterceptor
 	}
 
 	/**
-	 * Checks the current authentication token and passes it to the AuthenticationManager
-	 * if {@link org.springframework.security.core.Authentication#isAuthenticated()}
-	 * returns false or the property <tt>alwaysReauthenticate</tt> has been set to true.
-	 * @return an authenticated <tt>Authentication</tt> object.
+	 * 获得认对象
+	 * @return
 	 */
 	private Authentication authenticateIfRequired() {
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+		//是否直接线程级别的安全上下文策略中的 认证对象
 		if (authentication.isAuthenticated() && !this.alwaysReauthenticate) {
 			if (this.logger.isTraceEnabled()) {
 				this.logger.trace(LogMessage.format("Did not re-authenticate %s before authorizing", authentication));
 			}
 			return authentication;
 		}
+		//对传入的认证对象进行认证
 		authentication = this.authenticationManager.authenticate(authentication);
-		// Don't authenticated.setAuthentication(true) because each provider does that
+
 		if (this.logger.isDebugEnabled()) {
 			this.logger.debug(LogMessage.format("Re-authenticated %s before authorizing", authentication));
 		}
+
+		//重新将安全上下文写入线程级别安全上下文策略中
 		SecurityContext context = SecurityContextHolder.createEmptyContext();
 		context.setAuthentication(authentication);
 		SecurityContextHolder.setContext(context);
@@ -324,13 +387,10 @@ public abstract class AbstractSecurityInterceptor
 	}
 
 	/**
-	 * Helper method which generates an exception containing the passed reason, and
-	 * publishes an event to the application context.
-	 * <p>
-	 * Always throws an exception.
-	 * @param reason to be provided in the exception detail
-	 * @param secureObject that was being called
-	 * @param configAttribs that were defined for the secureObject
+	 * 发布认证对象未找到事件
+	 * @param reason
+	 * @param secureObject
+	 * @param configAttribs
 	 */
 	private void credentialsNotFound(String reason, Object secureObject, Collection<ConfigAttribute> configAttribs) {
 		AuthenticationCredentialsNotFoundException exception = new AuthenticationCredentialsNotFoundException(reason);

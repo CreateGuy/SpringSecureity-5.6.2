@@ -40,6 +40,7 @@ final class GlobalMethodSecuritySelector implements ImportSelector {
 	@Override
 	public String[] selectImports(AnnotationMetadata importingClassMetadata) {
 		Class<EnableGlobalMethodSecurity> annoType = EnableGlobalMethodSecurity.class;
+		//获得导入类的所有属性
 		Map<String, Object> annotationAttributes = importingClassMetadata.getAnnotationAttributes(annoType.getName(),
 				false);
 		AnnotationAttributes attributes = AnnotationAttributes.fromMap(annotationAttributes);

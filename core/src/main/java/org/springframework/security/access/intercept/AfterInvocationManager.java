@@ -23,24 +23,10 @@ import org.springframework.security.access.ConfigAttribute;
 import org.springframework.security.core.Authentication;
 
 /**
- * Reviews the <code>Object</code> returned from a secure object invocation, being able to
- * modify the <code>Object</code> or throw an {@link AccessDeniedException}.
- * <p>
- * Typically used to ensure the principal is permitted to access the domain object
- * instance returned by a service layer bean. Can also be used to mutate the domain object
- * instance so the principal is only able to access authorised bean properties or
- * <code>Collection</code> elements.
- * <p>
- * Special consideration should be given to using an <code>AfterInvocationManager</code>
- * on bean methods that modify a database. Typically an
- * <code>AfterInvocationManager</code> is used with read-only methods, such as
- * <code>public DomainObject getById(id)</code>. If used with methods that modify a
- * database, a transaction manager should be used to ensure any
- * <code>AccessDeniedException</code> will cause a rollback of the changes made by the
- * transaction.
- * </p>
- *
- * @author Ben Alex
+ * 执行后管理器
+ * <ul>
+ *     <li>是为了在执行目标方法后，继续操作</li>
+ * </ul>
  */
 public interface AfterInvocationManager {
 

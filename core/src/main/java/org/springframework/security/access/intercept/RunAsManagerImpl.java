@@ -70,7 +70,9 @@ public class RunAsManagerImpl implements RunAsManager, InitializingBean {
 			Collection<ConfigAttribute> attributes) {
 		List<GrantedAuthority> newAuthorities = new ArrayList<>();
 		for (ConfigAttribute attribute : attributes) {
+			//判断权限是否以RUN_AS_开头
 			if (this.supports(attribute)) {
+				//创建新的权限名称，变成ROLE_开头的
 				GrantedAuthority extraAuthority = new SimpleGrantedAuthority(
 						getRolePrefix() + attribute.getAttribute());
 				newAuthorities.add(extraAuthority);
@@ -79,8 +81,9 @@ public class RunAsManagerImpl implements RunAsManager, InitializingBean {
 		if (newAuthorities.size() == 0) {
 			return null;
 		}
-		// Add existing authorities
+		//新增替换后的权限
 		newAuthorities.addAll(authentication.getAuthorities());
+		//创建西新的认证对象
 		return new RunAsUserToken(this.key, authentication.getPrincipal(), authentication.getCredentials(),
 				newAuthorities, authentication.getClass());
 	}
@@ -106,6 +109,12 @@ public class RunAsManagerImpl implements RunAsManager, InitializingBean {
 		this.rolePrefix = rolePrefix;
 	}
 
+	/**
+	 * 判断权限是否以RUN_AS_开头
+	 * @param attribute a configuration attribute that has been configured against the
+	 * <code>AbstractSecurityInterceptor</code>
+	 * @return
+	 */
 	@Override
 	public boolean supports(ConfigAttribute attribute) {
 		return attribute.getAttribute() != null && attribute.getAttribute().startsWith("RUN_AS_");

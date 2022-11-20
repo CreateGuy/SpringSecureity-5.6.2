@@ -25,16 +25,13 @@ import org.springframework.security.access.ConfigAttribute;
 import org.springframework.security.core.Authentication;
 
 /**
- * Simple concrete implementation of
- * {@link org.springframework.security.access.AccessDecisionManager} that uses a
- * consensus-based approach.
- * <p>
- * "Consensus" here means majority-rule (ignoring abstains) rather than unanimous
- * agreement (ignoring abstains). If you require unanimity, please see
- * {@link UnanimousBased}.
+ * 根据大多数投票器的决定来确定返回
  */
 public class ConsensusBased extends AbstractAccessDecisionManager {
 
+	/**
+	 * 是否在 同意票等于拒绝票，并且同意票不为0的时候，放行
+	 */
 	private boolean allowIfEqualGrantedDeniedDecisions = true;
 
 	public ConsensusBased(List<AccessDecisionVoter<?>> decisionVoters) {
@@ -62,9 +59,12 @@ public class ConsensusBased extends AbstractAccessDecisionManager {
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public void decide(Authentication authentication, Object object, Collection<ConfigAttribute> configAttributes)
 			throws AccessDeniedException {
+		//投同意票的次数
 		int grant = 0;
+		//投拒绝票的次数
 		int deny = 0;
 		for (AccessDecisionVoter voter : getDecisionVoters()) {
+			//调用投票器进行投票
 			int result = voter.vote(authentication, object, configAttributes);
 			switch (result) {
 			case AccessDecisionVoter.ACCESS_GRANTED:
@@ -77,21 +77,25 @@ public class ConsensusBased extends AbstractAccessDecisionManager {
 				break;
 			}
 		}
+		//如果同意票大于拒绝票
 		if (grant > deny) {
 			return;
 		}
+		//如果同意票小于拒绝票
 		if (deny > grant) {
 			throw new AccessDeniedException(
 					this.messages.getMessage("AbstractAccessDecisionManager.accessDenied", "Access is denied"));
 		}
+		///如果同意票等于拒绝票，并且同意票不为0
 		if ((grant == deny) && (grant != 0)) {
+			//是否在 同意票等于拒绝票，并且同意票不为0的时候，放行
 			if (this.allowIfEqualGrantedDeniedDecisions) {
 				return;
 			}
 			throw new AccessDeniedException(
 					this.messages.getMessage("AbstractAccessDecisionManager.accessDenied", "Access is denied"));
 		}
-		// To get this far, every AccessDecisionVoter abstained
+		//走到这一步，就代表所有访问决策投票器都弃权了
 		checkAllowIfAllAbstainDecisions();
 	}
 

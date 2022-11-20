@@ -107,7 +107,7 @@ public class SecurityContextPersistenceFilter extends GenericFilterBean {
 			SecurityContext contextAfterChainExecution = SecurityContextHolder.getContext();
 			//清空
 			SecurityContextHolder.clearContext();
-			//由于用户的线程级别的安全上下文，可能被修改过
+			//由于用户可能修改过线程级别的安全上下文
 			//所有重新设置到HttpSession的线程级别的安全上下文策略中
 			this.repo.saveContext(contextAfterChainExecution, holder.getRequest(), holder.getResponse());
 			request.removeAttribute(FILTER_APPLIED);

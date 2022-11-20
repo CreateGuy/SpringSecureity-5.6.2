@@ -24,11 +24,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.util.Assert;
 
 /**
- * Extended RoleVoter which uses a {@link RoleHierarchy} definition to determine the roles
- * allocated to the current user before voting.
- *
- * @author Luke Taylor
- * @since 2.0.4
+ * 继承RoleVoter，它使用一个角色继承器来获取用户权限
  */
 public class RoleHierarchyVoter extends RoleVoter {
 

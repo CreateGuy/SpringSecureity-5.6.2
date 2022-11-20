@@ -25,9 +25,7 @@ import org.springframework.security.access.ConfigAttribute;
 import org.springframework.security.core.Authentication;
 
 /**
- * Simple concrete implementation of
- * {@link org.springframework.security.access.AccessDecisionManager} that grants access if
- * any <code>AccessDecisionVoter</code> returns an affirmative response.
+ * 只要有任何一个投票器投了同意一票，就可以的 访问决策管理器
  */
 public class AffirmativeBased extends AbstractAccessDecisionManager {
 
@@ -36,20 +34,7 @@ public class AffirmativeBased extends AbstractAccessDecisionManager {
 	}
 
 	/**
-	 * This concrete implementation simply polls all configured
-	 * {@link AccessDecisionVoter}s and grants access if any
-	 * <code>AccessDecisionVoter</code> voted affirmatively. Denies access only if there
-	 * was a deny vote AND no affirmative votes.
-	 * <p>
-	 * If every <code>AccessDecisionVoter</code> abstained from voting, the decision will
-	 * be based on the {@link #isAllowIfAllAbstainDecisions()} property (defaults to
-	 * false).
-	 * </p>
-	 * @param authentication the caller invoking the method
-	 * @param object the secured object
-	 * @param configAttributes the configuration attributes associated with the method
-	 * being invoked
-	 * @throws AccessDeniedException if access is denied
+	 * 只要有任何一个投票器投了同意一票，就可以
 	 */
 	@Override
 	@SuppressWarnings({ "rawtypes", "unchecked" })
@@ -57,22 +42,25 @@ public class AffirmativeBased extends AbstractAccessDecisionManager {
 			throws AccessDeniedException {
 		int deny = 0;
 		for (AccessDecisionVoter voter : getDecisionVoters()) {
+			//调用投票器进行投票
 			int result = voter.vote(authentication, object, configAttributes);
 			switch (result) {
-			case AccessDecisionVoter.ACCESS_GRANTED:
-				return;
-			case AccessDecisionVoter.ACCESS_DENIED:
-				deny++;
-				break;
-			default:
-				break;
+				//有任何一个同意就可以
+				case AccessDecisionVoter.ACCESS_GRANTED:
+					return;
+				case AccessDecisionVoter.ACCESS_DENIED:
+					deny++;
+					break;
+				default:
+					break;
 			}
 		}
+		//有任何一个拒绝就抛出异常
 		if (deny > 0) {
 			throw new AccessDeniedException(
 					this.messages.getMessage("AbstractAccessDecisionManager.accessDenied", "Access is denied"));
 		}
-		// To get this far, every AccessDecisionVoter abstained
+		//走到这一步，就代表所有访问决策投票器都弃权了
 		checkAllowIfAllAbstainDecisions();
 	}
 

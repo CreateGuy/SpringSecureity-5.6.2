@@ -97,6 +97,7 @@ public interface Authentication extends Principal, Serializable {
 	Object getPrincipal();
 
 	/**
+	 * 判断当前认证对象是否经过认证的，可以即使匿名用户也经过了认证的
 	 * Used to indicate to {@code AbstractSecurityInterceptor} whether it should present
 	 * the authentication token to the <code>AuthenticationManager</code>. Typically an
 	 * <code>AuthenticationManager</code> (or, more often, one of its
