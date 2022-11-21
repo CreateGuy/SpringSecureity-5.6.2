@@ -42,6 +42,9 @@ import org.springframework.util.Assert;
  */
 public class InsecureChannelProcessor implements InitializingBean, ChannelProcessor {
 
+	/**
+	 * 通过使用HTTP重新尝试原始请求
+	 */
 	private ChannelEntryPoint entryPoint = new RetryWithHttpEntryPoint();
 
 	private String insecureKeyword = "REQUIRES_INSECURE_CHANNEL";
@@ -52,6 +55,13 @@ public class InsecureChannelProcessor implements InitializingBean, ChannelProces
 		Assert.notNull(this.entryPoint, "entryPoint required");
 	}
 
+	/**
+	 * 要求请求不能使用安全通道(如HTTPS)发出
+	 * @param invocation
+	 * @param config
+	 * @throws IOException
+	 * @throws ServletException
+	 */
 	@Override
 	public void decide(FilterInvocation invocation, Collection<ConfigAttribute> config)
 			throws IOException, ServletException {
@@ -81,6 +91,12 @@ public class InsecureChannelProcessor implements InitializingBean, ChannelProces
 		this.insecureKeyword = secureKeyword;
 	}
 
+	/**
+	 * 权限表达式必须是 REQUIRES_INSECURE_CHANNEL
+	 * @param attribute a configuration attribute that has been configured against the
+	 * <tt>ChannelProcessingFilter</tt>.
+	 * @return
+	 */
 	@Override
 	public boolean supports(ConfigAttribute attribute) {
 		return (attribute != null) && (attribute.getAttribute() != null)
