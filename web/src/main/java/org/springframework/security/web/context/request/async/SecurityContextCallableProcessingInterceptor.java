@@ -26,19 +26,7 @@ import org.springframework.web.context.request.async.CallableProcessingIntercept
 import org.springframework.web.context.request.async.CallableProcessingInterceptorAdapter;
 
 /**
- * <p>
- * Allows for integration with Spring MVC's {@link Callable} support.
- * </p>
- * <p>
- * A {@link CallableProcessingInterceptor} that establishes the injected
- * {@link SecurityContext} on the {@link SecurityContextHolder} when
- * {@link #preProcess(NativeWebRequest, Callable)} is invoked. It also clear out the
- * {@link SecurityContextHolder} by invoking {@link SecurityContextHolder#clearContext()}
- * in the {@link #postProcess(NativeWebRequest, Callable, Object)} method.
- * </p>
- *
- * @author Rob Winch
- * @since 3.2
+ * 为了让异步线程也能获取到安全上下文
  */
 public final class SecurityContextCallableProcessingInterceptor extends CallableProcessingInterceptorAdapter {
 
@@ -65,6 +53,12 @@ public final class SecurityContextCallableProcessingInterceptor extends Callable
 		setSecurityContext(securityContext);
 	}
 
+	/**
+	 * 在执行异步任务之前执行，也就是还是用户线程的时候执行，是为了将安全上下文保存起来
+	 * @param request
+	 * @param task
+	 * @param <T>
+	 */
 	@Override
 	public <T> void beforeConcurrentHandling(NativeWebRequest request, Callable<T> task) {
 		if (this.securityContext == null) {
@@ -72,11 +66,24 @@ public final class SecurityContextCallableProcessingInterceptor extends Callable
 		}
 	}
 
+	/**
+	 * 在已经执行异步任务(submit)但是还没有执行Callable.call()方法，是为了将安全上下文保存到线程级别的安全上下文策略中
+	 * @param request
+	 * @param task
+	 * @param <T>
+	 */
 	@Override
 	public <T> void preProcess(NativeWebRequest request, Callable<T> task) {
 		SecurityContextHolder.setContext(this.securityContext);
 	}
 
+	/**
+	 * 异步任务已经执行完毕，是为了情况安全上下文
+	 * @param request
+	 * @param task
+	 * @param concurrentResult
+	 * @param <T>
+	 */
 	@Override
 	public <T> void postProcess(NativeWebRequest request, Callable<T> task, Object concurrentResult) {
 		SecurityContextHolder.clearContext();
