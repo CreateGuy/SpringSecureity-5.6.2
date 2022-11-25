@@ -23,11 +23,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.SpringSecurityCoreVersion;
 
 /**
- * {@link org.springframework.security.core.Authentication} implementation for
- * pre-authenticated authentication.
- *
- * @author Ruud Senden
- * @since 2.0
+ * 已经在其他系统进行认证的认证对象
  */
 public class PreAuthenticatedAuthenticationToken extends AbstractAuthenticationToken {
 

@@ -16,6 +16,7 @@
 
 package org.springframework.security.cas.authentication;
 
+import com.sun.security.ntlm.Server;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.jasig.cas.client.validation.Assertion;
@@ -66,18 +67,33 @@ public class CasAuthenticationProvider implements AuthenticationProvider, Initia
 
 	private AuthenticationUserDetailsService<CasAssertionAuthenticationToken> authenticationUserDetailsService;
 
+	/**
+	 * 用户对象检查器
+	 */
 	private final UserDetailsChecker userDetailsChecker = new AccountStatusUserDetailsChecker();
 
 	protected MessageSourceAccessor messages = SpringSecurityMessageSource.getAccessor();
 
 	private StatelessTicketCache statelessTicketCache = new NullStatelessTicketCache();
 
+	/**
+	 * 用于标识CAS认证对象是否是本机产生的
+	 */
 	private String key;
 
+	/**
+	 * 确认使用的ticket和service有效
+	 */
 	private TicketValidator ticketValidator;
 
+	/**
+	 * 存储如何与CAS Server通信的规则
+	 */
 	private ServiceProperties serviceProperties;
 
+	/**
+	 * 权限映射器
+	 */
 	private GrantedAuthoritiesMapper authoritiesMapper = new NullAuthoritiesMapper();
 
 	@Override
@@ -92,17 +108,19 @@ public class CasAuthenticationProvider implements AuthenticationProvider, Initia
 
 	@Override
 	public Authentication authenticate(Authentication authentication) throws AuthenticationException {
+		//确认是否支持
 		if (!supports(authentication.getClass())) {
 			return null;
 		}
+		//如果是已经通过CAS Server的认证后，Principal就会说这两个字符串
 		if (authentication instanceof UsernamePasswordAuthenticationToken
 				&& (!CasAuthenticationFilter.CAS_STATEFUL_IDENTIFIER.equals(authentication.getPrincipal().toString())
 						&& !CasAuthenticationFilter.CAS_STATELESS_IDENTIFIER
 								.equals(authentication.getPrincipal().toString()))) {
-			// UsernamePasswordAuthenticationToken not CAS related
+			//UsernamePasswordAuthenticationToken与CAS 无关
 			return null;
 		}
-		// If an existing CasAuthenticationToken, just check we created it
+		//如果存在CasAuthenticationToken，只需检查是否是本系统创建了它
 		if (authentication instanceof CasAuthenticationToken) {
 			if (this.key.hashCode() != ((CasAuthenticationToken) authentication).getKeyHash()) {
 				throw new BadCredentialsException(this.messages.getMessage("CasAuthenticationProvider.incorrectKey",
@@ -111,7 +129,7 @@ public class CasAuthenticationProvider implements AuthenticationProvider, Initia
 			return authentication;
 		}
 
-		// Ensure credentials are presented
+		//确认提供了密码
 		if ((authentication.getCredentials() == null) || "".equals(authentication.getCredentials())) {
 			throw new BadCredentialsException(this.messages.getMessage("CasAuthenticationProvider.noServiceTicket",
 					"Failed to provide a CAS service ticket to validate"));
@@ -122,26 +140,38 @@ public class CasAuthenticationProvider implements AuthenticationProvider, Initia
 		CasAuthenticationToken result = null;
 
 		if (stateless) {
-			// Try to obtain from cache
+			//尝试从缓存中获取
 			result = this.statelessTicketCache.getByTicketId(authentication.getCredentials().toString());
 		}
 		if (result == null) {
+			//重点：从CAS服务器获取认证对象
 			result = this.authenticateNow(authentication);
 			result.setDetails(authentication.getDetails());
 		}
 		if (stateless) {
-			// Add to cache
+			//添加到缓存
 			this.statelessTicketCache.putTicketInCache(result);
 		}
 		return result;
 	}
 
+	/**
+	 * 通过调用远程的 CAS Server获取认证对象
+	 * @param authentication
+	 * @return
+	 * @throws AuthenticationException
+	 */
 	private CasAuthenticationToken authenticateNow(final Authentication authentication) throws AuthenticationException {
 		try {
+			//调用远程的 CAS Server 获得Assertion
 			Assertion assertion = this.ticketValidator.validate(authentication.getCredentials().toString(),
 					getServiceUrl(authentication));
+			//转为用户对象
 			UserDetails userDetails = loadUserByAssertion(assertion);
+
 			this.userDetailsChecker.check(userDetails);
+
+			//创建CAS的认证对象
 			return new CasAuthenticationToken(this.key, userDetails, authentication.getCredentials(),
 					this.authoritiesMapper.mapAuthorities(userDetails.getAuthorities()), userDetails, assertion);
 		}
@@ -151,12 +181,7 @@ public class CasAuthenticationProvider implements AuthenticationProvider, Initia
 	}
 
 	/**
-	 * Gets the serviceUrl. If the {@link Authentication#getDetails()} is an instance of
-	 * {@link ServiceAuthenticationDetails}, then
-	 * {@link ServiceAuthenticationDetails#getServiceUrl()} is used. Otherwise, the
-	 * {@link ServiceProperties#getService()} is used.
-	 * @param authentication
-	 * @return
+	 * 获得CAS服务器地址
 	 */
 	private String getServiceUrl(Authentication authentication) {
 		String serviceUrl;
@@ -167,17 +192,14 @@ public class CasAuthenticationProvider implements AuthenticationProvider, Initia
 				"serviceProperties cannot be null unless Authentication.getDetails() implements ServiceAuthenticationDetails.");
 		Assert.state(this.serviceProperties.getService() != null,
 				"serviceProperties.getService() cannot be null unless Authentication.getDetails() implements ServiceAuthenticationDetails.");
+		//一般都是从这里获取
 		serviceUrl = this.serviceProperties.getService();
 		logger.debug(LogMessage.format("serviceUrl = %s", serviceUrl));
 		return serviceUrl;
 	}
 
 	/**
-	 * Template method for retrieving the UserDetails based on the assertion. Default is
-	 * to call configured userDetailsService and pass the username. Deployers can override
-	 * this method and retrieve the user based on any criteria they desire.
-	 * @param assertion The CAS Assertion.
-	 * @return the UserDetails.
+	 * 加载用户对象
 	 */
 	protected UserDetails loadUserByAssertion(final Assertion assertion) {
 		final CasAssertionAuthenticationToken token = new CasAssertionAuthenticationToken(assertion, "");
@@ -234,6 +256,11 @@ public class CasAuthenticationProvider implements AuthenticationProvider, Initia
 		this.authoritiesMapper = authoritiesMapper;
 	}
 
+	/**
+	 * 因为要想进行CAS认证，那必须是已经获取了ticket和service,那么就会被封装为UsernamePasswordAuthenticationToken
+	 * @param authentication
+	 * @return
+	 */
 	@Override
 	public boolean supports(final Class<?> authentication) {
 		return (UsernamePasswordAuthenticationToken.class.isAssignableFrom(authentication))

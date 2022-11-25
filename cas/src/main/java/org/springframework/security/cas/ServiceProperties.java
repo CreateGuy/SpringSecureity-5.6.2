@@ -20,13 +20,7 @@ import org.springframework.beans.factory.InitializingBean;
 import org.springframework.util.Assert;
 
 /**
- * Stores properties related to this CAS service.
- * <p>
- * Each web application capable of processing CAS tickets is known as a service. This
- * class stores the properties that are relevant to the local CAS service, being the
- * application that is being secured by Spring Security.
- *
- * @author Ben Alex
+ * 存储如何与CAS Server通信的规则
  */
 public class ServiceProperties implements InitializingBean {
 
@@ -34,10 +28,16 @@ public class ServiceProperties implements InitializingBean {
 
 	public static final String DEFAULT_CAS_SERVICE_PARAMETER = "service";
 
+	/**
+	 * CAS Server的地址
+	 */
 	private String service;
 
 	private boolean authenticateAllArtifacts;
 
+	/**
+	 * 没懂
+	 */
 	private boolean sendRenew = false;
 
 	private String artifactParameter = DEFAULT_CAS_ARTIFACT_PARAMETER;

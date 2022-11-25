@@ -26,17 +26,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.springframework.security.core.Authentication;
 
 /**
- * Strategy used to handle a successful user authentication.
- * <p>
- * Implementations can do whatever they want but typical behaviour would be to control the
- * navigation to the subsequent destination (using a redirect or a forward). For example,
- * after a user has logged in by submitting a login form, the application needs to decide
- * where they should be redirected to afterwards (see
- * {@link AbstractAuthenticationProcessingFilter} and subclasses). Other logic may also be
- * included if required.
- *
- * @author Luke Taylor
- * @since 3.0
+ * 认证成功处理器
  */
 public interface AuthenticationSuccessHandler {
 
