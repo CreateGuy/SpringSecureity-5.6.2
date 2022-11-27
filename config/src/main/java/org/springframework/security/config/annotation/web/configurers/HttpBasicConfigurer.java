@@ -46,49 +46,33 @@ import org.springframework.web.accept.ContentNegotiationStrategy;
 import org.springframework.web.accept.HeaderContentNegotiationStrategy;
 
 /**
- * Adds HTTP basic based authentication. All attributes have reasonable defaults making
- * all parameters are optional.
- *
- * <h2>Security Filters</h2>
- *
- * The following Filters are populated
- *
- * <ul>
- * <li>{@link BasicAuthenticationFilter}</li>
- * </ul>
- *
- * <h2>Shared Objects Created</h2>
- *
- * <ul>
- * <li>AuthenticationEntryPoint - populated with the
- * {@link #authenticationEntryPoint(AuthenticationEntryPoint)} (default
- * {@link BasicAuthenticationEntryPoint})</li>
- * </ul>
- *
- * <h2>Shared Objects Used</h2>
- *
- * The following shared objects are used:
- *
- * <ul>
- * <li>{@link AuthenticationManager}</li>
- * <li>{@link RememberMeServices}</li>
- * </ul>
- *
- * @author Rob Winch
- * @since 3.2
+ * 基本认证过滤器的配置类
  */
 public final class HttpBasicConfigurer<B extends HttpSecurityBuilder<B>>
 		extends AbstractHttpConfigurer<HttpBasicConfigurer<B>, B> {
 
+	/**
+	 * 本配置类提供的身份认证入口点 对应的 请求匹配器
+	 * <p>要求是X-Requested-With 必须是 XMLHttpRequest(异步请求)</p>
+	 */
 	private static final RequestHeaderRequestMatcher X_REQUESTED_WITH = new RequestHeaderRequestMatcher(
 			"X-Requested-With", "XMLHttpRequest");
 
+	/**
+	 * 用来指示需要哪个域的用户名和密码
+	 */
 	private static final String DEFAULT_REALM = "Realm";
 
+	/**
+	 * 最终 提供给ExceptionTranslationFilter的身份认证入口点
+	 */
 	private AuthenticationEntryPoint authenticationEntryPoint;
 
 	private AuthenticationDetailsSource<HttpServletRequest, ?> authenticationDetailsSource;
 
+	/**
+	 * 默认 提供给ExceptionTranslationFilter的身份认证入口点
+	 */
 	private BasicAuthenticationEntryPoint basicAuthEntryPoint = new BasicAuthenticationEntryPoint();
 
 	/**
@@ -100,6 +84,7 @@ public final class HttpBasicConfigurer<B extends HttpSecurityBuilder<B>>
 		LinkedHashMap<RequestMatcher, AuthenticationEntryPoint> entryPoints = new LinkedHashMap<>();
 		entryPoints.put(X_REQUESTED_WITH, new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED));
 		DelegatingAuthenticationEntryPoint defaultEntryPoint = new DelegatingAuthenticationEntryPoint(entryPoints);
+		//是设置默认的身份认证入口点
 		defaultEntryPoint.setDefaultEntryPoint(this.basicAuthEntryPoint);
 		this.authenticationEntryPoint = defaultEntryPoint;
 	}
@@ -147,6 +132,10 @@ public final class HttpBasicConfigurer<B extends HttpSecurityBuilder<B>>
 		registerDefaults(http);
 	}
 
+	/**
+	 * 注册默认值
+	 * @param http
+	 */
 	private void registerDefaults(B http) {
 		ContentNegotiationStrategy contentNegotiationStrategy = http.getSharedObject(ContentNegotiationStrategy.class);
 		if (contentNegotiationStrategy == null) {
@@ -157,18 +146,33 @@ public final class HttpBasicConfigurer<B extends HttpSecurityBuilder<B>>
 				MediaType.APPLICATION_OCTET_STREAM, MediaType.APPLICATION_XML, MediaType.MULTIPART_FORM_DATA,
 				MediaType.TEXT_XML);
 		restMatcher.setIgnoredMediaTypes(Collections.singleton(MediaType.ALL));
+
+		//第一个请求匹配器
 		MediaTypeRequestMatcher allMatcher = new MediaTypeRequestMatcher(contentNegotiationStrategy, MediaType.ALL);
 		allMatcher.setUseEquals(true);
+
+
 		RequestMatcher notHtmlMatcher = new NegatedRequestMatcher(
 				new MediaTypeRequestMatcher(contentNegotiationStrategy, MediaType.TEXT_HTML));
+
+		//第二个请求匹配器
 		RequestMatcher restNotHtmlMatcher = new AndRequestMatcher(
 				Arrays.<RequestMatcher>asList(notHtmlMatcher, restMatcher));
+
 		RequestMatcher preferredMatcher = new OrRequestMatcher(
 				Arrays.asList(X_REQUESTED_WITH, restNotHtmlMatcher, allMatcher));
+
+		//注册到ExceptionTranslationFilter中
 		registerDefaultEntryPoint(http, preferredMatcher);
+		//注册到LogoutFilter中去
 		registerDefaultLogoutSuccessHandler(http, preferredMatcher);
 	}
 
+	/**
+	 * 注册到ExceptionTranslationFilter中
+	 * @param http
+	 * @param preferredMatcher
+	 */
 	private void registerDefaultEntryPoint(B http, RequestMatcher preferredMatcher) {
 		ExceptionHandlingConfigurer<B> exceptionHandling = http.getConfigurer(ExceptionHandlingConfigurer.class);
 		if (exceptionHandling == null) {
@@ -178,6 +182,11 @@ public final class HttpBasicConfigurer<B extends HttpSecurityBuilder<B>>
 				preferredMatcher);
 	}
 
+	/**
+	 * 注册到LogoutFilter中去
+	 * @param http
+	 * @param preferredMatcher
+	 */
 	private void registerDefaultLogoutSuccessHandler(B http, RequestMatcher preferredMatcher) {
 		LogoutConfigurer<B> logout = http.getConfigurer(LogoutConfigurer.class);
 		if (logout == null) {
@@ -190,15 +199,20 @@ public final class HttpBasicConfigurer<B extends HttpSecurityBuilder<B>>
 	@Override
 	public void configure(B http) {
 		AuthenticationManager authenticationManager = http.getSharedObject(AuthenticationManager.class);
+		//创建过滤器，并设置局部认证管理器
 		BasicAuthenticationFilter basicAuthenticationFilter = new BasicAuthenticationFilter(authenticationManager,
 				this.authenticationEntryPoint);
 		if (this.authenticationDetailsSource != null) {
 			basicAuthenticationFilter.setAuthenticationDetailsSource(this.authenticationDetailsSource);
 		}
+
+		//设置记住我服务
 		RememberMeServices rememberMeServices = http.getSharedObject(RememberMeServices.class);
 		if (rememberMeServices != null) {
 			basicAuthenticationFilter.setRememberMeServices(rememberMeServices);
 		}
+
+
 		basicAuthenticationFilter = postProcess(basicAuthenticationFilter);
 		http.addFilter(basicAuthenticationFilter);
 	}

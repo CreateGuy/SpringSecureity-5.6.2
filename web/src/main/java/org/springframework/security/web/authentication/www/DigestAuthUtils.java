@@ -27,6 +27,9 @@ import org.springframework.security.crypto.codec.Hex;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
+/**
+ * 摘要数据生成工具类
+ */
 final class DigestAuthUtils {
 
 	private static final String[] EMPTY_STRING_ARRAY = new String[0];
@@ -107,6 +110,7 @@ final class DigestAuthUtils {
 		String a1Md5 = (!passwordAlreadyEncoded) ? DigestAuthUtils.encodePasswordInA1Format(username, realm, password)
 				: password;
 		String a2Md5 = md5Hex(a2);
+		//可以看出只支持md5的加密方式
 		if (qop == null) {
 			// as per RFC 2069 compliant clients (also reaffirmed by RFC 2617)
 			return md5Hex(a1Md5 + ":" + nonce + ":" + a2Md5);

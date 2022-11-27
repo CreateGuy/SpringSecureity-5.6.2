@@ -32,19 +32,24 @@ import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 /**
- * Converts from a HttpServletRequest to {@link UsernamePasswordAuthenticationToken} that
- * can be authenticated. Null authentication possible if there was no Authorization header
- * with Basic authentication scheme.
- *
- * @author Sergey Bespalov
- * @since 5.2.0
+ * 从HttpServletRequest获取某些参数然后转换为认证对象，
+ * 如果没有请求头中的Authorization没有以Basic开头的，则可能存在空身份认证
  */
 public class BasicAuthenticationConverter implements AuthenticationConverter {
 
+	/**
+	 * 基本认证传输的用户名和密码采用Basic64加密，然后前面有一个Basic
+	 * <li>
+	 *     eg：Authorization: Basic bHp4OjEyMw==
+	 * </li>
+	 */
 	public static final String AUTHENTICATION_SCHEME_BASIC = "Basic";
 
 	private AuthenticationDetailsSource<HttpServletRequest, ?> authenticationDetailsSource;
 
+	/**
+	 * 解密Base64字符串的编码格式
+	 */
 	private Charset credentialsCharset = StandardCharsets.UTF_8;
 
 	public BasicAuthenticationConverter() {
@@ -74,26 +79,40 @@ public class BasicAuthenticationConverter implements AuthenticationConverter {
 		this.authenticationDetailsSource = authenticationDetailsSource;
 	}
 
+	/**
+	 * 通过解析request中的某些参数转为认证对象
+	 * @param request
+	 * @return
+	 */
 	@Override
 	public UsernamePasswordAuthenticationToken convert(HttpServletRequest request) {
+		//用户名+密码是放在Authorization中的
 		String header = request.getHeader(HttpHeaders.AUTHORIZATION);
 		if (header == null) {
 			return null;
 		}
 		header = header.trim();
+		//没有Basic开头，就返回空
 		if (!StringUtils.startsWithIgnoreCase(header, AUTHENTICATION_SCHEME_BASIC)) {
 			return null;
 		}
+		//Basic64不能为空
 		if (header.equalsIgnoreCase(AUTHENTICATION_SCHEME_BASIC)) {
 			throw new BadCredentialsException("Empty basic authentication token");
 		}
+		//去除前面的Basic+空格
 		byte[] base64Token = header.substring(6).getBytes(StandardCharsets.UTF_8);
 		byte[] decoded = decode(base64Token);
+		//解密
 		String token = new String(decoded, getCredentialsCharset(request));
+
+		//确定用户名和密码的分隔符在哪
 		int delim = token.indexOf(":");
 		if (delim == -1) {
 			throw new BadCredentialsException("Invalid basic authentication token");
 		}
+
+		//封装为认证对象
 		UsernamePasswordAuthenticationToken result = new UsernamePasswordAuthenticationToken(token.substring(0, delim),
 				token.substring(delim + 1));
 		result.setDetails(this.authenticationDetailsSource.buildDetails(request));

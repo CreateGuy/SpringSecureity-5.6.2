@@ -57,7 +57,7 @@ public interface RememberMeServices {
 	Authentication autoLogin(HttpServletRequest request, HttpServletResponse response);
 
 	/**
-	 * 认证失败调用的方法
+	 * 记住我认证失败调用的方法
 	 * <ul>
 	 *     <li>
 	 *         比如说执行autoLogin方法创建的认证对象，认证失败后，清除记住我令牌

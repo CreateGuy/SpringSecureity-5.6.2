@@ -54,6 +54,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.GenericFilterBean;
 
 /**
+ * 摘要认证的过滤器
  * Processes a HTTP request's Digest authorization headers, putting the result into the
  * <code>SecurityContextHolder</code>.
  * <p>
@@ -94,6 +95,9 @@ public class DigestAuthenticationFilter extends GenericFilterBean implements Mes
 
 	private AuthenticationDetailsSource<HttpServletRequest, ?> authenticationDetailsSource = new WebAuthenticationDetailsSource();
 
+	/**
+	 * 身份认证入口点，此处的是在验证摘要数据失败的时候执行
+	 */
 	private DigestAuthenticationEntryPoint authenticationEntryPoint;
 
 	protected MessageSourceAccessor messages = SpringSecurityMessageSource.getAccessor();
@@ -102,8 +106,14 @@ public class DigestAuthenticationFilter extends GenericFilterBean implements Mes
 
 	private UserDetailsService userDetailsService;
 
+	/**
+	 * 密码是否已经加密
+	 */
 	private boolean passwordAlreadyEncoded = false;
 
+	/**
+	 * 是否在创建认证对象的时候，填充权限
+	 */
 	private boolean createAuthenticatedToken = false;
 
 	@Override
@@ -128,6 +138,7 @@ public class DigestAuthenticationFilter extends GenericFilterBean implements Mes
 		logger.debug(LogMessage.format("Digest Authorization header received from user agent: %s", header));
 		DigestData digestAuth = new DigestData(header);
 		try {
+			//检查摘要数据的合法性
 			digestAuth.validateAndDecode(this.authenticationEntryPoint.getKey(),
 					this.authenticationEntryPoint.getRealmName());
 		}
@@ -135,10 +146,10 @@ public class DigestAuthenticationFilter extends GenericFilterBean implements Mes
 			fail(request, response, ex);
 			return;
 		}
-		// Lookup password for presented username. N.B. DAO-provided password MUST be
-		// clear text - not encoded/salted (unless this instance's passwordAlreadyEncoded
-		// property is 'false')
+
+		//是否使用缓存中的用户
 		boolean cacheWasUsed = true;
+
 		UserDetails user = this.userCache.getUserFromCache(digestAuth.getUsername());
 		String serverDigestMd5;
 		try {
@@ -151,10 +162,15 @@ public class DigestAuthenticationFilter extends GenericFilterBean implements Mes
 				}
 				this.userCache.putUserInCache(user);
 			}
+
+			// 计算摘要值
 			serverDigestMd5 = digestAuth.calculateServerDigest(user.getPassword(), request.getMethod());
 			// If digest is incorrect, try refreshing from backend and recomputing
 			if (!serverDigestMd5.equals(digestAuth.getResponse()) && cacheWasUsed) {
 				logger.debug("Digest comparison failure; trying to refresh user from DAO in case password had changed");
+				// 如果是缓存中的密码参与了计算摘要值的计算过程
+				// 那么可能是密码更新了，导致执行到这的，所以获取最新的密码
+				// 再重新计算摘要值
 				user = this.userDetailsService.loadUserByUsername(digestAuth.getUsername());
 				this.userCache.putUserInCache(user);
 				serverDigestMd5 = digestAuth.calculateServerDigest(user.getPassword(), request.getMethod());
@@ -166,20 +182,20 @@ public class DigestAuthenticationFilter extends GenericFilterBean implements Mes
 			fail(request, response, new BadCredentialsException(message));
 			return;
 		}
-		// If digest is still incorrect, definitely reject authentication attempt
+
+		// 如果摘要值仍然不正确，则执行失败策略
 		if (!serverDigestMd5.equals(digestAuth.getResponse())) {
 			logger.debug(LogMessage.format(
 					"Expected response: '%s' but received: '%s'; is AuthenticationDao returning clear text passwords?",
 					serverDigestMd5, digestAuth.getResponse()));
 			String message = this.messages.getMessage("DigestAuthenticationFilter.incorrectResponse",
 					"Incorrect response");
+			//失败策略
 			fail(request, response, new BadCredentialsException(message));
 			return;
 		}
-		// To get this far, the digest must have been valid
-		// Check the nonce has not expired
-		// We do this last so we can direct the user agent its nonce is stale
-		// but the request was otherwise appearing to be valid
+		// 走这一步，摘要已经是有效的
+		// 但是可能会存在过期的情况
 		if (digestAuth.isNonceExpired()) {
 			String message = this.messages.getMessage("DigestAuthenticationFilter.nonceExpired",
 					"Nonce has expired/timed out");
@@ -188,13 +204,25 @@ public class DigestAuthenticationFilter extends GenericFilterBean implements Mes
 		}
 		logger.debug(LogMessage.format("Authentication success for user: '%s' with response: '%s'",
 				digestAuth.getUsername(), digestAuth.getResponse()));
+
+
+		//认证成功，创建认证对象
 		Authentication authentication = createSuccessfulAuthentication(request, user);
+
+		//创建线程级别的安全上下文
 		SecurityContext context = SecurityContextHolder.createEmptyContext();
 		context.setAuthentication(authentication);
 		SecurityContextHolder.setContext(context);
+
 		chain.doFilter(request, response);
 	}
 
+	/**
+	 * 认证成功，创建认证对象
+	 * @param request
+	 * @param user
+	 * @return
+	 */
 	private Authentication createSuccessfulAuthentication(HttpServletRequest request, UserDetails user) {
 		UsernamePasswordAuthenticationToken authRequest = getAuthRequest(user);
 		authRequest.setDetails(this.authenticationDetailsSource.buildDetails(request));
@@ -208,11 +236,21 @@ public class DigestAuthenticationFilter extends GenericFilterBean implements Mes
 		return new UsernamePasswordAuthenticationToken(user, user.getPassword());
 	}
 
+	/**
+	 * 摘要认证失败执行的方法
+	 * @param request
+	 * @param response
+	 * @param failed
+	 * @throws IOException
+	 * @throws ServletException
+	 */
 	private void fail(HttpServletRequest request, HttpServletResponse response, AuthenticationException failed)
 			throws IOException, ServletException {
+		//清空线程级别的安全上下文
 		SecurityContext context = SecurityContextHolder.createEmptyContext();
 		SecurityContextHolder.setContext(context);
 		logger.debug(failed);
+		//通常是跳转到登录页
 		this.authenticationEntryPoint.commence(request, response, failed);
 	}
 
@@ -271,26 +309,67 @@ public class DigestAuthenticationFilter extends GenericFilterBean implements Mes
 		this.createAuthenticatedToken = createAuthenticatedToken;
 	}
 
+	/**
+	 * 摘要数据的实体
+	 */
 	private class DigestData {
 
+		/**
+		 * 登录用户名
+		 */
 		private final String username;
 
+		/**
+		 * 认证域
+		 */
 		private final String realm;
 
+		/**
+		 * 由服务器生成的随机字符串，包含过期时间和密钥
+		 */
 		private final String nonce;
 
+		/**
+		 * 请求的Url
+		 */
 		private final String uri;
 
+		/**
+		 * 客户端根据算法算出的摘要值，取决于qop
+		 */
 		private final String response;
 
+		/**
+		 * 客户端根据此参数指定摘要算法
+		 * <ul>
+		 *     <li>
+		 *         若是auth，则只进行身份验证，也是默认值
+		 *     </li>
+		 *     <li>
+		 *         若是auth-int，则还需要校验内容完整值
+		 *     </li>
+		 * </ul>
+		 */
 		private final String qop;
 
+		/**
+		 * 请求的次数，用于计数，以防止重放攻击
+		 */
 		private final String nc;
 
+		/**
+		 * 客户端给服务器的随机字符串
+		 */
 		private final String cnonce;
 
+		/**
+		 * 完整的摘要数据
+		 */
 		private final String section212response;
 
+		/**
+		 * 解密出来的过期时间
+		 */
 		private long nonceExpiryTime;
 
 		DigestData(String header) {
@@ -310,15 +389,21 @@ public class DigestAuthenticationFilter extends GenericFilterBean implements Mes
 							this.username, this.realm, this.nonce, this.uri, this.response));
 		}
 
+		/**
+		 * 检查摘要数据的合法性
+		 * @param entryPointKey
+		 * @param expectedRealm
+		 * @throws BadCredentialsException
+		 */
 		void validateAndDecode(String entryPointKey, String expectedRealm) throws BadCredentialsException {
-			// Check all required parameters were supplied (ie RFC 2069)
+			//检查所有必需参数都已经有值
 			if ((this.username == null) || (this.realm == null) || (this.nonce == null) || (this.uri == null)
 					|| (this.response == null)) {
 				throw new BadCredentialsException(DigestAuthenticationFilter.this.messages.getMessage(
 						"DigestAuthenticationFilter.missingMandatory", new Object[] { this.section212response },
 						"Missing mandatory digest value; received header {0}"));
 			}
-			// Check all required parameters for an "auth" qop were supplied (ie RFC 2617)
+			//继续检查参数
 			if ("auth".equals(this.qop)) {
 				if ((this.nc == null) || (this.cnonce == null)) {
 					logger.debug(LogMessage.format("extracted nc: '%s'; cnonce: '%s'", this.nc, this.cnonce));
@@ -327,13 +412,13 @@ public class DigestAuthenticationFilter extends GenericFilterBean implements Mes
 							"Missing mandatory digest value; received header {0}"));
 				}
 			}
-			// Check realm name equals what we expected
+			//检查保护域是否是我们的
 			if (!expectedRealm.equals(this.realm)) {
 				throw new BadCredentialsException(DigestAuthenticationFilter.this.messages.getMessage(
 						"DigestAuthenticationFilter.incorrectRealm", new Object[] { this.realm, expectedRealm },
 						"Response realm name '{0}' does not match system realm name of '{1}'"));
 			}
-			// Check nonce was Base64 encoded (as sent by DigestAuthenticationEntryPoint)
+			//检查摘要数据是否能够通过Base64解密
 			final byte[] nonceBytes;
 			try {
 				nonceBytes = Base64.getDecoder().decode(this.nonce.getBytes());
@@ -343,16 +428,18 @@ public class DigestAuthenticationFilter extends GenericFilterBean implements Mes
 						DigestAuthenticationFilter.this.messages.getMessage("DigestAuthenticationFilter.nonceEncoding",
 								new Object[] { this.nonce }, "Nonce is not encoded in Base64; received nonce {0}"));
 			}
-			// Decode nonce from Base64 format of nonce is: base64(expirationTime + ":" +
-			// md5Hex(expirationTime + ":" + key))
+			// 解密nonce，nonce格式为: base64(expirationTime + ":" + md5Hex(expirationTime + ":" + key))
 			String nonceAsPlainText = new String(nonceBytes);
 			String[] nonceTokens = StringUtils.delimitedListToStringArray(nonceAsPlainText, ":");
+
+			//nonce中只会包含两个东西
 			if (nonceTokens.length != 2) {
 				throw new BadCredentialsException(DigestAuthenticationFilter.this.messages.getMessage(
 						"DigestAuthenticationFilter.nonceNotTwoTokens", new Object[] { nonceAsPlainText },
 						"Nonce should have yielded two tokens but was {0}"));
 			}
-			// Extract expiry time from nonce
+
+			//从nonce中提取过期时间
 			try {
 				this.nonceExpiryTime = new Long(nonceTokens[0]);
 			}
@@ -361,7 +448,9 @@ public class DigestAuthenticationFilter extends GenericFilterBean implements Mes
 						"DigestAuthenticationFilter.nonceNotNumeric", new Object[] { nonceAsPlainText },
 						"Nonce token should have yielded a numeric first token, but was {0}"));
 			}
-			// Check signature of nonce matches this expiry time
+
+			//用过期时间+密钥重新加密
+			//判断是否是自己创建的
 			String expectedNonceSignature = DigestAuthUtils.md5Hex(this.nonceExpiryTime + ":" + entryPointKey);
 			if (!expectedNonceSignature.equals(nonceTokens[1])) {
 				throw new BadCredentialsException(DigestAuthenticationFilter.this.messages.getMessage(
@@ -370,6 +459,12 @@ public class DigestAuthenticationFilter extends GenericFilterBean implements Mes
 			}
 		}
 
+		/**
+		 * 计算摘要值
+		 * @param password
+		 * @param httpMethod
+		 * @return
+		 */
 		String calculateServerDigest(String password, String httpMethod) {
 			// Compute the expected response-digest (will be in hex form). Don't catch
 			// IllegalArgumentException (already checked validity)
