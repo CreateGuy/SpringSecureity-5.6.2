@@ -66,16 +66,15 @@ import org.springframework.web.filter.GenericFilterBean;
 import org.springframework.web.util.UrlPathHelper;
 
 /**
- * Switch User processing filter responsible for user context switching.
- * <p>
- * This filter is similar to Unix 'su' however for Spring Security-managed web
- * applications. A common use-case for this feature is the ability to allow
- * higher-authority users (e.g. ROLE_ADMIN) to switch to a regular user (e.g. ROLE_USER).
- * <p>
- * This filter assumes that the user performing the switch will be required to be logged
- * in as normal (i.e. as a ROLE_ADMIN user). The user will then access a page/controller
- * that enables the administrator to specify who they wish to become (see
- * <code>switchUserUrl</code>).
+ * 此过滤器负责切换用户
+ * <ul>
+ *    <li>
+ *        允许管理员成为他们想成为的用户
+ *    </li>
+ *     <li>
+ *         比如说允许更高权限的用户(例如ROLE_ADMIN)切换到普通用户(例如ROLE_USER),然后跳转到另外一个页面
+ *     </li>
+ * </ul>
  * <p>
  * <b>Note: This URL will be required to have appropriate security constraints configured
  * so that only users of that role can access it (e.g. ROLE_ADMIN).</b>
@@ -114,32 +113,62 @@ public class SwitchUserFilter extends GenericFilterBean implements ApplicationEv
 
 	public static final String ROLE_PREVIOUS_ADMINISTRATOR = "ROLE_PREVIOUS_ADMINISTRATOR";
 
+	/**
+	 * 事件推送器
+	 */
 	private ApplicationEventPublisher eventPublisher;
 
 	private AuthenticationDetailsSource<HttpServletRequest, ?> authenticationDetailsSource = new WebAuthenticationDetailsSource();
 
 	protected MessageSourceAccessor messages = SpringSecurityMessageSource.getAccessor();
 
+	/**
+	 * 切换用户的请求匹配器
+	 */
 	private RequestMatcher exitUserMatcher = createMatcher("/logout/impersonate");
 
+	/**
+	 * 退出已切换的用户的请求匹配器
+	 */
 	private RequestMatcher switchUserMatcher = createMatcher("/login/impersonate");
 
+	/**
+	 * 切换成功跳转的Url
+	 */
 	private String targetUrl;
 
+	/**
+	 * 切换失败跳转的Url
+	 */
 	private String switchFailureUrl;
 
+	/**
+	 * 从请求上获取想要切换用户的用户名 参数名
+	 */
 	private String usernameParameter = SPRING_SECURITY_SWITCH_USERNAME_KEY;
 
+	/**
+	 * 切换用户后，表明原来权限的
+	 */
 	private String switchAuthorityRole = ROLE_PREVIOUS_ADMINISTRATOR;
 
+	/**
+	 * 在切换用户时，变更 切换后用户的 权限
+	 */
 	private SwitchUserAuthorityChanger switchUserAuthorityChanger;
 
 	private UserDetailsService userDetailsService;
 
 	private UserDetailsChecker userDetailsChecker = new AccountStatusUserDetailsChecker();
 
+	/**
+	 * 切换成功执行的处理器
+	 */
 	private AuthenticationSuccessHandler successHandler;
 
+	/**
+	 * 切换失败执行的处理器
+	 */
 	private AuthenticationFailureHandler failureHandler;
 
 	@Override
@@ -147,10 +176,14 @@ public class SwitchUserFilter extends GenericFilterBean implements ApplicationEv
 		Assert.notNull(this.userDetailsService, "userDetailsService must be specified");
 		Assert.isTrue(this.successHandler != null || this.targetUrl != null,
 				"You must set either a successHandler or the targetUrl");
+
+		//设置切换成功执行的处理器
 		if (this.targetUrl != null) {
 			Assert.isNull(this.successHandler, "You cannot set both successHandler and targetUrl");
 			this.successHandler = new SimpleUrlAuthenticationSuccessHandler(this.targetUrl);
 		}
+
+		//设置切换失败执行的处理器
 		if (this.failureHandler == null) {
 			this.failureHandler = (this.switchFailureUrl != null)
 					? new SimpleUrlAuthenticationFailureHandler(this.switchFailureUrl)
@@ -169,34 +202,40 @@ public class SwitchUserFilter extends GenericFilterBean implements ApplicationEv
 
 	private void doFilter(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
 			throws IOException, ServletException {
-		// check for switch or exit request
+
+		//判断是否是切换用户的请求
 		if (requiresSwitchUser(request)) {
 			// if set, attempt switch and store original
 			try {
+				//试切换到另一个用户。如果用户不存在或不活动，则返回null
 				Authentication targetUser = attemptSwitchUser(request);
-				// update the current context to the new target user
+
+				// 更新线程级别的安全上下文
 				SecurityContext context = SecurityContextHolder.createEmptyContext();
 				context.setAuthentication(targetUser);
 				SecurityContextHolder.setContext(context);
 				this.logger.debug(LogMessage.format("Set SecurityContextHolder to %s", targetUser));
-				// redirect to target url
+				// 执行切换用户成功的处理器，一般是重定向到某个Url
 				this.successHandler.onAuthenticationSuccess(request, response, targetUser);
 			}
 			catch (AuthenticationException ex) {
 				this.logger.debug("Failed to switch user", ex);
+				// 执行切换用户失败的处理器，一般是重定向到某个Url
 				this.failureHandler.onAuthenticationFailure(request, response, ex);
 			}
 			return;
 		}
+
+		// 判断是否是退出切换用户的请求
 		if (requiresExitUser(request)) {
-			// get the original authentication object (if exists)
+			// 尝试退出已切换的用户
 			Authentication originalUser = attemptExitUser(request);
-			// update the current context back to the original user
+			// 更新线程级别的安全上下文
 			SecurityContext context = SecurityContextHolder.createEmptyContext();
 			context.setAuthentication(originalUser);
 			SecurityContextHolder.setContext(context);
 			this.logger.debug(LogMessage.format("Set SecurityContextHolder to %s", originalUser));
-			// redirect to target url
+			// 执行切换用户成功的处理器，一般是重定向到某个Url
 			this.successHandler.onAuthenticationSuccess(request, response, originalUser);
 			return;
 		}
@@ -206,26 +245,29 @@ public class SwitchUserFilter extends GenericFilterBean implements ApplicationEv
 	}
 
 	/**
-	 * Attempt to switch to another user. If the user does not exist or is not active,
-	 * return null.
-	 * @return The new <code>Authentication</code> request if successfully switched to
-	 * another user, <code>null</code> otherwise.
-	 * @throws UsernameNotFoundException If the target user is not found.
-	 * @throws LockedException if the account is locked.
-	 * @throws DisabledException If the target user is disabled.
-	 * @throws AccountExpiredException If the target user account is expired.
-	 * @throws CredentialsExpiredException If the target user credentials are expired.
+	 * 尝试切换到另一个用户。如果用户不存在或不活动，则返回null
+	 * <ul>
+	 *     <li>
+	 *         我理解应该重写这个方法，要先判断当前用户有 切换用户 的权限，然后才能进行切换用户
+	 *     </li>
+	 * </ul>
+	 * @param request
+	 * @return
+	 * @throws AuthenticationException
 	 */
 	protected Authentication attemptSwitchUser(HttpServletRequest request) throws AuthenticationException {
 		UsernamePasswordAuthenticationToken targetUserRequest;
+		//通过用户名获取用户对象
 		String username = request.getParameter(this.usernameParameter);
 		username = (username != null) ? username : "";
 		this.logger.debug(LogMessage.format("Attempting to switch to user [%s]", username));
 		UserDetails targetUser = this.userDetailsService.loadUserByUsername(username);
 		this.userDetailsChecker.check(targetUser);
-		// OK, create the switch user token
+
+		//创建新的认证对象
 		targetUserRequest = createSwitchUserToken(request, targetUser);
-		// publish event
+
+		//推送对应的事件
 		if (this.eventPublisher != null) {
 			this.eventPublisher.publishEvent(new AuthenticationSwitchUserEvent(
 					SecurityContextHolder.getContext().getAuthentication(), targetUser));
@@ -234,7 +276,7 @@ public class SwitchUserFilter extends GenericFilterBean implements ApplicationEv
 	}
 
 	/**
-	 * Attempt to exit from an already switched user.
+	 * 尝试退出已切换的用户
 	 * @param request The http servlet request
 	 * @return The original <code>Authentication</code> object or <code>null</code>
 	 * otherwise.
@@ -243,36 +285,38 @@ public class SwitchUserFilter extends GenericFilterBean implements ApplicationEv
 	 */
 	protected Authentication attemptExitUser(HttpServletRequest request)
 			throws AuthenticationCredentialsNotFoundException {
-		// need to check to see if the current user has a SwitchUserGrantedAuthority
+		//先检查当前用户是否有SwitchUserGrantedAuthority
+		//如果有才代表切换过用户
 		Authentication current = SecurityContextHolder.getContext().getAuthentication();
 		if (current == null) {
 			throw new AuthenticationCredentialsNotFoundException(this.messages
 					.getMessage("SwitchUserFilter.noCurrentUser", "No current user associated with this request"));
 		}
-		// check to see if the current user did actual switch to another user
-		// if so, get the original source user so we can switch back
+
+		//检查当前用户是否实际切换到另一个用户，如果是，获取原始源用户权限
 		Authentication original = getSourceAuthentication(current);
+		//如果为空，就代表还没有进行切换用户，怎么能进行退出已切换的用户呢
 		if (original == null) {
 			this.logger.debug("Failed to find original user");
 			throw new AuthenticationCredentialsNotFoundException(this.messages
 					.getMessage("SwitchUserFilter.noOriginalAuthentication", "Failed to find original user"));
 		}
-		// get the source user details
+
+		//推送对应的事件
 		UserDetails originalUser = null;
 		Object obj = original.getPrincipal();
 		if ((obj != null) && obj instanceof UserDetails) {
 			originalUser = (UserDetails) obj;
 		}
-		// publish event
 		if (this.eventPublisher != null) {
 			this.eventPublisher.publishEvent(new AuthenticationSwitchUserEvent(current, originalUser));
 		}
+
 		return original;
 	}
 
 	/**
-	 * Create a switch user token that contains an additional <tt>GrantedAuthority</tt>
-	 * that contains the original <code>Authentication</code> object.
+	 * 创建一个新的认证对象
 	 * @param request The http servlet request.
 	 * @param targetUser The target user
 	 * @return The authentication token
@@ -282,30 +326,39 @@ public class SwitchUserFilter extends GenericFilterBean implements ApplicationEv
 	private UsernamePasswordAuthenticationToken createSwitchUserToken(HttpServletRequest request,
 			UserDetails targetUser) {
 		UsernamePasswordAuthenticationToken targetUserRequest;
-		// grant an additional authority that contains the original Authentication object
-		// which will be used to 'exit' from the current switched user.
+		// 获得当前的认证对象
 		Authentication currentAuthentication = getCurrentAuthentication(request);
+
+		//将此时的认证对象保存起来，方便判断是否是已切换用户的状态
 		GrantedAuthority switchAuthority = new SwitchUserGrantedAuthority(this.switchAuthorityRole,
 				currentAuthentication);
-		// get the original authorities
+
+		//是否更换切换后的用户权限
 		Collection<? extends GrantedAuthority> orig = targetUser.getAuthorities();
-		// Allow subclasses to change the authorities to be granted
 		if (this.switchUserAuthorityChanger != null) {
 			orig = this.switchUserAuthorityChanger.modifyGrantedAuthorities(targetUser, currentAuthentication, orig);
 		}
-		// add the new switch user authority
+
+		//添加新的权限
 		List<GrantedAuthority> newAuths = new ArrayList<>(orig);
+		//重点：保存旧的权限，为的是在退出切换用户的时候，能够判断出是否做了用户切换的操作的
 		newAuths.add(switchAuthority);
-		// create the new authentication token
+
+		//创建新的认证对象
 		targetUserRequest = new UsernamePasswordAuthenticationToken(targetUser, targetUser.getPassword(), newAuths);
 		// set details
 		targetUserRequest.setDetails(this.authenticationDetailsSource.buildDetails(request));
 		return targetUserRequest;
 	}
 
+	/**
+	 * 获得当前的认证对象
+	 * @param request
+	 * @return
+	 */
 	private Authentication getCurrentAuthentication(HttpServletRequest request) {
 		try {
-			// SEC-1763. Check first if we are already switched.
+			//先检查一下我们是否已经切换过用户了
 			return attemptExitUser(request);
 		}
 		catch (AuthenticationCredentialsNotFoundException ex) {
@@ -314,17 +367,14 @@ public class SwitchUserFilter extends GenericFilterBean implements ApplicationEv
 	}
 
 	/**
-	 * Find the original <code>Authentication</code> object from the current user's
-	 * granted authorities. A successfully switched user should have a
-	 * <code>SwitchUserGrantedAuthority</code> that contains the original source user
-	 * <code>Authentication</code> object.
-	 * @param current The current <code>Authentication</code> object
-	 * @return The source user <code>Authentication</code> object or <code>null</code>
-	 * otherwise.
+	 * 获取切换前的认证对象
+	 * @param current
+	 * @return
 	 */
 	private Authentication getSourceAuthentication(Authentication current) {
 		Authentication original = null;
-		// iterate over granted authorities and find the 'switch user' authority
+		//由于切换用户前已经将 当时的认证对象封装成为了一个SwitchUserGrantedAuthority
+		//那就使用循环获取当时的认证对象
 		Collection<? extends GrantedAuthority> authorities = current.getAuthorities();
 		for (GrantedAuthority auth : authorities) {
 			// check for switch user type of authority
@@ -349,7 +399,7 @@ public class SwitchUserFilter extends GenericFilterBean implements ApplicationEv
 	}
 
 	/**
-	 * Checks the request URI for the presence of <tt>switchUserUrl</tt>.
+	 * 判断是否是切换另外一个用户的请求
 	 * @param request The http servlet request
 	 * @return <code>true</code> if the request requires a switch, <code>false</code>
 	 * otherwise.

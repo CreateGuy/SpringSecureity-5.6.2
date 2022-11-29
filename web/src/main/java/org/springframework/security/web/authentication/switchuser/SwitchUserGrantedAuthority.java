@@ -22,21 +22,20 @@ import org.springframework.security.core.SpringSecurityCoreVersion;
 import org.springframework.util.Assert;
 
 /**
- * Custom {@code GrantedAuthority} used by
- * {@link org.springframework.security.web.authentication.switchuser.SwitchUserFilter}
- * <p>
- * Stores the {@code Authentication} object of the original user to be used later when
- * 'exiting' from a user switch.
- *
- * @author Mark St.Godard
- * @see org.springframework.security.web.authentication.switchuser.SwitchUserFilter
+ * 是针对于切换用户前的权限
  */
 public final class SwitchUserGrantedAuthority implements GrantedAuthority {
 
 	private static final long serialVersionUID = SpringSecurityCoreVersion.SERIAL_VERSION_UID;
 
+	/**
+	 * Switch模式下的权限前缀
+	 */
 	private final String role;
 
+	/**
+	 * 切换前的权限
+	 */
 	private final Authentication source;
 
 	public SwitchUserGrantedAuthority(String role, Authentication source) {
