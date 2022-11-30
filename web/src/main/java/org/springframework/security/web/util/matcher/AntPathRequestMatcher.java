@@ -47,8 +47,14 @@ public final class AntPathRequestMatcher implements RequestMatcher, RequestVaria
 
 	private final Matcher matcher;
 
+	/**
+	 * 能够匹配的路径
+	 */
 	private final String pattern;
 
+	/**
+	 * 能够匹配的请求方法
+	 */
 	private final HttpMethod httpMethod;
 
 	private final boolean caseSensitive;

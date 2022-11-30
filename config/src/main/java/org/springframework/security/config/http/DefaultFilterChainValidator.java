@@ -48,25 +48,37 @@ import org.springframework.security.web.session.SessionManagementFilter;
 import org.springframework.security.web.util.matcher.AnyRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 
+/**
+ * FilterChainProxy配置完成的验证器
+ */
 public class DefaultFilterChainValidator implements FilterChainProxy.FilterChainValidator {
 
 	private final Log logger = LogFactory.getLog(getClass());
 
 	@Override
 	public void validate(FilterChainProxy fcp) {
+		//检查所有的过滤器连
 		for (SecurityFilterChain filterChain : fcp.getFilterChains()) {
+			//检查安全拦截程序保护登录页面URL的常见错误
 			checkLoginPageIsntProtected(fcp, filterChain.getFilters());
+			//检查特定过滤器是否出现重复的
 			checkFilterStack(filterChain.getFilters());
 		}
+		//检查过滤器链的顺序
 		checkPathOrder(new ArrayList<>(fcp.getFilterChains()));
+		//检查过滤器链的请求规则是否重复了
 		checkForDuplicateMatchers(new ArrayList<>(fcp.getFilterChains()));
 	}
 
+	/**
+	 * 检查过滤器链的顺序
+	 * @param filterChains
+	 */
 	private void checkPathOrder(List<SecurityFilterChain> filterChains) {
-		// Check that the universal pattern is listed at the end, if at all
 		Iterator<SecurityFilterChain> chains = filterChains.iterator();
 		while (chains.hasNext()) {
 			RequestMatcher matcher = ((DefaultSecurityFilterChain) chains.next()).getRequestMatcher();
+			//注意：Any代表任意请求都能匹配，那这一个过滤器链必须出现在最后一个位置，不然不合理
 			if (AnyRequestMatcher.INSTANCE.equals(matcher) && chains.hasNext()) {
 				throw new IllegalArgumentException("A universal match pattern ('/**') is defined "
 						+ " before other patterns in the filter chain, causing them to be ignored. Please check the "
@@ -75,10 +87,16 @@ public class DefaultFilterChainValidator implements FilterChainProxy.FilterChain
 		}
 	}
 
+	/**
+	 * 检查过滤器链的请求规则是否重复了
+	 * @param chains
+	 */
 	private void checkForDuplicateMatchers(List<SecurityFilterChain> chains) {
 		while (chains.size() > 1) {
 			DefaultSecurityFilterChain chain = (DefaultSecurityFilterChain) chains.remove(0);
 			for (SecurityFilterChain test : chains) {
+				//注意：请求匹配器重写了equals方法
+				//比如说AntPathRequestMatcher的equals方法就比较了路径，请求方式等等
 				if (chain.getRequestMatcher().equals(((DefaultSecurityFilterChain) test).getRequestMatcher())) {
 					throw new IllegalArgumentException("The FilterChainProxy contains two filter chains using the"
 							+ " matcher " + chain.getRequestMatcher() + ". If you are using multiple <http> namespace "
@@ -99,7 +117,12 @@ public class DefaultFilterChainValidator implements FilterChainProxy.FilterChain
 	}
 
 	/**
-	 * Checks the filter list for possible errors and logs them
+	 * 检查特定过滤器是否出现重复的
+	 * <ul>
+	 *     <li>
+	 *         里面出现的过滤器出现多个根本没有意义
+	 *     </li>
+	 * </ul>
 	 */
 	private void checkFilterStack(List<Filter> filters) {
 		checkForDuplicates(SecurityContextPersistenceFilter.class, filters);
@@ -112,6 +135,11 @@ public class DefaultFilterChainValidator implements FilterChainProxy.FilterChain
 		checkForDuplicates(FilterSecurityInterceptor.class, filters);
 	}
 
+	/**
+	 * 检查是否有相同类型的过滤器
+	 * @param clazz
+	 * @param filters
+	 */
 	private void checkForDuplicates(Class<? extends Filter> clazz, List<Filter> filters) {
 		for (int i = 0; i < filters.size(); i++) {
 			Filter f1 = filters.get(i);
@@ -129,12 +157,15 @@ public class DefaultFilterChainValidator implements FilterChainProxy.FilterChain
 		}
 	}
 
-	/*
-	 * Checks for the common error of having a login page URL protected by the security
-	 * interceptor
+	/**
+	 * 检查安全拦截程序保护登录页面URL的常见错误
+	 * @param fcp
+	 * @param filterStack
 	 */
 	private void checkLoginPageIsntProtected(FilterChainProxy fcp, List<Filter> filterStack) {
+		//拿到处理异常的过滤器
 		ExceptionTranslationFilter etf = getFilter(ExceptionTranslationFilter.class, filterStack);
+		//判断身份认证入口点是否是跳转到登录页的
 		if (etf == null || !(etf.getAuthenticationEntryPoint() instanceof LoginUrlAuthenticationEntryPoint)) {
 			return;
 		}
@@ -155,15 +186,21 @@ public class DefaultFilterChainValidator implements FilterChainProxy.FilterChain
 			this.logger.debug("Filter chain is empty for the login page");
 			return;
 		}
+		//判断是否有生成登录页的过滤器
 		if (getFilter(DefaultLoginPageGeneratingFilter.class, filters) != null) {
 			this.logger.debug("Default generated login page is in use");
 			return;
 		}
+
+		//拿到用于权限判断的过滤器
 		FilterSecurityInterceptor fsi = getFilter(FilterSecurityInterceptor.class, filters);
+		//拿到安全元数据源
 		FilterInvocationSecurityMetadataSource fids = fsi.getSecurityMetadataSource();
+		//判断登录页是否需要权限
 		Collection<ConfigAttribute> attributes = fids.getAttributes(loginRequest);
 		if (attributes == null) {
 			this.logger.debug("No access attributes defined for login page URL");
+			//到这就说明登录页并没有限制权限，再判断是否拒绝访问公共接口
 			if (fsi.isRejectPublicInvocations()) {
 				this.logger.warn("FilterSecurityInterceptor is configured to reject public invocations."
 						+ " Your login page may not be accessible.");
@@ -172,13 +209,17 @@ public class DefaultFilterChainValidator implements FilterChainProxy.FilterChain
 		}
 		AnonymousAuthenticationFilter anonPF = getFilter(AnonymousAuthenticationFilter.class, filters);
 		if (anonPF == null) {
+			//登录页面受筛选器链保护，但没有启用匿名身份认证。这几乎是一个错误
 			this.logger.warn("The login page is being protected by the filter chain, but you don't appear to have"
 					+ " anonymous authentication enabled. This is almost certainly an error.");
 			return;
 		}
-		// Simulate an anonymous access with the supplied attributes.
+
+		//使用提供的属性模拟匿名访问。
 		AnonymousAuthenticationToken token = new AnonymousAuthenticationToken("key", anonPF.getPrincipal(),
 				anonPF.getAuthorities());
+
+		//进行身份认证
 		try {
 			fsi.getAccessDecisionManager().decide(token, loginRequest, attributes);
 		}

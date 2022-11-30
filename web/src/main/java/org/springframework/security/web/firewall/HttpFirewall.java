@@ -25,8 +25,10 @@ import javax.servlet.http.HttpServletResponse;
 public interface HttpFirewall {
 
 	/**
-	 * Provides the request object which will be passed through the filter chain.
-	 * @throws RequestRejectedException if the request should be rejected immediately
+	 * 筛选请求是否合法
+	 * @param request
+	 * @return
+	 * @throws RequestRejectedException
 	 */
 	FirewalledRequest getFirewalledRequest(HttpServletRequest request) throws RequestRejectedException;
 

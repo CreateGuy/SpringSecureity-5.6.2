@@ -138,6 +138,9 @@ public abstract class AbstractSecurityInterceptor
 	 */
 	private boolean alwaysReauthenticate = false;
 
+	/**
+	 * 接口没有要求权限的时候，视为公共接口，猜测是否拒绝访问公共接口
+	 */
 	private boolean rejectPublicInvocations = false;
 
 	/**
