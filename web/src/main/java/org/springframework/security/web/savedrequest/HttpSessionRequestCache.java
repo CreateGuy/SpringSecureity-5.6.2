@@ -40,19 +40,32 @@ public class HttpSessionRequestCache implements RequestCache {
 
 	protected final Log logger = LogFactory.getLog(this.getClass());
 
+	/**
+	 * 端口解析器
+	 */
 	private PortResolver portResolver = new PortResolverImpl();
 
+	/**
+	 * 是否允许创建Session，默认就需要
+	 */
 	private boolean createSessionAllowed = true;
 
+	/**
+	 * 请求匹配器，由RequestCacheConfigurer负责构建
+	 */
 	private RequestMatcher requestMatcher = AnyRequestMatcher.INSTANCE;
 
+	/**
+	 * 将请求参数保存到Session中的key
+	 */
 	private String sessionAttrName = SAVED_REQUEST;
 
 	/**
-	 * Stores the current request, provided the configuration properties allow it.
+	 * 如果配置属性允许，则存储当前请求
 	 */
 	@Override
 	public void saveRequest(HttpServletRequest request, HttpServletResponse response) {
+		//某些请求不允许缓存请求数据
 		if (!this.requestMatcher.matches(request)) {
 			if (this.logger.isTraceEnabled()) {
 				this.logger.trace(
@@ -60,11 +73,10 @@ public class HttpSessionRequestCache implements RequestCache {
 			}
 			return;
 		}
+		//创建默认保存对象
 		DefaultSavedRequest savedRequest = new DefaultSavedRequest(request, this.portResolver);
+		//保存到Session中
 		if (this.createSessionAllowed || request.getSession(false) != null) {
-			// Store the HTTP request itself. Used by
-			// AbstractAuthenticationProcessingFilter
-			// for redirection after successful authentication (SEC-29)
 			request.getSession().setAttribute(this.sessionAttrName, savedRequest);
 			if (this.logger.isDebugEnabled()) {
 				this.logger.debug(LogMessage.format("Saved request %s to session", savedRequest.getRedirectUrl()));

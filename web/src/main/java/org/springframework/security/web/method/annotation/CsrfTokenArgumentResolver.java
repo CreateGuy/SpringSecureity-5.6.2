@@ -26,25 +26,15 @@ import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
 
 /**
- * Allows resolving the current {@link CsrfToken}. For example, the following
- * {@link RestController} will resolve the current {@link CsrfToken}:
- *
- * <pre>
- * <code>
- * &#064;RestController
- * public class MyController {
- *     &#064;MessageMapping("/im")
- *     public CsrfToken csrf(CsrfToken token) {
- *         return token;
- *     }
- * }
- * </code> </pre>
- *
- * @author Rob Winch
- * @since 4.0
+ * 为了解析方法入参中有 {@link CsrfToken} 的参数解析器
  */
 public final class CsrfTokenArgumentResolver implements HandlerMethodArgumentResolver {
 
+	/**
+	 * 此参数解析器仅支持 {@code CsrfToken}
+	 * @param parameter
+	 * @return
+	 */
 	@Override
 	public boolean supportsParameter(MethodParameter parameter) {
 		return CsrfToken.class.equals(parameter.getParameterType());
@@ -53,6 +43,7 @@ public final class CsrfTokenArgumentResolver implements HandlerMethodArgumentRes
 	@Override
 	public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
 			NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
+		// 从请求域中获得CsrfToken, 此属性值是由CsrfFilter负责放入的
 		CsrfToken token = (CsrfToken) webRequest.getAttribute(CsrfToken.class.getName(),
 				RequestAttributes.SCOPE_REQUEST);
 		return token;

@@ -39,25 +39,7 @@ import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 
 /**
- * Represents central information from a {@code HttpServletRequest}.
- * <p>
- * This class is used by
- * {@link org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter}
- * and {@link org.springframework.security.web.savedrequest.SavedRequestAwareWrapper} to
- * reproduce the request after successful authentication. An instance of this class is
- * stored at the time of an authentication exception by
- * {@link org.springframework.security.web.access.ExceptionTranslationFilter}.
- * <p>
- * <em>IMPLEMENTATION NOTE</em>: It is assumed that this object is accessed only from the
- * context of a single thread, so no synchronization around internal collection classes is
- * performed.
- * <p>
- * This class is based on code in Apache Tomcat.
- *
- * @author Craig McClanahan
- * @author Andrey Grebnev
- * @author Ben Alex
- * @author Luke Taylor
+ * 保存Request的信息，通常用在{@link RequestCache}
  */
 public class DefaultSavedRequest implements SavedRequest {
 

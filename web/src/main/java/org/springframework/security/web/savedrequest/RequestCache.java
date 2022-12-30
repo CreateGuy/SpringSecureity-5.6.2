@@ -25,9 +25,16 @@ import javax.servlet.http.HttpServletResponse;
 public interface RequestCache {
 
 	/**
-	 * 在身份验证发生后，缓存当前请求以供以后使用
-	 * 比如说：在一个论坛的帖子中，进行回帖，然后因为没有登录，先将回帖的信息保存到请求缓存器中，再重定向到登录页
-	 * 然后登陆成功后就会获取请求缓存器中上次保存的回帖信息，然后将当前request进行包装，变成一个回帖请求
+	 * <ul>
+	 *     <li>
+	 *          在身份验证发生后，缓存当前请求以供以后使用
+	 * 			比如说：在一个论坛的帖子中，进行回帖，然后因为没有登录，先将回帖的信息保存到请求缓存器中，再重定向到登录页
+	 * 	 		然后登陆成功后就会获取请求缓存器中上次保存的回帖信息，然后将当前request进行包装，变成一个回帖请求
+	 *     </li>
+	 *     <li>
+	 *         通常发生在{@link org.springframework.security.web.access.ExceptionTranslationFilter}中
+	 *     </li>
+	 * </ul>
 	 */
 	void saveRequest(HttpServletRequest request, HttpServletResponse response);
 
