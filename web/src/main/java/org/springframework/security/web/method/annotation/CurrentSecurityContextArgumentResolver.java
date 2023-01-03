@@ -37,41 +37,11 @@ import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
 
 /**
- * Allows resolving the {@link SecurityContext} using the {@link CurrentSecurityContext}
- * annotation. For example, the following {@link Controller}:
- *
- * <pre>
- * &#64;Controller
- * public class MyController {
- *     &#64;RequestMapping("/im")
- *     public void security(@CurrentSecurityContext SecurityContext context) {
- *         // do something with context
- *     }
- * }
- * </pre>
- *
- * it can also support the spring SPEL expression to get the value from SecurityContext
- * <pre>
- * &#64;Controller
- * public class MyController {
- *     &#64;RequestMapping("/im")
- *     public void security(@CurrentSecurityContext(expression="authentication") Authentication authentication) {
- *         // do something with context
- *     }
- * }
- * </pre>
- *
- * <p>
- * Will resolve the {@link SecurityContext} argument using
- * {@link SecurityContextHolder#getContext()} from the {@link SecurityContextHolder}. If
- * the {@link SecurityContext} is {@code null}, it will return {@code null}. If the types
- * do not match, {@code null} will be returned unless
- * {@link CurrentSecurityContext#errorOnInvalidType()} is {@code true} in which case a
- * {@link ClassCastException} will be thrown.
- * </p>
- *
- * @author Dan Zheng
- * @since 5.2
+ * 解析标注了 {@link CurrentSecurityContext} 注解的参数
+ * <ol>
+ *     <li> 支持 {@link Controller} 方法中的入参中有标注了 {@link CurrentSecurityContext} 注解放在 {@link SecurityContext} 参数上 </li>
+ *     <li> 支持 Spring SpEl表达式从 SecurityContext中获取值 eg：@CurrentSecurityContext(expression="authentication") Authentication authentication</li>
+ * </ol>
  */
 public final class CurrentSecurityContextArgumentResolver implements HandlerMethodArgumentResolver {
 
@@ -79,6 +49,11 @@ public final class CurrentSecurityContextArgumentResolver implements HandlerMeth
 
 	private BeanResolver beanResolver;
 
+	/**
+	 * 此参数解析器只能支持带有 {@code CurrentSecurityContext} 注解的参数
+	 * @param parameter
+	 * @return
+	 */
 	@Override
 	public boolean supportsParameter(MethodParameter parameter) {
 		return findMethodAnnotation(CurrentSecurityContext.class, parameter) != null;
@@ -87,13 +62,17 @@ public final class CurrentSecurityContextArgumentResolver implements HandlerMeth
 	@Override
 	public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
 			NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
+		// 从线程级别的策略中拿到安全上下文
 		SecurityContext securityContext = SecurityContextHolder.getContext();
 		if (securityContext == null) {
 			return null;
 		}
 		Object securityContextResult = securityContext;
+		// 从参数上拿到指定的 CurrentSecurityContext 注解信息
 		CurrentSecurityContext annotation = findMethodAnnotation(CurrentSecurityContext.class, parameter);
 		String expressionToParse = annotation.expression();
+		// 是否以 SpEL 进行解析
+		// SpEL 不懂
 		if (StringUtils.hasLength(expressionToParse)) {
 			StandardEvaluationContext context = new StandardEvaluationContext();
 			context.setRootObject(securityContext);
@@ -102,8 +81,10 @@ public final class CurrentSecurityContextArgumentResolver implements HandlerMeth
 			Expression expression = this.parser.parseExpression(expressionToParse);
 			securityContextResult = expression.getValue(context);
 		}
+		// 如果有安全上下文，但是参数类型不对
 		if (securityContextResult != null
 				&& !parameter.getParameterType().isAssignableFrom(securityContextResult.getClass())) {
+			// 是否抛出异常，还是返回空
 			if (annotation.errorOnInvalidType()) {
 				throw new ClassCastException(
 						securityContextResult + " is not assignable to " + parameter.getParameterType());
@@ -123,13 +104,14 @@ public final class CurrentSecurityContextArgumentResolver implements HandlerMeth
 	}
 
 	/**
-	 * Obtain the specified {@link Annotation} on the specified {@link MethodParameter}.
+	 * 在指定的方法参数上，获得指定的注解
 	 * @param annotationClass the class of the {@link Annotation} to find on the
 	 * {@link MethodParameter}
 	 * @param parameter the {@link MethodParameter} to search for an {@link Annotation}
 	 * @return the {@link Annotation} that was found or null.
 	 */
 	private <T extends Annotation> T findMethodAnnotation(Class<T> annotationClass, MethodParameter parameter) {
+		// 拿到参数上的指定注解
 		T annotation = parameter.getParameterAnnotation(annotationClass);
 		if (annotation != null) {
 			return annotation;
