@@ -25,15 +25,7 @@ import java.lang.annotation.Target;
 import org.springframework.security.core.Authentication;
 
 /**
- * Annotation that is used to resolve {@link Authentication#getPrincipal()} to a method
- * argument.
- *
- * @author Rob Winch
- * @since 4.0
- *
- * See: <a href=
- * "{@docRoot}/org/springframework/security/web/method/annotation/AuthenticationPrincipalArgumentResolver.html"
- * > AuthenticationPrincipalArgumentResolver </a>
+ * 新版的 AuthenticationPrincipal，比起老版的支持了表达式获取值
  */
 @Target({ ElementType.PARAMETER, ElementType.ANNOTATION_TYPE })
 @Retention(RetentionPolicy.RUNTIME)

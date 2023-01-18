@@ -42,7 +42,7 @@ public interface CsrfToken extends Serializable {
 	String getParameterName();
 
 	/**
-	 * Gets the token value. Cannot be null.
+	 * 获取令牌值。不能为空
 	 * @return the token value
 	 */
 	String getToken();

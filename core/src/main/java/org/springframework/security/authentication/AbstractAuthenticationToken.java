@@ -80,6 +80,10 @@ public abstract class AbstractAuthenticationToken implements Authentication, Cre
 		return this.authorities;
 	}
 
+	/**
+	 * 返回当前登录的用户名
+	 * @return
+	 */
 	@Override
 	public String getName() {
 		if (this.getPrincipal() instanceof UserDetails) {

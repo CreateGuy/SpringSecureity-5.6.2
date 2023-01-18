@@ -23,7 +23,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 指定方法入参中的 {@link org.springframework.security.core.context.SecurityContext} 参数
+ * 填充方法入参中的 {@link org.springframework.security.core.context.SecurityContext} 参数
  *
  * <p>
  * See: <a href=

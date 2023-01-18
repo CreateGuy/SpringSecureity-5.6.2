@@ -28,12 +28,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.util.WebUtils;
 
 /**
- * A {@link CsrfTokenRepository} that persists the CSRF token in a cookie named
- * "XSRF-TOKEN" and reads from the header "X-XSRF-TOKEN" following the conventions of
- * AngularJS. When using with AngularJS be sure to use {@link #withHttpOnlyFalse()}.
- *
- * @author Rob Winch
- * @since 4.1
+ * 基于Cookie的 {@link CsrfTokenRepository}
  */
 public final class CookieCsrfTokenRepository implements CsrfTokenRepository {
 
@@ -43,20 +38,42 @@ public final class CookieCsrfTokenRepository implements CsrfTokenRepository {
 
 	static final String DEFAULT_CSRF_HEADER_NAME = "X-XSRF-TOKEN";
 
+	/**
+	 * 通常表示csrfToken放在Url后面的参数键
+	 */
 	private String parameterName = DEFAULT_CSRF_PARAMETER_NAME;
 
+	/**
+	 * 通常表示csrfToken放在请求头中的参数键
+	 */
 	private String headerName = DEFAULT_CSRF_HEADER_NAME;
 
+	/**
+	 * 通常表示csrfToken放在Cookie中的参数键
+	 * <p>通常来说这个cookie是作为正确令牌，而从请求头或者Url后面读取的令牌是要作为要比较的令牌，所以说这种方式不安全</p>
+	 */
 	private String cookieName = DEFAULT_CSRF_COOKIE_NAME;
 
+	/**
+	 * 禁止客户端操作Cookie
+	 */
 	private boolean cookieHttpOnly = true;
 
 	private String cookiePath;
 
+	/**
+	 * 指定可以读取Cookie的域名(只有某个域名下的才能读取)
+	 */
 	private String cookieDomain;
 
+	/**
+	 * 表明客户端只有在像Https这种安全的情况下，才能向服务端发送Cookie
+	 */
 	private Boolean secure;
 
+	/**
+	 * 令牌放在Cookie中的过期时间
+	 */
 	private int cookieMaxAge = -1;
 
 	public CookieCsrfTokenRepository() {
@@ -67,6 +84,12 @@ public final class CookieCsrfTokenRepository implements CsrfTokenRepository {
 		return new DefaultCsrfToken(this.headerName, this.parameterName, createNewToken());
 	}
 
+	/**
+	 * 保存令牌到Cookie中
+	 * @param token the {@link CsrfToken} to save or null to delete
+	 * @param request the {@link HttpServletRequest} to use
+	 * @param response the {@link HttpServletResponse} to use
+	 */
 	@Override
 	public void saveToken(CsrfToken token, HttpServletRequest request, HttpServletResponse response) {
 		String tokenValue = (token != null) ? token.getToken() : "";
@@ -81,6 +104,11 @@ public final class CookieCsrfTokenRepository implements CsrfTokenRepository {
 		response.addCookie(cookie);
 	}
 
+	/**
+	 * 从请求中读取令牌
+	 * @param request the {@link HttpServletRequest} to use
+	 * @return
+	 */
 	@Override
 	public CsrfToken loadToken(HttpServletRequest request) {
 		Cookie cookie = WebUtils.getCookie(request, this.cookieName);
@@ -151,6 +179,10 @@ public final class CookieCsrfTokenRepository implements CsrfTokenRepository {
 		return result;
 	}
 
+	/**
+	 * 创建令牌
+	 * @return
+	 */
 	private String createNewToken() {
 		return UUID.randomUUID().toString();
 	}
