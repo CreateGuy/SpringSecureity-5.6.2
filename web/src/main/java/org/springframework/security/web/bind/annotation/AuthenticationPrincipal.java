@@ -25,15 +25,7 @@ import java.lang.annotation.Target;
 import org.springframework.security.core.Authentication;
 
 /**
- * Annotation that binds a method parameter or method return value to the
- * {@link Authentication#getPrincipal()}. This is necessary to signal that the argument
- * should be resolved to the current user rather than a user that might be edited on a
- * form.
- * @deprecated Use
- * {@link org.springframework.security.core.annotation.AuthenticationPrincipal} instead.
- *
- * @author Rob Winch
- * @since 3.2
+ * 在处理方法参数前面使用，可以填充主体(用户对象)
  */
 @Target({ ElementType.PARAMETER, ElementType.ANNOTATION_TYPE })
 @Retention(RetentionPolicy.RUNTIME)
@@ -42,9 +34,7 @@ import org.springframework.security.core.Authentication;
 public @interface AuthenticationPrincipal {
 
 	/**
-	 * True if a {@link ClassCastException} should be thrown when the current
-	 * {@link Authentication#getPrincipal()} is the incorrect type. Default is false.
-	 * @return
+	 * 如果 {@code SecurityContextHolder} 中的用户对象类型和处理方法的参数类型不匹配，是否抛出异常
 	 */
 	boolean errorOnInvalidType() default false;
 

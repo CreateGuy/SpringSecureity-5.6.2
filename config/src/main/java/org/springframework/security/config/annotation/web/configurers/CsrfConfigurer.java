@@ -49,44 +49,30 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.util.Assert;
 
 /**
- * Adds
- * <a href="https://www.owasp.org/index.php/Cross-Site_Request_Forgery_(CSRF)" >CSRF</a>
- * protection for the methods as specified by
- * {@link #requireCsrfProtectionMatcher(RequestMatcher)}.
- *
- * <h2>Security Filters</h2>
- *
- * The following Filters are populated
- *
- * <ul>
- * <li>{@link CsrfFilter}</li>
- * </ul>
- *
- * <h2>Shared Objects Created</h2>
- *
- * No shared objects are created.
- *
- * <h2>Shared Objects Used</h2>
- *
- * <ul>
- * <li>{@link ExceptionHandlingConfigurer#accessDeniedHandler(AccessDeniedHandler)} is
- * used to determine how to handle CSRF attempts</li>
- * <li>{@link InvalidSessionStrategy}</li>
- * </ul>
- *
- * @author Rob Winch
- * @author Michael Vitz
- * @since 3.2
+ * {@link CsrfFilter} 的配置类
  */
 public final class CsrfConfigurer<H extends HttpSecurityBuilder<H>>
 		extends AbstractHttpConfigurer<CsrfConfigurer<H>, H> {
 
+	/**
+	 * Csrf令牌的默认存储策略
+	 */
 	private CsrfTokenRepository csrfTokenRepository = new LazyCsrfTokenRepository(new HttpSessionCsrfTokenRepository());
 
+	/**
+	 * 不需要Csrf保护的请求方式
+	 */
 	private RequestMatcher requireCsrfProtectionMatcher = CsrfFilter.DEFAULT_CSRF_MATCHER;
 
+	/**
+	 * 不需要Csrf保护的请求地址
+	 */
 	private List<RequestMatcher> ignoredCsrfProtectionMatchers = new ArrayList<>();
 
+	/**
+	 * 需要暴露给 {@code SessionManagementConfigurer} 的认证成功会话策略
+	 * <p>如果没有设置默认是一个有关Csrf令牌的，这样认证成功后就会设置令牌的</p>
+	 */
 	private SessionAuthenticationStrategy sessionAuthenticationStrategy;
 
 	private final ApplicationContext context;
@@ -202,18 +188,28 @@ public final class CsrfConfigurer<H extends HttpSecurityBuilder<H>>
 	@Override
 	public void configure(H http) {
 		CsrfFilter filter = new CsrfFilter(this.csrfTokenRepository);
+
+		// 设置不需要Csrf保护的请求对应的请求匹配器
 		RequestMatcher requireCsrfProtectionMatcher = getRequireCsrfProtectionMatcher();
 		if (requireCsrfProtectionMatcher != null) {
 			filter.setRequireCsrfProtectionMatcher(requireCsrfProtectionMatcher);
 		}
+
+		// 设置访问被拒绝处理器
 		AccessDeniedHandler accessDeniedHandler = createAccessDeniedHandler(http);
 		if (accessDeniedHandler != null) {
 			filter.setAccessDeniedHandler(accessDeniedHandler);
 		}
+
+		// 给 LogoutConfigurer 中设置Csrf存储策略
+		// 是为了在登出的时候清除Csrf令牌
 		LogoutConfigurer<H> logoutConfigurer = http.getConfigurer(LogoutConfigurer.class);
 		if (logoutConfigurer != null) {
 			logoutConfigurer.addLogoutHandler(new CsrfLogoutHandler(this.csrfTokenRepository));
 		}
+
+		// 给 sessionConfigurer 中认证成功后的会话策略
+		// 是为了在认证成功后创建Csrf令牌
 		SessionManagementConfigurer<H> sessionConfigurer = http.getConfigurer(SessionManagementConfigurer.class);
 		if (sessionConfigurer != null) {
 			sessionConfigurer.addSessionAuthenticationStrategy(getSessionAuthenticationStrategy());
@@ -223,9 +219,7 @@ public final class CsrfConfigurer<H extends HttpSecurityBuilder<H>>
 	}
 
 	/**
-	 * Gets the final {@link RequestMatcher} to use by combining the
-	 * {@link #requireCsrfProtectionMatcher(RequestMatcher)} and any {@link #ignore()}.
-	 * @return the {@link RequestMatcher} to use
+	 * 返回不需要Csrf保护的请求对应的请求匹配器
 	 */
 	private RequestMatcher getRequireCsrfProtectionMatcher() {
 		if (this.ignoredCsrfProtectionMatchers.isEmpty()) {
@@ -236,11 +230,7 @@ public final class CsrfConfigurer<H extends HttpSecurityBuilder<H>>
 	}
 
 	/**
-	 * Gets the default {@link AccessDeniedHandler} from the
-	 * {@link ExceptionHandlingConfigurer#getAccessDeniedHandler()} or create a
-	 * {@link AccessDeniedHandlerImpl} if not available.
-	 * @param http the {@link HttpSecurityBuilder}
-	 * @return the {@link AccessDeniedHandler}
+	 * 通过 {@code ExceptionHandlingConfigurer} 拿到访问被拒绝处理器
 	 */
 	@SuppressWarnings("unchecked")
 	private AccessDeniedHandler getDefaultAccessDeniedHandler(H http) {
@@ -256,11 +246,7 @@ public final class CsrfConfigurer<H extends HttpSecurityBuilder<H>>
 	}
 
 	/**
-	 * Gets the default {@link InvalidSessionStrategy} from the
-	 * {@link SessionManagementConfigurer#getInvalidSessionStrategy()} or null if not
-	 * available.
-	 * @param http the {@link HttpSecurityBuilder}
-	 * @return the {@link InvalidSessionStrategy}
+	 * 通过 {@code SessionManagementConfigurer} 拿到 HttpSession过期策略
 	 */
 	@SuppressWarnings("unchecked")
 	private InvalidSessionStrategy getInvalidSessionStrategy(H http) {
@@ -272,19 +258,12 @@ public final class CsrfConfigurer<H extends HttpSecurityBuilder<H>>
 	}
 
 	/**
-	 * Creates the {@link AccessDeniedHandler} from the result of
-	 * {@link #getDefaultAccessDeniedHandler(HttpSecurityBuilder)} and
-	 * {@link #getInvalidSessionStrategy(HttpSecurityBuilder)}. If
-	 * {@link #getInvalidSessionStrategy(HttpSecurityBuilder)} is non-null, then a
-	 * {@link DelegatingAccessDeniedHandler} is used in combination with
-	 * {@link InvalidSessionAccessDeniedHandler} and the
-	 * {@link #getDefaultAccessDeniedHandler(HttpSecurityBuilder)}. Otherwise, only
-	 * {@link #getDefaultAccessDeniedHandler(HttpSecurityBuilder)} is used.
-	 * @param http the {@link HttpSecurityBuilder}
-	 * @return the {@link AccessDeniedHandler}
+	 * 创建访问被拒绝处理器
 	 */
 	private AccessDeniedHandler createAccessDeniedHandler(H http) {
+		// 拿到 HttpSession过期策略
 		InvalidSessionStrategy invalidSessionStrategy = getInvalidSessionStrategy(http);
+		// 拿到访问被拒绝处理器
 		AccessDeniedHandler defaultAccessDeniedHandler = getDefaultAccessDeniedHandler(http);
 		if (invalidSessionStrategy == null) {
 			return defaultAccessDeniedHandler;
@@ -297,10 +276,7 @@ public final class CsrfConfigurer<H extends HttpSecurityBuilder<H>>
 	}
 
 	/**
-	 * Gets the {@link SessionAuthenticationStrategy} to use. If none was set by the user
-	 * a {@link CsrfAuthenticationStrategy} is created.
-	 * @return the {@link SessionAuthenticationStrategy}
-	 * @since 5.2
+	 * 创建认证成功后的会话策略
 	 */
 	private SessionAuthenticationStrategy getSessionAuthenticationStrategy() {
 		if (this.sessionAuthenticationStrategy != null) {
@@ -310,12 +286,7 @@ public final class CsrfConfigurer<H extends HttpSecurityBuilder<H>>
 	}
 
 	/**
-	 * Allows registering {@link RequestMatcher} instances that should be ignored (even if
-	 * the {@link HttpServletRequest} matches the
-	 * {@link CsrfConfigurer#requireCsrfProtectionMatcher(RequestMatcher)}.
-	 *
-	 * @author Rob Winch
-	 * @since 4.0
+	 * 允许注册应该被忽略的Url的注册中心
 	 */
 	private class IgnoreCsrfProtectionRegistry extends AbstractRequestMatcherRegistry<IgnoreCsrfProtectionRegistry> {
 

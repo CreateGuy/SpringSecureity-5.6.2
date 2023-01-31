@@ -25,11 +25,7 @@ import javax.servlet.http.HttpSession;
 import org.springframework.util.Assert;
 
 /**
- * A {@link CsrfTokenRepository} that stores the {@link CsrfToken} in the
- * {@link HttpSession}.
- *
- * @author Rob Winch
- * @since 3.2
+ * 基于会话的{@link CsrfTokenRepository}
  */
 public final class HttpSessionCsrfTokenRepository implements CsrfTokenRepository {
 
@@ -40,10 +36,19 @@ public final class HttpSessionCsrfTokenRepository implements CsrfTokenRepository
 	private static final String DEFAULT_CSRF_TOKEN_ATTR_NAME = HttpSessionCsrfTokenRepository.class.getName()
 			.concat(".CSRF_TOKEN");
 
+	/**
+	 * 通常表示csrfToken放在Url后面的参数键
+	 */
 	private String parameterName = DEFAULT_CSRF_PARAMETER_NAME;
 
+	/**
+	 * 通常表示csrfToken放在请求头中的参数键
+	 */
 	private String headerName = DEFAULT_CSRF_HEADER_NAME;
 
+	/**
+	 * 通常表示csrfToken放在会话中的参数键
+	 */
 	private String sessionAttributeName = DEFAULT_CSRF_TOKEN_ATTR_NAME;
 
 	@Override

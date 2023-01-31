@@ -19,18 +19,21 @@ package org.springframework.security.web.csrf;
 import org.springframework.util.Assert;
 
 /**
- * A CSRF token that is used to protect against CSRF attacks.
- *
- * @author Rob Winch
- * @since 3.2
+ * 用于防止CSRF攻击的CSRF令牌，默认的
  */
 @SuppressWarnings("serial")
 public final class DefaultCsrfToken implements CsrfToken {
 
 	private final String token;
 
+	/**
+	 * 令牌放在Url后的键
+	 */
 	private final String parameterName;
 
+	/**
+	 * 令牌放在请求头后的键
+	 */
 	private final String headerName;
 
 	/**
