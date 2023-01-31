@@ -39,12 +39,7 @@ public abstract class FirewalledRequest extends HttpServletRequestWrapper {
 	}
 
 	/**
-	 * This method will be called once the request has passed through the security filter
-	 * chain, when it is about to proceed to the application proper.
-	 * <p>
-	 * An implementation can thus choose to modify the state of the request for the
-	 * security infrastructure, while still maintaining the original
-	 * {@link HttpServletRequest}.
+	 * 该方法将在请求SpringSecurity的过滤器链后调用，此时它即将进入后面的过滤器链
 	 */
 	public abstract void reset();
 
