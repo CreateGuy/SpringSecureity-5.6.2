@@ -28,7 +28,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 public interface UserDetailsManager extends UserDetailsService {
 
 	/**
-	 * Create a new user with the supplied details.
+	 * *使用提供的 {@link UserDetails} 创建一个新用户
 	 */
 	void createUser(UserDetails user);
 

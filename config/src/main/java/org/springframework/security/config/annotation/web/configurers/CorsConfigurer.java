@@ -70,6 +70,7 @@ public class CorsConfigurer<H extends HttpSecurityBuilder<H>> extends AbstractHt
 	@Override
 	public void configure(H http) {
 		ApplicationContext context = http.getSharedObject(ApplicationContext.class);
+		// 创建CorsFilter
 		CorsFilter corsFilter = getCorsFilter(context);
 		Assert.state(corsFilter != null, () -> "Please configure either a " + CORS_FILTER_BEAN_NAME + " bean or a "
 				+ CORS_CONFIGURATION_SOURCE_BEAN_NAME + "bean.");
@@ -90,7 +91,7 @@ public class CorsConfigurer<H extends HttpSecurityBuilder<H>> extends AbstractHt
 		if (containsCorsFilter) {
 			return context.getBean(CORS_FILTER_BEAN_NAME, CorsFilter.class);
 		}
-		//获取Cors规则容器
+		//获取Cors匹配容器
 		boolean containsCorsSource = context.containsBean(CORS_CONFIGURATION_SOURCE_BEAN_NAME);
 		if (containsCorsSource) {
 			CorsConfigurationSource configurationSource = context.getBean(CORS_CONFIGURATION_SOURCE_BEAN_NAME,

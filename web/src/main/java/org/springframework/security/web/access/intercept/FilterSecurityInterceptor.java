@@ -31,7 +31,8 @@ import org.springframework.security.access.intercept.InterceptorStatusToken;
 import org.springframework.security.web.FilterInvocation;
 
 /**
- * Performs security handling of HTTP resources via a filter implementation.
+ * 通过 {@link WebSecurityConfigurerAdapter} 配置的权限，在这进行校验
+ * <li>通过注解配置的在 {@link org.springframework.security.access.intercept.aopalliance.MethodSecurityInterceptor} 中负责校验</li>
  * <p>
  * The <code>SecurityMetadataSource</code> required by this security interceptor is of
  * type {@link FilterInvocationSecurityMetadataSource}.

@@ -16,12 +16,16 @@
 
 package org.springframework.security.config.http;
 
+import javax.servlet.FilterChain;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpSession;
 
 import org.springframework.security.core.context.SecurityContext;
 
 /**
- * Spring Security的会话创建策略
+ * Spring Security的过滤器在执行过程中是否允许创建会话的策略
+ * <li>比如说：{@link org.springframework.security.web.context.SecurityContextPersistenceFilter#doFilter(ServletRequest, ServletResponse, FilterChain)}</li>
  */
 public enum SessionCreationPolicy {
 
@@ -32,7 +36,7 @@ public enum SessionCreationPolicy {
 
 	/**
 	 * 永远不会创建 {@link HttpSession}, 除非他已经存在
-	 * 应该是不会由Spring Security创建
+	 * 应该不会由Spring Security创建
 	 */
 	NEVER,
 
