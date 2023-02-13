@@ -24,23 +24,11 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Annotation for specifying a method filtering expression which will be evaluated before
- * a method has been invoked. The name of the argument to be filtered is specified using
- * the <tt>filterTarget</tt> attribute. This must be a Java Collection implementation
- * which supports the {@link java.util.Collection#remove(Object) remove} method.
- * Pre-filtering isn't supported on array types and will fail if the value of named filter
- * target argument is null at runtime.
- * <p>
- * For methods which have a single argument which is a collection type, this argument will
- * be used as the filter target.
- * <p>
- * The annotation value contains the expression which will be evaluated for each element
- * in the collection. If the expression evaluates to false, the element will be removed.
- * The reserved name "filterObject" can be used within the expression to refer to the
- * current object which is being evaluated.
- *
- * @author Luke Taylor
- * @since 3.0
+ * 在方法执行前被调用：对于集合进行过滤，不符合的将会被删除
+ * <ul>
+ *     <li>参数必须是支持删除的集合类型，不支持过滤空数组</li>
+ *     <li>对于只有一个参数且为集合类型的方法，此参数将被用作过滤器目标</li>
+ * </ul>
  */
 @Target({ ElementType.METHOD, ElementType.TYPE })
 @Retention(RetentionPolicy.RUNTIME)
@@ -49,15 +37,12 @@ import java.lang.annotation.Target;
 public @interface PreFilter {
 
 	/**
-	 * @return the Spring-EL expression to be evaluated before invoking the protected
-	 * method
+	 * 匹配表达式：Spring-EL表达式
 	 */
 	String value();
 
 	/**
-	 * @return the name of the parameter which should be filtered (must be a non-null
-	 * collection instance) If the method contains a single collection argument, then this
-	 * attribute can be omitted.
+	 * 需要过滤的参数名称(必须是非空集合)
 	 */
 	String filterTarget() default "";
 

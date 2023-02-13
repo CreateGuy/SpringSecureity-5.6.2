@@ -35,8 +35,7 @@ import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 
 /**
- * Advisor driven by a {@link MethodSecurityMetadataSource}, used to exclude a
- * {@link MethodInterceptor} from public (non-secure) methods.
+ * 由 {@link MethodSecurityMetadataSource}, 确定哪些Bean能够匹配 {@link MethodInterceptor}
  * <p>
  * Because the AOP framework caches advice calculations, this is normally faster than just
  * letting the <code>MethodInterceptor</code> run and find out itself that it has no work
@@ -62,8 +61,14 @@ public class MethodSecurityMetadataSourceAdvisor extends AbstractPointcutAdvisor
 
 	private BeanFactory beanFactory;
 
+	/**
+	 * 默认是methodSecurityInterceptor，是由于 {@link MethodSecurityMetadataSourceAdvisorRegistrar} 设置的
+	 */
 	private final String adviceBeanName;
 
+	/**
+	 * 默认是methodSecurityInterceptor, 也是由于 {@link MethodSecurityMetadataSourceAdvisorRegistrar} 设置的
+	 */
 	private final String metadataSourceBeanName;
 
 	private transient volatile Object adviceMonitor = new Object();

@@ -29,8 +29,7 @@ import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 
 /**
- * Dynamically determines which imports to include using the
- * {@link EnableGlobalMethodSecurity} annotation.
+ * 由 {@link EnableGlobalMethodSecurity @EnableGlobalMethodSecurity} 确定哪些权限注解能开启
  *
  * @author Rob Winch
  * @since 3.2
@@ -40,30 +39,44 @@ final class GlobalMethodSecuritySelector implements ImportSelector {
 	@Override
 	public String[] selectImports(AnnotationMetadata importingClassMetadata) {
 		Class<EnableGlobalMethodSecurity> annoType = EnableGlobalMethodSecurity.class;
-		//获得导入类的所有属性
+		// 获得导入类上有关EnableGlobalMethodSecurity的属性
 		Map<String, Object> annotationAttributes = importingClassMetadata.getAnnotationAttributes(annoType.getName(),
 				false);
 		AnnotationAttributes attributes = AnnotationAttributes.fromMap(annotationAttributes);
 		Assert.notNull(attributes, () -> String.format("@%s is not present on importing class '%s' as expected",
 				annoType.getSimpleName(), importingClassMetadata.getClassName()));
+
 		// TODO would be nice if could use BeanClassLoaderAware (does not work)
 		Class<?> importingClass = ClassUtils.resolveClassName(importingClassMetadata.getClassName(),
 				ClassUtils.getDefaultClassLoader());
 		boolean skipMethodSecurityConfiguration = GlobalMethodSecurityConfiguration.class
 				.isAssignableFrom(importingClass);
+
+		// 设置有关代理属性
+		// 默认就是AdviceMode.PROXY
 		AdviceMode mode = attributes.getEnum("mode");
 		boolean isProxy = AdviceMode.PROXY == mode;
 		String autoProxyClassName = isProxy ? AutoProxyRegistrar.class.getName()
 				: GlobalMethodSecurityAspectJAutoProxyRegistrar.class.getName();
+
+
 		boolean jsr250Enabled = attributes.getBoolean("jsr250Enabled");
 		List<String> classNames = new ArrayList<>(4);
+
+		// 默认就是True
 		if (isProxy) {
+			// 重点：注册一个Advisor
 			classNames.add(MethodSecurityMetadataSourceAdvisorRegistrar.class.getName());
 		}
+
 		classNames.add(autoProxyClassName);
+
+
 		if (!skipMethodSecurityConfiguration) {
 			classNames.add(GlobalMethodSecurityConfiguration.class.getName());
 		}
+
+		// 注册
 		if (jsr250Enabled) {
 			classNames.add(Jsr250MetadataSourceConfiguration.class.getName());
 		}

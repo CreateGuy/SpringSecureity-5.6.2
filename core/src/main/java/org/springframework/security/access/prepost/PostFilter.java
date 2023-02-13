@@ -24,8 +24,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Annotation for specifying a method filtering expression which will be evaluated after a
- * method has been invoked.
+ * 和{@link PreFilter} 很像，不过是在方法执行后，对于返回值进行过滤
  *
  * @author Luke Taylor
  * @since 3.0

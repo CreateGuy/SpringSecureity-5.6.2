@@ -23,13 +23,16 @@ import org.springframework.security.access.ConfigAttribute;
 import org.springframework.security.access.SecurityMetadataSource;
 
 /**
- * Interface for <code>SecurityMetadataSource</code> implementations that are designed to
- * perform lookups keyed on <code>Method</code>s.
- *
- * @author Ben Alex
+ * 方法安全元数据源
  */
 public interface MethodSecurityMetadataSource extends SecurityMetadataSource {
 
+	/**
+	 * 返回执行传入的方法需要什么权限
+	 * @param method
+	 * @param targetClass
+	 * @return
+	 */
 	Collection<ConfigAttribute> getAttributes(Method method, Class<?> targetClass);
 
 }

@@ -349,13 +349,15 @@ public class GlobalMethodSecurityConfiguration implements ImportAware, SmartInit
 		List<MethodSecurityMetadataSource> sources = new ArrayList<>();
 		ExpressionBasedAnnotationAttributeFactory attributeFactory = new ExpressionBasedAnnotationAttributeFactory(
 				getExpressionHandler());
+
+		// 自定义安全数据源
 		MethodSecurityMetadataSource customMethodSecurityMetadataSource = customMethodSecurityMetadataSource();
 		if (customMethodSecurityMetadataSource != null) {
 			sources.add(customMethodSecurityMetadataSource);
 		}
 		boolean hasCustom = customMethodSecurityMetadataSource != null;
 
-		//是否开启了下面三种类型的注解
+		// 是否开启了下面三种类型的注解
 		boolean isPrePostEnabled = prePostEnabled();
 		boolean isSecuredEnabled = securedEnabled();
 		boolean isJsr250Enabled = jsr250Enabled();
@@ -363,7 +365,7 @@ public class GlobalMethodSecurityConfiguration implements ImportAware, SmartInit
 				"In the composition of all global method configuration, "
 						+ "no annotation support was actually activated");
 
-		//尝试添加下面三种安全元数据源
+		// 尝试添加下面三种安全元数据源
 		if (isPrePostEnabled) {
 			sources.add(new PrePostAnnotationSecurityMetadataSource(attributeFactory));
 		}
@@ -374,6 +376,7 @@ public class GlobalMethodSecurityConfiguration implements ImportAware, SmartInit
 			GrantedAuthorityDefaults grantedAuthorityDefaults = getSingleBeanOrNull(GrantedAuthorityDefaults.class);
 			Jsr250MethodSecurityMetadataSource jsr250MethodSecurityMetadataSource = this.context
 					.getBean(Jsr250MethodSecurityMetadataSource.class);
+			// 设置角色前缀
 			if (grantedAuthorityDefaults != null) {
 				jsr250MethodSecurityMetadataSource.setDefaultRolePrefix(grantedAuthorityDefaults.getRolePrefix());
 			}
@@ -445,7 +448,7 @@ public class GlobalMethodSecurityConfiguration implements ImportAware, SmartInit
 	}
 
 	/**
-	 * 获得有关@EnableGlobalMethodSecurity注解的属性
+	 * 获得有关 {@link EnableGlobalMethodSecurity @EnableGlobalMethodSecurity} 的属性
 	 * @return
 	 */
 	private AnnotationAttributes enableMethodSecurity() {

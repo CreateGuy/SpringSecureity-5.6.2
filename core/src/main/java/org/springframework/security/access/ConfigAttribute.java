@@ -21,8 +21,7 @@ import java.io.Serializable;
 import org.springframework.security.access.intercept.RunAsManager;
 
 /**
- * 存储与安全系统相关的配置属性。
- *
+ * 存储与安全系统相关的配置属性
  * <p>
  * When an
  * {@link org.springframework.security.access.intercept.AbstractSecurityInterceptor} is

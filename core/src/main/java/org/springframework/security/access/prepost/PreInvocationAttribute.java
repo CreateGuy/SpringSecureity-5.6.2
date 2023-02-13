@@ -19,13 +19,9 @@ package org.springframework.security.access.prepost;
 import org.springframework.security.access.ConfigAttribute;
 
 /**
- * Marker interface for attributes which are created from combined @PreFilter
- * and @PreAuthorize annotations.
- * <p>
- * Consumed by a {@link PreInvocationAuthorizationAdvice}.
- *
- * @author Luke Taylor
- * @since 3.0
+ * 标记接口，表示在方法执行前需要判断的表达式
+ * <li>通常来源是 {@link PreFilter @PreFilter} 和 {@link PreAuthorize @PreAuthorize}</li>
+ * <li>在 {@link PreInvocationAuthorizationAdvice} 中被调用</li>
  */
 public interface PreInvocationAttribute extends ConfigAttribute {
 
