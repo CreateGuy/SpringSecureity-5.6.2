@@ -23,7 +23,7 @@ import org.springframework.security.access.ConfigAttribute;
 import org.springframework.security.access.SecurityMetadataSource;
 
 /**
- * 方法安全元数据源
+ * 获得方法安全元数据
  */
 public interface MethodSecurityMetadataSource extends SecurityMetadataSource {
 

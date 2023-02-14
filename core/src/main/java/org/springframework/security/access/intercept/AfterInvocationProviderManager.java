@@ -33,7 +33,8 @@ import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 
 /**
- * Provider-based implementation of {@link AfterInvocationManager}.
+ * 在处理方法执行后，对于权限和返回值进行判断
+ * <p>Provider-based implementation of {@link AfterInvocationManager}.
  * <p>
  * Handles configuration of a bean context defined list of {@link AfterInvocationProvider}
  * s.
@@ -52,6 +53,9 @@ public class AfterInvocationProviderManager implements AfterInvocationManager, I
 
 	protected static final Log logger = LogFactory.getLog(AfterInvocationProviderManager.class);
 
+	/**
+	 * 负责对方法的权限表达式和返回值进行操作
+	 */
 	private List<AfterInvocationProvider> providers;
 
 	@Override
@@ -59,11 +63,22 @@ public class AfterInvocationProviderManager implements AfterInvocationManager, I
 		checkIfValidList(this.providers);
 	}
 
+	/**
+	 * 对于返回值和权限进行判断
+	 * @param authentication 认证对象
+	 * @param object the secured object that was called
+	 * @param config 方法上的权限表达式
+	 * @param returnedObject 处理方法的返回值
+	 * object invocation
+	 * @return
+	 * @throws AccessDeniedException
+	 */
 	@Override
 	public Object decide(Authentication authentication, Object object, Collection<ConfigAttribute> config,
 			Object returnedObject) throws AccessDeniedException {
 		Object result = returnedObject;
 		for (AfterInvocationProvider provider : this.providers) {
+			// 对于返回值和权限进行判断
 			result = provider.decide(authentication, object, config, result);
 		}
 		return result;

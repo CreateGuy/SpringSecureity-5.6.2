@@ -25,7 +25,7 @@ import org.springframework.security.access.intercept.InterceptorStatusToken;
 import org.springframework.security.access.method.MethodSecurityMetadataSource;
 
 /**
- * Provides security interception of AOP Alliance based method invocations.
+ * 基于AOP的切入
  * <p>
  * The <code>SecurityMetadataSource</code> required by this security interceptor is of
  * type {@link MethodSecurityMetadataSource}. This is shared with the AspectJ based

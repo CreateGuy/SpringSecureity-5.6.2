@@ -71,7 +71,7 @@ final class GlobalMethodSecuritySelector implements ImportSelector {
 
 		classNames.add(autoProxyClassName);
 
-
+		// 注册权限注解的基本配置类
 		if (!skipMethodSecurityConfiguration) {
 			classNames.add(GlobalMethodSecurityConfiguration.class.getName());
 		}

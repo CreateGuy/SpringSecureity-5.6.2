@@ -32,7 +32,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.access.prepost.PreFilter;
 
 /**
- * Enables Spring Security Method Security.
+ * SpringSecurity开启权限注解
+ * <li>和 {@link EnableGlobalMethodSecurity @EnableGlobalMethodSecurity} 都是AOP的方式，但是他们注册的Advisor会不一样</li>
  * @author Evgeniy Cheban
  * @author Josh Cummings
  * @since 5.6

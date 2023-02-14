@@ -29,8 +29,8 @@ import org.springframework.security.access.SecurityConfig;
 import org.springframework.security.access.method.AbstractFallbackMethodSecurityMetadataSource;
 import org.springframework.util.Assert;
 
-/**
- * Sources method security metadata from Spring Security's {@link Secured} annotation.
+  /**
+ * 从Spring security的 {@link Secured @Secured}中获取方法安全元数据源
  * <p>
  * Can also be used with custom security annotations by injecting an
  * {@link AnnotationMetadataExtractor}. The annotation type will then be obtained from the
@@ -44,6 +44,9 @@ public class SecuredAnnotationSecurityMetadataSource extends AbstractFallbackMet
 
 	private AnnotationMetadataExtractor annotationExtractor;
 
+	  /**
+	   * 默认就是 {@link Secured @Secured}
+	   */
 	private Class<? extends Annotation> annotationType;
 
 	public SecuredAnnotationSecurityMetadataSource() {

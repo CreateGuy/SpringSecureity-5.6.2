@@ -46,37 +46,40 @@ import org.springframework.security.access.ConfigAttribute;
  */
 public abstract class AbstractFallbackMethodSecurityMetadataSource extends AbstractMethodSecurityMetadataSource {
 
+	/**
+	 * 返回执行传入的方法需要什么权限
+	 * @param method
+	 * @param targetClass
+	 * @return
+	 */
 	@Override
 	public Collection<ConfigAttribute> getAttributes(Method method, Class<?> targetClass) {
-		// The method may be on an interface, but we need attributes from the target
-		// class.
-		// If the target class is null, the method will be unchanged.
+		// 如果传入的方法可能是来自接口，那么就找到具体的实现方法
 		Method specificMethod = AopUtils.getMostSpecificMethod(method, targetClass);
-		// First try is the method in the target class.
+		// 先找到方法上的权限表达式
 		Collection<ConfigAttribute> attr = findAttributes(specificMethod, targetClass);
 		if (attr != null) {
 			return attr;
 		}
-		// Second try is the config attribute on the target class.
+		// 方法上没有找到，那就从方法的声明类上去查找
 		attr = findAttributes(specificMethod.getDeclaringClass());
 		if (attr != null) {
 			return attr;
 		}
 		if (specificMethod != method || targetClass == null) {
-			// Fallback is to look at the original method.
+			// 退一步看最初的方法
 			attr = findAttributes(method, method.getDeclaringClass());
 			if (attr != null) {
 				return attr;
 			}
-			// Last fallback is the class of the original method.
+			// 退一步看最初的方法的声明类
 			return findAttributes(method.getDeclaringClass());
 		}
 		return Collections.emptyList();
 	}
 
 	/**
-	 * Obtains the security metadata applicable to the specified method invocation.
-	 *
+	 * 在方法上查找指定的权限注解，然后返回的权限表达式
 	 * <p>
 	 * Note that the {@link Method#getDeclaringClass()} may not equal the
 	 * <code>targetClass</code>. Both parameters are provided to assist subclasses which
@@ -90,7 +93,7 @@ public abstract class AbstractFallbackMethodSecurityMetadataSource extends Abstr
 	protected abstract Collection<ConfigAttribute> findAttributes(Method method, Class<?> targetClass);
 
 	/**
-	 * Obtains the security metadata registered against the specified class.
+	 * 在类上查找指定的权限注解，然后返回的权限表达式
 	 *
 	 * <p>
 	 * Subclasses should only return metadata expressed at a class level. Subclasses

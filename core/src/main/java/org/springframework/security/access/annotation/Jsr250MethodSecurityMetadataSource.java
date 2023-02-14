@@ -31,13 +31,16 @@ import org.springframework.security.access.ConfigAttribute;
 import org.springframework.security.access.method.AbstractFallbackMethodSecurityMetadataSource;
 
 /**
- * Sources method security metadata from major JSR 250 security annotations.
- *
- * @author Ben Alex
- * @since 2.0
+ * 从 JSR 250 的注解中中获取方法安全元数据源
+ * <li>{@link javax.annotation.security.RolesAllowed @RolesAllowed}.
+ * {@link javax.annotation.security.PermitAll @RolesAllowed},
+ * {@link javax.annotation.security.DenyAll @RolesAllowed}</li>
  */
 public class Jsr250MethodSecurityMetadataSource extends AbstractFallbackMethodSecurityMetadataSource {
 
+	/**
+	 * 角色前缀
+	 */
 	private String defaultRolePrefix = "ROLE_";
 
 	/**
@@ -71,6 +74,11 @@ public class Jsr250MethodSecurityMetadataSource extends AbstractFallbackMethodSe
 		return null;
 	}
 
+	/**
+	 * 获得指定指定注解的方法的权限表达式
+	 * @param annotations
+	 * @return
+	 */
 	private List<ConfigAttribute> processAnnotations(Annotation[] annotations) {
 		if (annotations == null || annotations.length == 0) {
 			return null;
@@ -88,6 +96,7 @@ public class Jsr250MethodSecurityMetadataSource extends AbstractFallbackMethodSe
 			if (annotation instanceof RolesAllowed) {
 				RolesAllowed ra = (RolesAllowed) annotation;
 
+				// 给角色加上默认前缀
 				for (String allowed : ra.value()) {
 					String defaultedAllowed = getRoleWithDefaultPrefix(allowed);
 					attributes.add(new Jsr250SecurityConfig(defaultedAllowed));
@@ -98,6 +107,11 @@ public class Jsr250MethodSecurityMetadataSource extends AbstractFallbackMethodSe
 		return null;
 	}
 
+	/**
+	 * 如果角色没有带默认前缀，那就加上
+	 * @param role
+	 * @return
+	 */
 	private String getRoleWithDefaultPrefix(String role) {
 		if (role == null) {
 			return role;

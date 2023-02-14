@@ -58,6 +58,7 @@ import org.springframework.util.Assert;
  * ->@EnableWebSecurity->@EnableGlobalAuthentication->@Import(AuthenticationConfiguration.class)才有的
  */
 @Configuration(proxyBeanMethods = false)
+// 导入了AutowireBeanFactoryObjectPostProcessor
 @Import(ObjectPostProcessorConfiguration.class)
 public class AuthenticationConfiguration {
 

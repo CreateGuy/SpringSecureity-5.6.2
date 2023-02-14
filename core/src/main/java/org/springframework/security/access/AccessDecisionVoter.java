@@ -60,7 +60,7 @@ public interface AccessDecisionVoter<S> {
 	boolean supports(Class<?> clazz);
 
 	/**
-	 * Indicates whether or not access is granted.
+	 * 投票
 	 * <p>
 	 * The decision must be affirmative ({@code ACCESS_GRANTED}), negative (
 	 * {@code ACCESS_DENIED}) or the {@code AccessDecisionVoter} can abstain (

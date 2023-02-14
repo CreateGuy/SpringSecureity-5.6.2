@@ -29,10 +29,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.util.Assert;
 
 /**
- * Method pre-invocation handling based on expressions.
- *
- * @author Luke Taylor
- * @since 3.0
+ * 在方法执行前进行参数过滤和权限判断
  */
 public class ExpressionBasedPreInvocationAdvice implements PreInvocationAuthorizationAdvice {
 
@@ -42,30 +39,52 @@ public class ExpressionBasedPreInvocationAdvice implements PreInvocationAuthoriz
 	public boolean before(Authentication authentication, MethodInvocation mi, PreInvocationAttribute attr) {
 		PreInvocationExpressionAttribute preAttr = (PreInvocationExpressionAttribute) attr;
 		EvaluationContext ctx = this.expressionHandler.createEvaluationContext(authentication, mi);
+
+		// 参数过滤表达式
 		Expression preFilter = preAttr.getFilterExpression();
+		// 方法执行前的权限表达式
 		Expression preAuthorize = preAttr.getAuthorizeExpression();
+
+		// 进行参数过滤
 		if (preFilter != null) {
+			// 找到需要过滤的参数
 			Object filterTarget = findFilterTarget(preAttr.getFilterTarget(), ctx, mi);
+			// 进行过滤
 			this.expressionHandler.filter(filterTarget, preFilter, ctx);
 		}
+
+		// 匹配权限表达式
 		return (preAuthorize != null) ? ExpressionUtils.evaluateAsBoolean(preAuthorize, ctx) : true;
 	}
 
+	/**
+	 * 找到需要过滤的参数
+	 * @param filterTargetName 要过滤的集合
+	 * @param ctx
+	 * @param invocation
+	 * @return
+	 */
 	private Object findFilterTarget(String filterTargetName, EvaluationContext ctx, MethodInvocation invocation) {
 		Object filterTarget = null;
+
+		// 通过名称查询
 		if (filterTargetName.length() > 0) {
+			// 查找指定参数
 			filterTarget = ctx.lookupVariable(filterTargetName);
 			Assert.notNull(filterTarget,
 					() -> "Filter target was null, or no argument with name " + filterTargetName + " found in method");
 		}
+		// 如果参数列表中只有一个参数，那么就获得第一个参数
 		else if (invocation.getArguments().length == 1) {
 			Object arg = invocation.getArguments()[0];
+			// @PreFilter只支持带有删除功能的数组或集合
 			if (arg.getClass().isArray() || arg instanceof Collection<?>) {
 				filterTarget = arg;
 			}
 			Assert.notNull(filterTarget, () -> "A PreFilter expression was set but the method argument type"
 					+ arg.getClass() + " is not filterable");
 		}
+		// 无法确定筛选的方法参数
 		else if (invocation.getArguments().length > 1) {
 			throw new IllegalArgumentException(
 					"Unable to determine the method argument for filtering. Specify the filter target.");

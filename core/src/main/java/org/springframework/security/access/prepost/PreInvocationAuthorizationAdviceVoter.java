@@ -27,8 +27,7 @@ import org.springframework.security.access.ConfigAttribute;
 import org.springframework.security.core.Authentication;
 
 /**
- * Voter which performs the actions using a PreInvocationAuthorizationAdvice
- * implementation generated from @PreFilter and @PreAuthorize annotations.
+ * 根据 {@link PreFilter @PreFilter} 和 {@link PreAuthorize @PreAuthorize} 进行投票
  * <p>
  * In practice, if these annotations are being used, they will normally contain all the
  * necessary access control logic, so a voter-based system is not really necessary and a
@@ -61,16 +60,22 @@ public class PreInvocationAuthorizationAdviceVoter implements AccessDecisionVote
 
 	@Override
 	public int vote(Authentication authentication, MethodInvocation method, Collection<ConfigAttribute> attributes) {
-		// Find prefilter and preauth (or combined) attributes
-		// if both null, abstain else call advice with them
+		// 找到pre的权限表达式
 		PreInvocationAttribute preAttr = findPreInvocationAttribute(attributes);
 		if (preAttr == null) {
-			// No expression based metadata, so abstain
+			// 没有权限表达式，投弃权票
 			return ACCESS_ABSTAIN;
 		}
+		// 在方法执行前进行投票
 		return this.preAdvice.before(authentication, method, preAttr) ? ACCESS_GRANTED : ACCESS_DENIED;
 	}
 
+	/**
+	 * 找到pre的权限表达式
+	 * <li>通常来源是 {@link PreFilter @PreFilter} 和 {@link PreAuthorize @PreAuthorize}</li>
+	 * @param config
+	 * @return
+	 */
 	private PreInvocationAttribute findPreInvocationAttribute(Collection<ConfigAttribute> config) {
 		for (ConfigAttribute attribute : config) {
 			if (attribute instanceof PreInvocationAttribute) {

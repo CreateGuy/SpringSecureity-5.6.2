@@ -31,9 +31,7 @@ import org.springframework.security.core.Authentication;
 public interface AfterInvocationManager {
 
 	/**
-	 * Given the details of a secure object invocation including its returned
-	 * <code>Object</code>, make an access control decision or optionally modify the
-	 * returned <code>Object</code>.
+	 * 根据处理方法执行后权限表达式和返回值进行操作
 	 * @param authentication the caller that invoked the method
 	 * @param object the secured object that was called
 	 * @param attributes the configuration attributes associated with the secured object
@@ -50,8 +48,7 @@ public interface AfterInvocationManager {
 			Object returnedObject) throws AccessDeniedException;
 
 	/**
-	 * Indicates whether this <code>AfterInvocationManager</code> is able to process
-	 * "after invocation" requests presented with the passed <code>ConfigAttribute</code>.
+	 * 此 {@link AfterInvocationManager} 是否支持解析 {@link ConfigAttribute}
 	 * <p>
 	 * This allows the <code>AbstractSecurityInterceptor</code> to check every
 	 * configuration attribute can be consumed by the configured

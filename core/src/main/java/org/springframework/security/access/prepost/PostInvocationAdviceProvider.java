@@ -50,14 +50,23 @@ public class PostInvocationAdviceProvider implements AfterInvocationProvider {
 	@Override
 	public Object decide(Authentication authentication, Object object, Collection<ConfigAttribute> config,
 			Object returnedObject) throws AccessDeniedException {
+		// 找到有关Post的权限表达式
 		PostInvocationAttribute postInvocationAttribute = findPostInvocationAttribute(config);
 		if (postInvocationAttribute == null) {
 			return returnedObject;
 		}
+
+		// 进行权限和返回值的判断
 		return this.postAdvice.after(authentication, (MethodInvocation) object, postInvocationAttribute,
 				returnedObject);
 	}
 
+	/**
+	 * 找到有关Post的权限表达式
+	 * <li>其实就是 {@link PostFilter @PostFilter} 和 {@link PostAuthorize @PostAuthorize}</li>
+	 * @param config
+	 * @return
+	 */
 	private PostInvocationAttribute findPostInvocationAttribute(Collection<ConfigAttribute> config) {
 		for (ConfigAttribute attribute : config) {
 			if (attribute instanceof PostInvocationAttribute) {

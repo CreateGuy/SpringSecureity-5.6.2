@@ -76,12 +76,7 @@ import org.springframework.security.config.core.GrantedAuthorityDefaults;
 import org.springframework.util.Assert;
 
 /**
- * Base {@link Configuration} for enabling global method security. Classes may extend this
- * class to customize the defaults, but must be sure to specify the
- * {@link EnableGlobalMethodSecurity} annotation on the subclass.
- *
- * @author Rob Winch
- * @author Eddú Meléndez
+ * 提供权限注解的一些基本Bean
  * @since 3.2
  * @see EnableGlobalMethodSecurity
  */
@@ -91,6 +86,9 @@ public class GlobalMethodSecurityConfiguration implements ImportAware, SmartInit
 
 	private static final Log logger = LogFactory.getLog(GlobalMethodSecurityConfiguration.class);
 
+	/**
+	 * 默认就是 {@link org.springframework.security.config.annotation.configuration.AutowireBeanFactoryObjectPostProcessor AutowireBeanFactoryObjectPostProcessor}
+	 */
 	private ObjectPostProcessor<Object> objectPostProcessor = new ObjectPostProcessor<Object>() {
 
 		@Override
@@ -114,12 +112,13 @@ public class GlobalMethodSecurityConfiguration implements ImportAware, SmartInit
 	private AuthenticationManagerBuilder auth;
 
 	/**
-	 * 是否使用容器中的认证管理器，还是使用认证管理器构建器 构建出来的
+	 * 是否使用容器中的认证管理器，还是使用上面的认证管理器构建器构建出来的
+	 * <ul>如果没有重写configure方法，那么就为True</ul>
 	 */
 	private boolean disableAuthenticationRegistry;
 
 	/**
-	 * 导入类上关于 @EnableGlobalMethodSecurity 注解的属性
+	 * 导入类上关于 {@link EnableGlobalMethodSecurity @EnableGlobalMethodSecurity} 的属性
 	 */
 	private AnnotationAttributes enableMethodSecurity;
 
@@ -127,26 +126,13 @@ public class GlobalMethodSecurityConfiguration implements ImportAware, SmartInit
 
 	private MethodSecurityExpressionHandler expressionHandler;
 
+	/**
+	 * 最终在Cglib的CglibAopProxy中的拦截器
+	 */
 	private MethodSecurityInterceptor methodSecurityInterceptor;
 
 	/**
-	 * Creates the default MethodInterceptor which is a MethodSecurityInterceptor using
-	 * the following methods to construct it.
-	 * <ul>
-	 * <li>{@link #accessDecisionManager()}</li>
-	 * <li>{@link #afterInvocationManager()}</li>
-	 * <li>{@link #authenticationManager()}</li>
-	 * <li>{@link #runAsManager()}</li>
-	 *
-	 * </ul>
-	 *
-	 * <p>
-	 * Subclasses can override this method to provide a different
-	 * {@link MethodInterceptor}.
-	 * </p>
-	 * @param methodSecurityMetadataSource the default
-	 * {@link MethodSecurityMetadataSource}.
-	 * @return the {@link MethodInterceptor}.
+	 * 创建 {@link MethodSecurityInterceptor}
 	 */
 	@Bean
 	public MethodInterceptor methodSecurityInterceptor(MethodSecurityMetadataSource methodSecurityMetadataSource) {
@@ -168,23 +154,32 @@ public class GlobalMethodSecurityConfiguration implements ImportAware, SmartInit
 	@Override
 	public void afterSingletonsInstantiated() {
 		try {
+			// 初始化 MethodSecurityInterceptor
 			initializeMethodSecurityInterceptor();
 		}
 		catch (Exception ex) {
 			throw new RuntimeException(ex);
 		}
+
+		// 设置权限评估器
 		PermissionEvaluator permissionEvaluator = getSingleBeanOrNull(PermissionEvaluator.class);
 		if (permissionEvaluator != null) {
 			this.defaultMethodExpressionHandler.setPermissionEvaluator(permissionEvaluator);
 		}
+
+		// 设置角色继承器
 		RoleHierarchy roleHierarchy = getSingleBeanOrNull(RoleHierarchy.class);
 		if (roleHierarchy != null) {
 			this.defaultMethodExpressionHandler.setRoleHierarchy(roleHierarchy);
 		}
+
+		// 设置认证对象解析器
 		AuthenticationTrustResolver trustResolver = getSingleBeanOrNull(AuthenticationTrustResolver.class);
 		if (trustResolver != null) {
 			this.defaultMethodExpressionHandler.setTrustResolver(trustResolver);
 		}
+
+		// 设置角色默认前缀
 		GrantedAuthorityDefaults grantedAuthorityDefaults = getSingleBeanOrNull(GrantedAuthorityDefaults.class);
 		if (grantedAuthorityDefaults != null) {
 			this.defaultMethodExpressionHandler.setDefaultRolePrefix(grantedAuthorityDefaults.getRolePrefix());
@@ -193,6 +188,12 @@ public class GlobalMethodSecurityConfiguration implements ImportAware, SmartInit
 		this.defaultMethodExpressionHandler = this.objectPostProcessor.postProcess(this.defaultMethodExpressionHandler);
 	}
 
+	/**
+	 * 获得容器中的指定Bean
+	 * @param type
+	 * @param <T>
+	 * @return
+	 */
 	private <T> T getSingleBeanOrNull(Class<T> type) {
 		try {
 			return this.context.getBean(type);
@@ -202,24 +203,22 @@ public class GlobalMethodSecurityConfiguration implements ImportAware, SmartInit
 		return null;
 	}
 
+	/**
+	 * 初始化 {@link MethodSecurityInterceptor}
+	 * @throws Exception
+	 */
 	private void initializeMethodSecurityInterceptor() throws Exception {
 		if (this.methodSecurityInterceptor == null) {
 			return;
 		}
+		// 设置认证管理器
 		this.methodSecurityInterceptor.setAuthenticationManager(authenticationManager());
 	}
 
 	/**
-	 * Provide a custom {@link AfterInvocationManager} for the default implementation of
-	 * {@link #methodSecurityInterceptor(MethodSecurityMetadataSource)}. The default is
-	 * null if pre post is not enabled. Otherwise, it returns a
-	 * {@link AfterInvocationProviderManager}.
-	 *
-	 * <p>
-	 * Subclasses should override this method to provide a custom
-	 * {@link AfterInvocationManager}
-	 * </p>
-	 * @return the {@link AfterInvocationManager} to use
+	 * 创建 {@link AfterInvocationManager}
+	 * <li>这个是为了在方法执行后，在继续操作，比如说 {@link org.springframework.security.access.prepost.PostAuthorize @PostAuthorize}</li>
+	 * @return
 	 */
 	protected AfterInvocationManager afterInvocationManager() {
 		if (prePostEnabled()) {
@@ -250,21 +249,28 @@ public class GlobalMethodSecurityConfiguration implements ImportAware, SmartInit
 	 */
 	protected AccessDecisionManager accessDecisionManager() {
 		List<AccessDecisionVoter<?>> decisionVoters = new ArrayList<>();
+		// 开启了prePost的权限注解，创建对应的访问决策投票器
 		if (prePostEnabled()) {
 			ExpressionBasedPreInvocationAdvice expressionAdvice = new ExpressionBasedPreInvocationAdvice();
 			expressionAdvice.setExpressionHandler(getExpressionHandler());
 			decisionVoters.add(new PreInvocationAuthorizationAdviceVoter(expressionAdvice));
 		}
+
+		// 开启了jsr250的权限注解，创建对应的访问决策投票器
 		if (jsr250Enabled()) {
 			decisionVoters.add(new Jsr250Voter());
 		}
 		RoleVoter roleVoter = new RoleVoter();
-		//获得角色前缀
+		// 获得角色前缀
 		GrantedAuthorityDefaults grantedAuthorityDefaults = getSingleBeanOrNull(GrantedAuthorityDefaults.class);
 		if (grantedAuthorityDefaults != null) {
 			roleVoter.setRolePrefix(grantedAuthorityDefaults.getRolePrefix());
 		}
+
+		// 有任何一个角色匹配就投同意票
 		decisionVoters.add(roleVoter);
+
+		// 根据认证方式投票
 		decisionVoters.add(new AuthenticatedVoter());
 		return new AffirmativeBased(decisionVoters);
 	}
@@ -298,22 +304,14 @@ public class GlobalMethodSecurityConfiguration implements ImportAware, SmartInit
 	}
 
 	/**
-	 * Provides a custom {@link MethodSecurityMetadataSource} that is registered with the
-	 * {@link #methodSecurityMetadataSource()}. Default is null.
-	 * @return a custom {@link MethodSecurityMetadataSource} that is registered with the
-	 * {@link #methodSecurityMetadataSource()}
+	 * 自定义安全元数据源
 	 */
 	protected MethodSecurityMetadataSource customMethodSecurityMetadataSource() {
 		return null;
 	}
 
 	/**
-	 * Allows providing a custom {@link AuthenticationManager}. The default is to use any
-	 * authentication mechanisms registered by
-	 * {@link #configure(AuthenticationManagerBuilder)}. If
-	 * {@link #configure(AuthenticationManagerBuilder)} was not overridden, then an
-	 * {@link AuthenticationManager} is attempted to be autowired by type.
-	 * @return the {@link AuthenticationManager} to use
+	 * 创建认证管理器
 	 */
 	protected AuthenticationManager authenticationManager() throws Exception {
 		if (this.authenticationManager == null) {
@@ -322,6 +320,8 @@ public class GlobalMethodSecurityConfiguration implements ImportAware, SmartInit
 			this.auth = new AuthenticationManagerBuilder(this.objectPostProcessor);
 			this.auth.authenticationEventPublisher(eventPublisher);
 			configure(this.auth);
+
+			// 是使用容器中的还是用构建起创建出来的
 			this.authenticationManager = (this.disableAuthenticationRegistry)
 					? getAuthenticationConfiguration().getAuthenticationManager() : this.auth.build();
 		}
@@ -329,12 +329,7 @@ public class GlobalMethodSecurityConfiguration implements ImportAware, SmartInit
 	}
 
 	/**
-	 * Sub classes can override this method to register different types of authentication.
-	 * If not overridden, {@link #configure(AuthenticationManagerBuilder)} will attempt to
-	 * autowire by type.
-	 * @param auth the {@link AuthenticationManagerBuilder} used to register different
-	 * authentication mechanisms for the global method security.
-	 * @throws Exception
+	 * 操作 {@link AuthenticationManagerBuilder} 的回调方法
 	 */
 	protected void configure(AuthenticationManagerBuilder auth) throws Exception {
 		this.disableAuthenticationRegistry = true;
@@ -350,7 +345,7 @@ public class GlobalMethodSecurityConfiguration implements ImportAware, SmartInit
 		ExpressionBasedAnnotationAttributeFactory attributeFactory = new ExpressionBasedAnnotationAttributeFactory(
 				getExpressionHandler());
 
-		// 自定义安全数据源
+		// 自定义安全元数据源
 		MethodSecurityMetadataSource customMethodSecurityMetadataSource = customMethodSecurityMetadataSource();
 		if (customMethodSecurityMetadataSource != null) {
 			sources.add(customMethodSecurityMetadataSource);
@@ -398,8 +393,7 @@ public class GlobalMethodSecurityConfiguration implements ImportAware, SmartInit
 	}
 
 	/**
-	 * Obtains the attributes from {@link EnableGlobalMethodSecurity} if this class was
-	 * imported using the {@link EnableGlobalMethodSecurity} annotation.
+	 * 设置导入类上的 {@link EnableGlobalMethodSecurity @EnableGlobalMethodSecurity} 信息
 	 */
 	@Override
 	public final void setImportMetadata(AnnotationMetadata importMetadata) {
@@ -408,6 +402,10 @@ public class GlobalMethodSecurityConfiguration implements ImportAware, SmartInit
 		this.enableMethodSecurity = AnnotationAttributes.fromMap(annotationAttributes);
 	}
 
+	/**
+	 * 是由 {@link org.springframework.security.config.annotation.configuration.ObjectPostProcessorConfiguration ObjectPostProcessorConfiguration} 导入容器的 {@link org.springframework.security.config.annotation.configuration.AutowireBeanFactoryObjectPostProcessor AutowireBeanFactoryObjectPostProcessor}
+	 * @param objectPostProcessor
+	 */
 	@Autowired(required = false)
 	public void setObjectPostProcessor(ObjectPostProcessor<Object> objectPostProcessor) {
 		this.objectPostProcessor = objectPostProcessor;
@@ -427,18 +425,35 @@ public class GlobalMethodSecurityConfiguration implements ImportAware, SmartInit
 		this.context = beanFactory;
 	}
 
+	/**
+	 * 获得容器中的认证管理器, 也就是在认证过滤器中的局部认证管理器
+	 * @return
+	 */
 	private AuthenticationConfiguration getAuthenticationConfiguration() {
 		return this.context.getBean(AuthenticationConfiguration.class);
 	}
 
+	/**
+	 * {@link EnableGlobalMethodSecurity @EnableGlobalMethodSecurity} 是否设置prePostEnabled属性为True
+	 * @return
+	 */
 	private boolean prePostEnabled() {
 		return enableMethodSecurity().getBoolean("prePostEnabled");
 	}
 
+
+	/**
+	 * {@link EnableGlobalMethodSecurity @EnableGlobalMethodSecurity} 是否设置securedEnabled属性为True
+	 * @return
+	 */
 	private boolean securedEnabled() {
 		return enableMethodSecurity().getBoolean("securedEnabled");
 	}
 
+	/**
+	 * {@link EnableGlobalMethodSecurity @EnableGlobalMethodSecurity} 是否设置jsr250Enabled属性为True
+	 * @return
+	 */
 	private boolean jsr250Enabled() {
 		return enableMethodSecurity().getBoolean("jsr250Enabled");
 	}
