@@ -27,8 +27,7 @@ import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.servlet.support.RequestDataValueProcessor;
 
 /**
- * Integration with Spring Web MVC that automatically adds the {@link CsrfToken} into
- * forms with hidden inputs when using Spring tag libraries.
+ *与Spring Web MVC集成，在使用Spring标记库时自动将CsrfToken添加到具有隐藏输入的表单中
  *
  * @author Rob Winch
  * @since 3.2

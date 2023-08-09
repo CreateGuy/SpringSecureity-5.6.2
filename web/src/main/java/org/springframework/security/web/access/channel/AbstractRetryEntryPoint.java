@@ -40,8 +40,14 @@ public abstract class AbstractRetryEntryPoint implements ChannelEntryPoint {
 
 	protected final Log logger = LogFactory.getLog(getClass());
 
+	/**
+	 * 端口映射器
+	 */
 	private PortMapper portMapper = new PortMapperImpl();
 
+	/**
+	 * 端口解析器
+	 */
 	private PortResolver portResolver = new PortResolverImpl();
 
 	/**
@@ -50,7 +56,7 @@ public abstract class AbstractRetryEntryPoint implements ChannelEntryPoint {
 	private final String scheme;
 
 	/**
-	 * The standard port for the scheme (80 for http, 443 for https)
+	 * 标准(默认)接口 (http：80, https：443)
 	 */
 	private final int standardPort;
 
@@ -67,12 +73,16 @@ public abstract class AbstractRetryEntryPoint implements ChannelEntryPoint {
 		String redirectUrl = request.getRequestURI() + ((queryString != null) ? ("?" + queryString) : "");
 		Integer currentPort = this.portResolver.getServerPort(request);
 		Integer redirectPort = getMappedPort(currentPort);
+
 		if (redirectPort != null) {
+			// http和https默认的端口不需要设置
 			boolean includePort = redirectPort != this.standardPort;
 			String port = (includePort) ? (":" + redirectPort) : "";
+
 			redirectUrl = this.scheme + request.getServerName() + port + redirectUrl;
 		}
 		this.logger.debug(LogMessage.format("Redirecting to: %s", redirectUrl));
+		// 设置重定向Url
 		this.redirectStrategy.sendRedirect(request, response, redirectUrl);
 	}
 

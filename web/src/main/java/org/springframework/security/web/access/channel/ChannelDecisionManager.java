@@ -25,7 +25,7 @@ import org.springframework.security.access.ConfigAttribute;
 import org.springframework.security.web.FilterInvocation;
 
 /**
- * Decides whether a web channel provides sufficient security.
+ * 通道决策管理器
  *
  * @author Ben Alex
  */

@@ -324,7 +324,7 @@ public abstract class WebSecurityConfigurerAdapter implements WebSecurityConfigu
 		//重点
 		HttpSecurity http = getHttp();
 		//将HttpSecurity中的FilterSecurityInterceptor加入到WebSecurity中
-		//FilterSecurityInterceptor是用来做配置类中的权限校验的，不懂应用场景
+		//FilterSecurityInterceptor是用来做配置类中的权限校验的，这里为什么要注册？，不懂应用场景
 		web.addSecurityFilterChainBuilder(http).postBuildAction(() -> {
 			FilterSecurityInterceptor securityInterceptor = http.getSharedObject(FilterSecurityInterceptor.class);
 			web.securityInterceptor(securityInterceptor);

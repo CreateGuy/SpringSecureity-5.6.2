@@ -27,9 +27,7 @@ import org.springframework.security.web.FilterInvocation;
 import org.springframework.util.Assert;
 
 /**
- * Ensures channel security is inactive by review of
- * <code>HttpServletRequest.isSecure()</code> responses.
- * <p>
+ * 要求非安全通道的通道处理器
  * The class responds to one case-sensitive keyword, {@link #getInsecureKeyword}. If this
  * keyword is detected, <code>HttpServletRequest.isSecure()</code> is used to determine
  * the channel security offered. If channel security is present, the configured
@@ -56,7 +54,7 @@ public class InsecureChannelProcessor implements InitializingBean, ChannelProces
 	}
 
 	/**
-	 * 要求请求不能使用安全通道(如HTTPS)发出
+	 * 要求请求不能使用安全协议(如HTTPS)发出
 	 * @param invocation
 	 * @param config
 	 * @throws IOException
