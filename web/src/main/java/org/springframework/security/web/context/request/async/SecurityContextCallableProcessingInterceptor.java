@@ -78,7 +78,7 @@ public final class SecurityContextCallableProcessingInterceptor extends Callable
 	}
 
 	/**
-	 * 异步任务已经执行完毕，是为了情况安全上下文
+	 * 异步任务已经执行完毕，是为了清空安全上下文
 	 * @param request
 	 * @param task
 	 * @param concurrentResult

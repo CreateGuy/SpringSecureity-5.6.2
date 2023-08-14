@@ -125,7 +125,7 @@ public class HttpSessionSecurityContextRepository implements SecurityContextRepo
 		HttpServletResponse response = requestResponseHolder.getResponse();
 		//false表示有就获取，没有就返回空HttpSession
 		HttpSession httpSession = request.getSession(false);
-		//从HttpSession获取安全存储上下文
+		//从HttpSession获取安全存储的上下文
 		SecurityContext context = readSecurityContextFromSession(httpSession);
 		if (context == null) {
 			//如果没有找到安全上下文，那就创建一个空安全上下文
@@ -161,7 +161,7 @@ public class HttpSessionSecurityContextRepository implements SecurityContextRepo
 	}
 
 	/**
-	 * 从HttpSession获取安全存储上下文
+	 * 从HttpSession获取安全存储的上下文
 	 */
 	private SecurityContext readSecurityContextFromSession(HttpSession httpSession) {
 		if (httpSession == null) {
