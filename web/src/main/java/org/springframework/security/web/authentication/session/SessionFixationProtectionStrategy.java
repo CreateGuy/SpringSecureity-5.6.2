@@ -64,9 +64,7 @@ public class SessionFixationProtectionStrategy extends AbstractSessionFixationPr
 	boolean migrateSessionAttributes = true;
 
 	/**
-	 * Called to extract the existing attributes from the session, prior to invalidating
-	 * it. If {@code migrateAttributes} is set to {@code false}, only Spring Security
-	 * attributes will be retained. All application attributes will be discarded.
+	 * 提取此 {@link HttpSession} 中的所有数据
 	 * <p>
 	 * You can override this method to control exactly what is transferred to the new
 	 * session.
@@ -84,11 +82,13 @@ public class SessionFixationProtectionStrategy extends AbstractSessionFixationPr
 		String originalSessionId = session.getId();
 		this.logger.debug(LogMessage.of(() -> "Invalidating session with Id '" + originalSessionId + "' "
 				+ (this.migrateSessionAttributes ? "and" : "without") + " migrating attributes."));
+		// 提取此 HttpSession 中的所有数据
 		Map<String, Object> attributesToMigrate = extractAttributes(session);
 		int maxInactiveIntervalToMigrate = session.getMaxInactiveInterval();
 		session.invalidate();
 		session = request.getSession(true); // we now have a new session
 		this.logger.debug(LogMessage.format("Started new session: %s", session.getId()));
+		// 复制数据到新的HttpSession中
 		transferAttributes(attributesToMigrate, session);
 		if (this.migrateSessionAttributes) {
 			session.setMaxInactiveInterval(maxInactiveIntervalToMigrate);
@@ -97,6 +97,7 @@ public class SessionFixationProtectionStrategy extends AbstractSessionFixationPr
 	}
 
 	/**
+	 * 复制数据到新的HttpSession中
 	 * @param attributes the attributes which were extracted from the original session by
 	 * {@code extractAttributes}
 	 * @param newSession the newly created session
@@ -107,6 +108,11 @@ public class SessionFixationProtectionStrategy extends AbstractSessionFixationPr
 		}
 	}
 
+	/**
+	 * 提取此 {@link HttpSession} 中的所有数据
+	 * @param session
+	 * @return
+	 */
 	@SuppressWarnings("unchecked")
 	private HashMap<String, Object> createMigratedAttributeMap(HttpSession session) {
 		HashMap<String, Object> attributesToMigrate = new HashMap<>();

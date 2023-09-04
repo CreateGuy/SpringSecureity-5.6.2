@@ -109,7 +109,7 @@ public class RememberMeAuthenticationFilter extends GenericFilterBean implements
 		if (rememberMeAuth != null) {
 			try {
 				//通过局部认证管理器进行认证操作
-				//局部认证管理器通常有匿名和记住我的认证提供者，而全局认证管理器才是表单的认证提供者
+				//局部认证管理器通常有匿名和记住我的认证提供者，而全局认证管理器才有表单的认证提供者
 				rememberMeAuth = this.authenticationManager.authenticate(rememberMeAuth);
 
 				//将认证对象保存到线程级别的安全上下文策略中

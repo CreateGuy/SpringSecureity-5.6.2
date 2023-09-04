@@ -68,6 +68,9 @@ public abstract class AbstractAuthenticationFilterConfigurer<B extends HttpSecur
 	 */
 	private SavedRequestAwareAuthenticationSuccessHandler defaultSuccessHandler = new SavedRequestAwareAuthenticationSuccessHandler();
 
+	/**
+	 * 认证成功处理器
+	 */
 	private AuthenticationSuccessHandler successHandler = this.defaultSuccessHandler;
 
 	/**

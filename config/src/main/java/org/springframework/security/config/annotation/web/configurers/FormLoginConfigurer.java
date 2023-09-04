@@ -229,6 +229,7 @@ public final class FormLoginConfigurer<H extends HttpSecurityBuilder<H>> extends
 	@Override
 	public void init(H http) throws Exception {
 		super.init(http);
+		// 当开启了表单登录，尝试初始化登录页过滤器
 		initDefaultLoginFilter(http);
 	}
 

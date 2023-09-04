@@ -47,7 +47,7 @@ import org.springframework.web.filter.GenericFilterBean;
  *         作用1：对于已经过期的SessionInformation进行登出操作，然后执行过期策略
  *     </li>
  *     <li>
- *         作用2：更新操作时间，这是因为如果并发数达到限制，可能会根据最后操作时间来踢出用户
+ *         作用2：更新操作时间，这是因为如果并发数达到限制，可以会根据最后操作时间来踢出用户
  *     </li>
  * </ul>
  */
@@ -164,7 +164,7 @@ public class ConcurrentSessionFilter extends GenericFilterBean {
 					return;
 				}
 				//如果没有过期，那么就更新操作时间
-				//这是因为如果并发数达到限制，可能会根据最后操作时间来踢出用户
+				//这是因为如果并发数达到限制，可以根据最后操作时间来踢出用户
 				this.sessionRegistry.refreshLastRequest(info.getSessionId());
 			}
 		}

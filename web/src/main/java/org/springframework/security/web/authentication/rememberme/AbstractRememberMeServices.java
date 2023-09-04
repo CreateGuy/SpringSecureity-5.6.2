@@ -119,7 +119,7 @@ public abstract class AbstractRememberMeServices
 	 *         true：都携带记住我令牌
 	 *     </li>
 	 *     <li>
-	 *         false：看是否携带了记住我参数
+	 *         false：看客户端是否携带了记住我参数
 	 *     </li>
 	 * </url>
 	 */
@@ -335,10 +335,12 @@ public abstract class AbstractRememberMeServices
 	@Override
 	public final void loginSuccess(HttpServletRequest request, HttpServletResponse response,
 			Authentication successfulAuthentication) {
+		// 是否不开启记住我机制
 		if (!rememberMeRequested(request, this.parameter)) {
 			this.logger.debug("Remember-me login not requested.");
 			return;
 		}
+		// 创建记住我令牌
 		onLoginSuccess(request, response, successfulAuthentication);
 	}
 
@@ -351,8 +353,8 @@ public abstract class AbstractRememberMeServices
 			Authentication successfulAuthentication);
 
 	/**
-	 * Allows customization of whether a remember-me login has been requested. The default
-	 * is to return true if <tt>alwaysRemember</tt> is set or the configured parameter
+	 * 是否开启记住我机制
+	 * <p>The default is to return true if <tt>alwaysRemember</tt> is set or the configured parameter
 	 * name has been included in the request and is set to the value "true".
 	 * @param request the request submitted from an interactive login, which may include
 	 * additional information indicating that a persistent login is desired.
@@ -361,11 +363,11 @@ public abstract class AbstractRememberMeServices
 	 * has been requested.
 	 */
 	protected boolean rememberMeRequested(HttpServletRequest request, String parameter) {
-		//是否一直需要携带记住我令牌
+		// 服务端：是否一直需要携带记住我令牌
 		if (this.alwaysRemember) {
 			return true;
 		}
-		//通过参数值来判断是否需要携带记住我令牌
+		// 客户端：通过参数值来判断是否需要携带记住我令牌
 		String paramValue = request.getParameter(parameter);
 		if (paramValue != null) {
 			if (paramValue.equalsIgnoreCase("true") || paramValue.equalsIgnoreCase("on")

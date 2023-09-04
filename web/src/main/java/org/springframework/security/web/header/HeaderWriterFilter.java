@@ -61,7 +61,7 @@ public class HeaderWriterFilter extends OncePerRequestFilter {
 	@Override
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
 			throws ServletException, IOException {
-		//是否在请求的开始就写请求头
+		//是否在请求的开始就写头
 		if (this.shouldWriteHeadersEagerly) {
 			doHeadersBefore(request, response, filterChain);
 		}

@@ -31,7 +31,7 @@ import org.springframework.security.core.Authentication;
 public interface AuthenticationSuccessHandler {
 
 	/**
-	 * Called when a user has been successfully authenticated.
+	 * 当用户已成功通过身份认证时调用
 	 * @param request the request which caused the successful authentication
 	 * @param response the response
 	 * @param chain the {@link FilterChain} which can be used to proceed other filters in

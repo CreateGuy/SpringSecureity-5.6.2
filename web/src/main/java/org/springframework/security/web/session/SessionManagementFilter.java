@@ -123,7 +123,7 @@ public class SessionManagementFilter extends GenericFilterBean {
 					return;
 				}
 				//紧急在HttpSession级别的安全上下文存储策略中保存一个空的安全上下文
-				//我猜是在执行认证策略的时候就会设置线程级别的安全上下文，但是现在抛出异常了，那么就设置为空的
+				//我猜是通过记住我认证的时候没有将SecurityContext保存在SecurityContextRepository中，所以这里紧急保存下
 				this.securityContextRepository.saveContext(SecurityContextHolder.getContext(), request, response);
 			}
 			else {

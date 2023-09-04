@@ -53,6 +53,7 @@ public class DefaultLogoutPageGeneratingFilter extends OncePerRequestFilter {
 			throws ServletException, IOException {
 		//确定是否是登出请求
 		if (this.matcher.matches(request)) {
+			// 生成登出页
 			renderLogout(request, response);
 		}
 		else {

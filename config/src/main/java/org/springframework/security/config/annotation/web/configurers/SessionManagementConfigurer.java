@@ -411,7 +411,7 @@ public final class SessionManagementConfigurer<H extends HttpSecurityBuilder<H>>
 			sessionManagementFilter.setTrustResolver(trustResolver);
 		}
 
-		//每一个Filter必执行的postProcess方法
+		// 大部分Filter必执行的postProcess方法
 		sessionManagementFilter = postProcess(sessionManagementFilter);
 		//添加到HttpSecurity的过滤器集合中
 		http.addFilter(sessionManagementFilter);

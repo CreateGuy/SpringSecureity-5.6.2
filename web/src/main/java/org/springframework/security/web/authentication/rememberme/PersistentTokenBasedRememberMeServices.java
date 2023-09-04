@@ -192,7 +192,7 @@ public class PersistentTokenBasedRememberMeServices extends AbstractRememberMeSe
 	 * @param response
 	 */
 	private void addCookie(PersistentRememberMeToken token, HttpServletRequest request, HttpServletResponse response) {
-		//可以看出此时的记住我令牌是由 Series + TokenValue
+		// 可以看出此时的记住我令牌是由 Series + TokenValue
 		setCookie(new String[] { token.getSeries(), token.getTokenValue() }, getTokenValiditySeconds(), request,
 				response);
 	}

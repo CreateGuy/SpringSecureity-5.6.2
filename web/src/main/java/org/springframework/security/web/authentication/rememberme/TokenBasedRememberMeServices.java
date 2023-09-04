@@ -117,7 +117,7 @@ public class TokenBasedRememberMeServices extends AbstractRememberMeServices {
 		Assert.notNull(userDetails, () -> "UserDetailsService " + getUserDetailsService()
 				+ " returned null for username " + cookieTokens[0] + ". " + "This is an interface contract violation");
 
-		//以固定的参数重新生成签名
+		//以原有的固定的参数重新生成签名
 		String expectedTokenSignature = makeTokenSignature(tokenExpiryTime, userDetails.getUsername(),
 				userDetails.getPassword());
 		//如果不一样，就抛出异常
@@ -227,7 +227,7 @@ public class TokenBasedRememberMeServices extends AbstractRememberMeServices {
 		if (isInstanceOfUserDetails(authentication)) {
 			return ((UserDetails) authentication.getPrincipal()).getUsername();
 		}
-		//其他情况就是主要就是用户名了
+		//其他情况Principal中就是用户名了
 		return authentication.getPrincipal().toString();
 	}
 

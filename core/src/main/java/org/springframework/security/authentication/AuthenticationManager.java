@@ -25,9 +25,7 @@ import org.springframework.security.core.AuthenticationException;
 public interface AuthenticationManager {
 
 	/**
-	 * Attempts to authenticate the passed {@link Authentication} object, returning a
-	 * fully populated <code>Authentication</code> object (including granted authorities)
-	 * if successful.
+	 * 尝试对传递的认证对象进行身份认证，返回一个完全填充的认证对象(包括授予的权限)
 	 * <p>
 	 * An <code>AuthenticationManager</code> must honour the following contract concerning
 	 * exceptions:

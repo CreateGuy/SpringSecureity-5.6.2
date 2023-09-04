@@ -102,6 +102,7 @@ public class DaoAuthenticationProvider extends AbstractUserDetailsAuthentication
 	@Override
 	protected final UserDetails retrieveUser(String username, UsernamePasswordAuthenticationToken authentication)
 			throws AuthenticationException {
+		// 防止计时攻击而做的准备
 		prepareTimingAttackProtection();
 		try {
 			UserDetails loadedUser = this.getUserDetailsService().loadUserByUsername(username);
