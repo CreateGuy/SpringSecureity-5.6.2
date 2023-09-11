@@ -23,10 +23,12 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 /**
- * Determines the behaviour of the {@code SessionManagementFilter} when an invalid session
- * Id is submitted and detected in the {@code SessionManagementFilter}.
- *
- * @author Luke Taylor
+ * 用于在SessionManagementFilter发现HttpSession过期(无效)的时候的操作
+ * <ul>
+ *     <li>
+ *			执行HttpSession.invalidate()的时候，内部实际上是执行expire()方法，也就说无效和过期都是一样的
+ *     </li>
+ * </ul>
  */
 public interface InvalidSessionStrategy {
 

@@ -20,20 +20,15 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 /**
- * Interface which can be used to reject potentially dangerous requests and/or wrap them
- * to control their behaviour.
- * <p>
- * The implementation is injected into the {@code FilterChainProxy} and will be invoked
- * before sending any request through the filter chain. It can also provide a response
- * wrapper if the response behaviour should also be restricted.
- *
- * @author Luke Taylor
+ * 防火墙，是SpringSecurity在执行过滤器之前进行操作
  */
 public interface HttpFirewall {
 
 	/**
-	 * Provides the request object which will be passed through the filter chain.
-	 * @throws RequestRejectedException if the request should be rejected immediately
+	 * 筛选请求是否合法
+	 * @param request
+	 * @return
+	 * @throws RequestRejectedException
 	 */
 	FirewalledRequest getFirewalledRequest(HttpServletRequest request) throws RequestRejectedException;
 

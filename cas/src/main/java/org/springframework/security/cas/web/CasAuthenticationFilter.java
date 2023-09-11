@@ -248,6 +248,7 @@ public class CasAuthenticationFilter extends AbstractAuthenticationProcessingFil
 		}
 		UsernamePasswordAuthenticationToken authRequest = new UsernamePasswordAuthenticationToken(username, password);
 		authRequest.setDetails(this.authenticationDetailsSource.buildDetails(request));
+		//因为如果支持CAS.一定要创建一个调用远程CAS服务器的认证提供者
 		return this.getAuthenticationManager().authenticate(authRequest);
 	}
 

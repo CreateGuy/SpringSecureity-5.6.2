@@ -22,22 +22,17 @@ import javax.servlet.http.HttpServletResponse;
 import org.springframework.security.core.Authentication;
 
 /**
- * Allows pluggable support for HttpSession-related behaviour when an authentication
- * occurs.
- * <p>
- * Typical use would be to make sure a session exists or to change the session Id to guard
- * against session-fixation attacks.
- *
- * @author Luke Taylor
- * @since
+ * 是在身份认证成功发生时 执行有关HttpSession的策略
+ * 默认会有一个防止固定会话攻击的 改变sessionId的策略
  */
 public interface SessionAuthenticationStrategy {
 
 	/**
-	 * Performs Http session-related functionality when a new authentication occurs.
-	 * @throws SessionAuthenticationException if it is decided that the authentication is
-	 * not allowed for the session. This will typically be because the user has too many
-	 * sessions open at once.
+	 * 比如说在UsernamePasswordAuthenticationFilter中认证通过了就会执行
+	 * @param authentication 创建的正确的认证对象，而不是由用户输入的用户名和密码构建的
+	 * @param request
+	 * @param response
+	 * @throws SessionAuthenticationException
 	 */
 	void onAuthentication(Authentication authentication, HttpServletRequest request, HttpServletResponse response)
 			throws SessionAuthenticationException;

@@ -26,9 +26,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.access.ExceptionTranslationFilter;
 
 /**
- * Used by {@link ExceptionTranslationFilter} to commence an authentication scheme.
- *
- * @author Ben Alex
+ * 身份验证入口点(认证异常处理器)
  */
 public interface AuthenticationEntryPoint {
 

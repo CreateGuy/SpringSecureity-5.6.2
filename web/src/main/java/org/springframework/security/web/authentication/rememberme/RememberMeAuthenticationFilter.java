@@ -40,37 +40,28 @@ import org.springframework.util.Assert;
 import org.springframework.web.filter.GenericFilterBean;
 
 /**
- * Detects if there is no {@code Authentication} object in the {@code SecurityContext},
- * and populates the context with a remember-me authentication token if a
- * {@link RememberMeServices} implementation so requests.
- * <p>
- * Concrete {@code RememberMeServices} implementations will have their
- * {@link RememberMeServices#autoLogin(HttpServletRequest, HttpServletResponse)} method
- * called by this filter. If this method returns a non-null {@code Authentication} object,
- * it will be passed to the {@code AuthenticationManager}, so that any
- * authentication-specific behaviour can be achieved. The resulting {@code Authentication}
- * (if successful) will be placed into the {@code SecurityContext}.
- * <p>
- * If authentication is successful, an {@link InteractiveAuthenticationSuccessEvent} will
- * be published to the application context. No events will be published if authentication
- * was unsuccessful, because this would generally be recorded via an
- * {@code AuthenticationManager}-specific application event.
- * <p>
- * Normally the request will be allowed to proceed regardless of whether authentication
- * succeeds or fails. If some control over the destination for authenticated users is
- * required, an {@link AuthenticationSuccessHandler} can be injected
- *
- * @author Ben Alex
- * @author Luke Taylor
+ * 记住我功能的登录
  */
 public class RememberMeAuthenticationFilter extends GenericFilterBean implements ApplicationEventPublisherAware {
 
+	/**
+	 * 事件推送器
+	 */
 	private ApplicationEventPublisher eventPublisher;
 
+	/**
+	 * 认证成功处理器
+	 */
 	private AuthenticationSuccessHandler successHandler;
 
+	/**
+	 * 局部认证管理器
+	 */
 	private AuthenticationManager authenticationManager;
 
+	/**
+	 * 记住我服务
+	 */
 	private RememberMeServices rememberMeServices;
 
 	public RememberMeAuthenticationFilter(AuthenticationManager authenticationManager,
@@ -93,8 +84,19 @@ public class RememberMeAuthenticationFilter extends GenericFilterBean implements
 		doFilter((HttpServletRequest) request, (HttpServletResponse) response, chain);
 	}
 
+	/**
+	 * 进行记住我方式的认证
+	 * @param request
+	 * @param response
+	 * @param chain
+	 * @throws IOException
+	 * @throws ServletException
+	 */
 	private void doFilter(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
 			throws IOException, ServletException {
+		//如果HttpSession级别的安全上下文中有认证对象的话，那就说明已经认证过了，就不需要进行记住我方式认证了
+		//通常情况是因为Session过期了
+		//注意：匿名认证过滤器在这个过滤器的后面
 		if (SecurityContextHolder.getContext().getAuthentication() != null) {
 			this.logger.debug(LogMessage
 					.of(() -> "SecurityContextHolder not populated with remember-me token, as it already contained: '"
@@ -102,22 +104,31 @@ public class RememberMeAuthenticationFilter extends GenericFilterBean implements
 			chain.doFilter(request, response);
 			return;
 		}
+		//获得认证对象
 		Authentication rememberMeAuth = this.rememberMeServices.autoLogin(request, response);
 		if (rememberMeAuth != null) {
-			// Attempt authenticaton via AuthenticationManager
 			try {
+				//通过局部认证管理器进行认证操作
+				//局部认证管理器通常有匿名和记住我的认证提供者，而全局认证管理器才有表单的认证提供者
 				rememberMeAuth = this.authenticationManager.authenticate(rememberMeAuth);
-				// Store to SecurityContextHolder
+
+				//将认证对象保存到线程级别的安全上下文策略中
 				SecurityContext context = SecurityContextHolder.createEmptyContext();
 				context.setAuthentication(rememberMeAuth);
 				SecurityContextHolder.setContext(context);
+
+				//执行认证成功的方法，默认是空方法
 				onSuccessfulAuthentication(request, response, rememberMeAuth);
 				this.logger.debug(LogMessage.of(() -> "SecurityContextHolder populated with remember-me token: '"
 						+ SecurityContextHolder.getContext().getAuthentication() + "'"));
+
+				//推送交互式认证成功事件
 				if (this.eventPublisher != null) {
 					this.eventPublisher.publishEvent(new InteractiveAuthenticationSuccessEvent(
 							SecurityContextHolder.getContext().getAuthentication(), this.getClass()));
 				}
+
+				//执行认证成功处理器
 				if (this.successHandler != null) {
 					this.successHandler.onAuthenticationSuccess(request, response, rememberMeAuth);
 					return;
@@ -129,7 +140,9 @@ public class RememberMeAuthenticationFilter extends GenericFilterBean implements
 								+ "rejected Authentication returned by RememberMeServices: '%s'; "
 								+ "invalidating remember-me token", rememberMeAuth),
 						ex);
+				//执行认证失败操作
 				this.rememberMeServices.loginFail(request, response);
+				//默认空方法
 				onUnsuccessfulAuthentication(request, response, ex);
 			}
 		}
@@ -137,9 +150,7 @@ public class RememberMeAuthenticationFilter extends GenericFilterBean implements
 	}
 
 	/**
-	 * Called if a remember-me token is presented and successfully authenticated by the
-	 * {@code RememberMeServices} {@code autoLogin} method and the
-	 * {@code AuthenticationManager}.
+	 * 通过记住我令牌进行认证通过了，就调用此方法
 	 */
 	protected void onSuccessfulAuthentication(HttpServletRequest request, HttpServletResponse response,
 			Authentication authResult) {

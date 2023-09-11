@@ -22,11 +22,7 @@ import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 
 /**
- * Lazily initializes the global authentication with an {@link AuthenticationProvider} if
- * it is not yet configured and there is only a single Bean of that type.
- *
- * @author Rob Winch
- * @since 4.1
+ * 为了给全局认证管理器设置认证提供者
  */
 @Order(InitializeAuthenticationProviderBeanManagerConfigurer.DEFAULT_ORDER)
 class InitializeAuthenticationProviderBeanManagerConfigurer extends GlobalAuthenticationConfigurerAdapter {
@@ -42,6 +38,11 @@ class InitializeAuthenticationProviderBeanManagerConfigurer extends GlobalAuthen
 		this.context = context;
 	}
 
+	/**
+	 * 为了给全局认证管理器构建器添加一个InitializeAuthenticationProviderManagerConfigurer？？，那为什么不一开始就添加？？，搞不懂
+	 * @param auth 一般情况都是全局认证管理器构建器
+	 * @throws Exception
+	 */
 	@Override
 	public void init(AuthenticationManagerBuilder auth) throws Exception {
 		auth.apply(new InitializeAuthenticationProviderManagerConfigurer());
@@ -49,6 +50,10 @@ class InitializeAuthenticationProviderBeanManagerConfigurer extends GlobalAuthen
 
 	class InitializeAuthenticationProviderManagerConfigurer extends GlobalAuthenticationConfigurerAdapter {
 
+		/**
+		 * 尝试从容器中获取认证提供者
+		 * @param auth
+		 */
 		@Override
 		public void configure(AuthenticationManagerBuilder auth) {
 			if (auth.isConfigured()) {
@@ -58,6 +63,7 @@ class InitializeAuthenticationProviderBeanManagerConfigurer extends GlobalAuthen
 			if (authenticationProvider == null) {
 				return;
 			}
+			//将认证提供者添加到对应集合中
 			auth.authenticationProvider(authenticationProvider);
 		}
 

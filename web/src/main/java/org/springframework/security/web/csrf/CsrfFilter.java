@@ -63,9 +63,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public final class CsrfFilter extends OncePerRequestFilter {
 
 	/**
-	 * The default {@link RequestMatcher} that indicates if CSRF protection is required or
-	 * not. The default is to ignore GET, HEAD, TRACE, OPTIONS and process all other
-	 * requests.
+	 * 默认的请求匹配器，用于表示是否需要CsRE保护。默认是忽略GET, HEAD, TRACE, OPTIONS这四种，而处理所有其他请求
 	 */
 	public static final RequestMatcher DEFAULT_CSRF_MATCHER = new DefaultRequiresCsrfMatcher();
 
@@ -81,10 +79,19 @@ public final class CsrfFilter extends OncePerRequestFilter {
 
 	private final Log logger = LogFactory.getLog(getClass());
 
+	/**
+	 * CsrfToken的存储策略
+	 */
 	private final CsrfTokenRepository tokenRepository;
 
+	/**
+	 * 请求匹配器：不需要进行Csrf校验的
+	 */
 	private RequestMatcher requireCsrfProtectionMatcher = DEFAULT_CSRF_MATCHER;
 
+	/**
+	 * 访问被拒绝处理器
+	 */
 	private AccessDeniedHandler accessDeniedHandler = new AccessDeniedHandlerImpl();
 
 	public CsrfFilter(CsrfTokenRepository csrfTokenRepository) {
@@ -101,14 +108,20 @@ public final class CsrfFilter extends OncePerRequestFilter {
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
 			throws ServletException, IOException {
 		request.setAttribute(HttpServletResponse.class.getName(), response);
+		// 从存储策略中读取令牌
 		CsrfToken csrfToken = this.tokenRepository.loadToken(request);
 		boolean missingToken = (csrfToken == null);
+		// 如果没有先生成后保存
 		if (missingToken) {
 			csrfToken = this.tokenRepository.generateToken(request);
 			this.tokenRepository.saveToken(csrfToken, request, response);
 		}
+
+		// 在请求域中暴露Csrf令牌
 		request.setAttribute(CsrfToken.class.getName(), csrfToken);
 		request.setAttribute(csrfToken.getParameterName(), csrfToken);
+
+		// 判断是否是不需要Csrf保护的
 		if (!this.requireCsrfProtectionMatcher.matches(request)) {
 			if (this.logger.isTraceEnabled()) {
 				this.logger.trace("Did not protect against CSRF since request did not match "
@@ -117,18 +130,24 @@ public final class CsrfFilter extends OncePerRequestFilter {
 			filterChain.doFilter(request, response);
 			return;
 		}
+
+		// 从请求头和QueryString中提取Csrf令牌
 		String actualToken = request.getHeader(csrfToken.getHeaderName());
 		if (actualToken == null) {
 			actualToken = request.getParameter(csrfToken.getParameterName());
 		}
+
+		// 常数比较令牌是否相同
 		if (!equalsConstantTime(csrfToken.getToken(), actualToken)) {
 			this.logger.debug(
 					LogMessage.of(() -> "Invalid CSRF token found for " + UrlUtils.buildFullRequestUrl(request)));
 			AccessDeniedException exception = (!missingToken) ? new InvalidCsrfTokenException(csrfToken, actualToken)
 					: new MissingCsrfTokenException(actualToken);
+			// 当成访问被拒绝处理
 			this.accessDeniedHandler.handle(request, response, exception);
 			return;
 		}
+		// Csrf校验通过
 		filterChain.doFilter(request, response);
 	}
 
@@ -168,7 +187,7 @@ public final class CsrfFilter extends OncePerRequestFilter {
 	}
 
 	/**
-	 * Constant time comparison to prevent against timing attacks.
+	 * 常数时间比较，防止定时攻击
 	 * @param expected
 	 * @param actual
 	 * @return
@@ -186,6 +205,9 @@ public final class CsrfFilter extends OncePerRequestFilter {
 		return MessageDigest.isEqual(expectedBytes, actualBytes);
 	}
 
+	/**
+	 * 默认的请求匹配器，用于表示是否需要CsRE保护。默认是忽略GET, HEAD, TRACE, OPTIONS这四种，而处理所有其他请求
+	 */
 	private static final class DefaultRequiresCsrfMatcher implements RequestMatcher {
 
 		private final HashSet<String> allowedMethods = new HashSet<>(Arrays.asList("GET", "HEAD", "TRACE", "OPTIONS"));

@@ -25,7 +25,7 @@ import org.springframework.security.access.ConfigAttribute;
 import org.springframework.security.web.FilterInvocation;
 
 /**
- * Decides whether a web channel meets a specific security condition.
+ * 通道处理器，用于判断是否满足某些安全条件
  * <p>
  * <code>ChannelProcessor</code> implementations are iterated by the
  * {@link ChannelDecisionManagerImpl}.

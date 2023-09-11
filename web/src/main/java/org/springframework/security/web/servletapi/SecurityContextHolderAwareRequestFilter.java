@@ -38,46 +38,39 @@ import org.springframework.util.Assert;
 import org.springframework.web.filter.GenericFilterBean;
 
 /**
- * A <code>Filter</code> which populates the <code>ServletRequest</code> with a request
- * wrapper which implements the servlet API security methods.
- * <p>
- * {@link SecurityContextHolderAwareRequestWrapper} is extended to provide the following
- * additional methods:
- * </p>
- * <ul>
- * <li>{@link HttpServletRequest#authenticate(HttpServletResponse)} - Allows the user to
- * determine if they are authenticated and if not send the user to the login page. See
- * {@link #setAuthenticationEntryPoint(AuthenticationEntryPoint)}.</li>
- * <li>{@link HttpServletRequest#login(String, String)} - Allows the user to authenticate
- * using the {@link AuthenticationManager}. See
- * {@link #setAuthenticationManager(AuthenticationManager)}.</li>
- * <li>{@link HttpServletRequest#logout()} - Allows the user to logout using the
- * {@link LogoutHandler}s configured in Spring Security. See
- * {@link #setLogoutHandlers(List)}.</li>
- * <li>{@link AsyncContext#start(Runnable)} - Automatically copy the
- * {@link SecurityContext} from the {@link SecurityContextHolder} found on the Thread that
- * invoked {@link AsyncContext#start(Runnable)} to the Thread that processes the
- * {@link Runnable}.</li>
- * </ul>
- *
- * @author Orlando Garcia Carmona
- * @author Ben Alex
- * @author Luke Taylor
- * @author Rob Winch
- * @author Eddú Meléndez
+ * 对Request包装，让Request也可以进行登录，登出等等功能
+ * 这是Servlet3.0出现了Request的登录，登出，所以SpringSecurity也要让Request支持
  */
 public class SecurityContextHolderAwareRequestFilter extends GenericFilterBean {
 
+	/**
+	 * 角色前缀
+	 */
 	private String rolePrefix = "ROLE_";
 
+	/**
+	 * 包装Request的工厂
+	 */
 	private HttpServletRequestFactory requestFactory;
 
+	/**
+	 * 身份认证入口点，一般是跳转到登录页
+	 */
 	private AuthenticationEntryPoint authenticationEntryPoint;
 
+	/**
+	 * 局部认证管理器，用来做登录的
+	 */
 	private AuthenticationManager authenticationManager;
 
+	/**
+	 * 登出处理器。用来做登出的
+	 */
 	private List<LogoutHandler> logoutHandlers;
 
+	/**
+	 * 认证对象解析器
+	 */
 	private AuthenticationTrustResolver trustResolver = new AuthenticationTrustResolverImpl();
 
 	public void setRolePrefix(String rolePrefix) {
@@ -146,7 +139,10 @@ public class SecurityContextHolderAwareRequestFilter extends GenericFilterBean {
 	@Override
 	public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain)
 			throws IOException, ServletException {
-		chain.doFilter(this.requestFactory.create((HttpServletRequest) req, (HttpServletResponse) res), res);
+		chain.doFilter(
+				//包装Request
+				this.requestFactory.create((HttpServletRequest) req
+						, (HttpServletResponse) res), res);
 	}
 
 	@Override
@@ -155,6 +151,9 @@ public class SecurityContextHolderAwareRequestFilter extends GenericFilterBean {
 		updateFactory();
 	}
 
+	/**
+	 * 更新工厂的角色前缀
+	 */
 	private void updateFactory() {
 		String rolePrefix = this.rolePrefix;
 		this.requestFactory = createServlet3Factory(rolePrefix);
@@ -172,6 +171,11 @@ public class SecurityContextHolderAwareRequestFilter extends GenericFilterBean {
 		updateFactory();
 	}
 
+	/**
+	 * 创建包装工厂
+	 * @param rolePrefix
+	 * @return
+	 */
 	private HttpServletRequestFactory createServlet3Factory(String rolePrefix) {
 		HttpServlet3RequestFactory factory = new HttpServlet3RequestFactory(rolePrefix);
 		factory.setTrustResolver(this.trustResolver);

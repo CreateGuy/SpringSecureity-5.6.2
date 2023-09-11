@@ -22,9 +22,7 @@ import org.springframework.security.access.ConfigAttribute;
 import org.springframework.security.core.Authentication;
 
 /**
- * Creates a new temporary {@link Authentication} object for the current secure object
- * invocation only.
- *
+ * 为当前的认证对象创建临时的认证对象
  * <p>
  * This interface permits implementations to replace the <code>Authentication</code>
  * object that applies to the current secure object invocation only. The

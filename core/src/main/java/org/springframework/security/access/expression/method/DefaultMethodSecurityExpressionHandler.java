@@ -44,6 +44,8 @@ import org.springframework.security.core.parameters.DefaultSecurityParameterName
 import org.springframework.util.Assert;
 
 /**
+ * 和 {@link org.springframework.security.access.prepost.PreFilter @PreFilter} 有关，作用是过滤集合或者数组中的数据
+ * <p>
  * The standard implementation of {@code MethodSecurityExpressionHandler}.
  * <p>
  * A single instance should usually be shared amongst the beans that require expression
@@ -93,12 +95,7 @@ public class DefaultMethodSecurityExpressionHandler extends AbstractSecurityExpr
 	}
 
 	/**
-	 * Filters the {@code filterTarget} object (which must be either a collection, array,
-	 * map or stream), by evaluating the supplied expression.
-	 * <p>
-	 * If a {@code Collection} or {@code Map} is used, the original instance will be
-	 * modified to contain the elements for which the permission expression evaluates to
-	 * {@code true}. For an array, a new array instance will be returned.
+	 * 对参数中的数据进行过滤
 	 */
 	@Override
 	public Object filter(Object filterTarget, Expression filterExpression, EvaluationContext ctx) {
@@ -121,6 +118,15 @@ public class DefaultMethodSecurityExpressionHandler extends AbstractSecurityExpr
 				"Filter target must be a collection, array, map or stream type, but was " + filterTarget);
 	}
 
+	/**
+	 * 过滤器集合中的数据
+	 * @param filterTarget
+	 * @param filterExpression
+	 * @param ctx
+	 * @param rootObject
+	 * @param <T>
+	 * @return
+	 */
 	private <T> Object filterCollection(Collection<T> filterTarget, Expression filterExpression, EvaluationContext ctx,
 			MethodSecurityExpressionOperations rootObject) {
 		this.logger.debug(LogMessage.format("Filtering collection with %s elements", filterTarget.size()));
@@ -140,6 +146,14 @@ public class DefaultMethodSecurityExpressionHandler extends AbstractSecurityExpr
 		return filterTarget;
 	}
 
+	/**
+	 * 过滤数组中的数据
+	 * @param filterTarget
+	 * @param filterExpression
+	 * @param ctx
+	 * @param rootObject
+	 * @return
+	 */
 	private Object filterArray(Object[] filterTarget, Expression filterExpression, EvaluationContext ctx,
 			MethodSecurityExpressionOperations rootObject) {
 		List<Object> retain = new ArrayList<>(filterTarget.length);
@@ -162,6 +176,16 @@ public class DefaultMethodSecurityExpressionHandler extends AbstractSecurityExpr
 		return filtered;
 	}
 
+	/**
+	 * 对Map进行过滤
+	 * @param filterTarget
+	 * @param filterExpression
+	 * @param ctx
+	 * @param rootObject
+	 * @param <K>
+	 * @param <V>
+	 * @return
+	 */
 	private <K, V> Object filterMap(final Map<K, V> filterTarget, Expression filterExpression, EvaluationContext ctx,
 			MethodSecurityExpressionOperations rootObject) {
 		Map<K, V> retain = new LinkedHashMap<>(filterTarget.size());
@@ -178,6 +202,14 @@ public class DefaultMethodSecurityExpressionHandler extends AbstractSecurityExpr
 		return filterTarget;
 	}
 
+	/**
+	 * 对流进行过滤
+	 * @param filterTarget
+	 * @param filterExpression
+	 * @param ctx
+	 * @param rootObject
+	 * @return
+	 */
 	private Object filterStream(final Stream<?> filterTarget, Expression filterExpression, EvaluationContext ctx,
 			MethodSecurityExpressionOperations rootObject) {
 		return filterTarget.filter((filterObject) -> {

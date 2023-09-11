@@ -62,6 +62,7 @@ public final class DelegatingMethodSecurityMetadataSource extends AbstractMethod
 			}
 			// No cached value, so query the sources to find a result
 			Collection<ConfigAttribute> attributes = null;
+			//
 			for (MethodSecurityMetadataSource s : this.methodSecurityMetadataSources) {
 				attributes = s.getAttributes(method, targetClass);
 				if (attributes != null && !attributes.isEmpty()) {

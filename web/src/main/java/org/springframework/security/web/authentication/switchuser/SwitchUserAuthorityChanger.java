@@ -23,14 +23,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 /**
- * Allows subclasses to modify the {@link GrantedAuthority} list that will be assigned to
- * the principal when they assume the identity of a different principal.
- *
- * <p>
- * Configured against the {@link SwitchUserFilter}.
- *
- * @author Ben Alex
- *
+ * 在切换用户时，变更切换后用户的权限
  */
 public interface SwitchUserAuthorityChanger {
 

@@ -17,15 +17,15 @@
 package org.springframework.security.web;
 
 /**
- * <code>PortMapper</code> implementations provide callers with information about which
- * HTTP ports are associated with which HTTPS ports on the system, and vice versa.
- *
- * @author Ben Alex
+ * 端口映射器，将Https可以和Http的端口进行互相映射
+ * <p>
+ *     我猜测：如果有nginx的情况，nginx采用 Https，而后端服务采用 Http，那么request.getServerPort()就会获取Https的端口，那么就需要映射
+ * </p>
  */
 public interface PortMapper {
 
 	/**
-	 * Locates the HTTP port associated with the specified HTTPS port.
+	 * 返回与指定HTTPS端口关联的HTTP端口
 	 * <P>
 	 * Returns <code>null</code> if unknown.
 	 * </p>
@@ -35,7 +35,7 @@ public interface PortMapper {
 	Integer lookupHttpPort(Integer httpsPort);
 
 	/**
-	 * Locates the HTTPS port associated with the specified HTTP port.
+	 * 返回与指定HTTP端口关联的HTTPS端口
 	 * <P>
 	 * Returns <code>null</code> if unknown.
 	 * </p>

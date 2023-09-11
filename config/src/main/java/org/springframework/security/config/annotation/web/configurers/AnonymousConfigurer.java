@@ -43,14 +43,30 @@ import org.springframework.security.web.authentication.AnonymousAuthenticationFi
 public final class AnonymousConfigurer<H extends HttpSecurityBuilder<H>>
 		extends AbstractHttpConfigurer<AnonymousConfigurer<H>, H> {
 
+	/**
+	 * 创建匿名认证对象的key
+	 */
 	private String key;
 
+	/**
+	 * 匿名用户认证提供者
+	 */
 	private AuthenticationProvider authenticationProvider;
 
+	/**
+	 * 匿名用户过滤器
+	 */
 	private AnonymousAuthenticationFilter authenticationFilter;
 
+	/**
+	 * 匿名认证对象的principal是一个字符串
+	 * 像UsernamePasswordAuthenticationToken一般是User类
+	 */
 	private Object principal = "anonymousUser";
 
+	/**
+	 * 匿名认证对象的权限
+	 */
 	private List<GrantedAuthority> authorities = AuthorityUtils.createAuthorityList("ROLE_ANONYMOUS");
 
 	/**
@@ -141,13 +157,16 @@ public final class AnonymousConfigurer<H extends HttpSecurityBuilder<H>>
 
 	@Override
 	public void init(H http) {
+		//获得匿名用户认证提供者
 		if (this.authenticationProvider == null) {
 			this.authenticationProvider = new AnonymousAuthenticationProvider(getKey());
 		}
+		//获得AnonymousAuthenticationFilter
 		if (this.authenticationFilter == null) {
 			this.authenticationFilter = new AnonymousAuthenticationFilter(getKey(), this.principal, this.authorities);
 		}
 		this.authenticationProvider = postProcess(this.authenticationProvider);
+		//设置匿名用户认证提供者到局部认证管理器中
 		http.authenticationProvider(this.authenticationProvider);
 	}
 

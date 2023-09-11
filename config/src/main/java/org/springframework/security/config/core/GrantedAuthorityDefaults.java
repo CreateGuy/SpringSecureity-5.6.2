@@ -19,10 +19,7 @@ package org.springframework.security.config.core;
 import org.springframework.security.core.GrantedAuthority;
 
 /**
- * Allows providing defaults for {@link GrantedAuthority}
- *
- * @author Eddú Meléndez
- * @since 4.2.0
+ * 角色前缀
  */
 public final class GrantedAuthorityDefaults {
 
@@ -33,7 +30,7 @@ public final class GrantedAuthorityDefaults {
 	}
 
 	/**
-	 * The default prefix used with role based authorization. Default is "ROLE_".
+	 * 基于角色的授权使用的默认前缀。默认为 ROLE_
 	 * @return the default role prefix
 	 */
 	public String getRolePrefix() {

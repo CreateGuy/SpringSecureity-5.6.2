@@ -22,9 +22,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 /**
- * Encapsulates the redirection logic for all classes in the framework which perform
- * redirects.
- *
+ * 封装Spring Security中执行重定向的重定向逻辑
  * @author Luke Taylor
  * @since 3.0
  */

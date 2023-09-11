@@ -41,45 +41,49 @@ import org.springframework.util.Assert;
 import org.springframework.web.filter.GenericFilterBean;
 
 /**
- * Filter required by concurrent session handling package.
- * <p>
- * This filter performs two functions. First, it calls
- * {@link org.springframework.security.core.session.SessionRegistry#refreshLastRequest(String)}
- * for each request so that registered sessions always have a correct "last update"
- * date/time. Second, it retrieves a
- * {@link org.springframework.security.core.session.SessionInformation} from the
- * <code>SessionRegistry</code> for each request and checks if the session has been marked
- * as expired. If it has been marked as expired, the configured logout handlers will be
- * called (as happens with
- * {@link org.springframework.security.web.authentication.logout.LogoutFilter}), typically
- * to invalidate the session. To handle the expired session a call to the
- * {@link SessionInformationExpiredStrategy} is made. The session invalidation will cause
- * an {@link org.springframework.security.web.session.HttpSessionDestroyedEvent} to be
- * published via the
- * {@link org.springframework.security.web.session.HttpSessionEventPublisher} registered
- * in <code>web.xml</code>.
- * </p>
- *
- * @author Ben Alex
- * @author Eddú Meléndez
- * @author Marten Deinum
- * @author Onur Kagan Ozcan
+ * 限制并发会话的过滤器
+ * <ul>
+ *     <li>
+ *         作用1：对于已经过期的SessionInformation进行登出操作，然后执行过期策略
+ *     </li>
+ *     <li>
+ *         作用2：更新操作时间，这是因为如果并发数达到限制，可以会根据最后操作时间来踢出用户
+ *     </li>
+ * </ul>
  */
 public class ConcurrentSessionFilter extends GenericFilterBean {
 
+	/**
+	 * SessionInformation注册中心
+	 */
 	private final SessionRegistry sessionRegistry;
 
+	/**
+	 * 出现SessionInformation过期，需要执行的策略
+	 * 和下面那个的作用一样
+	 */
+	private SessionInformationExpiredStrategy sessionInformationExpiredStrategy;
+
+	/**
+	 * 出现SessionInformation过期，需要重定向的Url
+	 */
 	private String expiredUrl;
 
+	/**
+	 * 重定向逻辑，和上面那个一起使用
+	 */
 	private RedirectStrategy redirectStrategy;
 
+	/**
+	 * 登出需要执行的处理器：是通过LogoutConfigurer拿到的
+	 */
 	private LogoutHandler handlers = new CompositeLogoutHandler(new SecurityContextLogoutHandler());
 
-	private SessionInformationExpiredStrategy sessionInformationExpiredStrategy;
 
 	public ConcurrentSessionFilter(SessionRegistry sessionRegistry) {
 		Assert.notNull(sessionRegistry, "SessionRegistry required");
 		this.sessionRegistry = sessionRegistry;
+		//创建默认的SessionInformation过期策略
 		this.sessionInformationExpiredStrategy = new ResponseBodySessionInformationExpiredStrategy();
 	}
 
@@ -125,22 +129,42 @@ public class ConcurrentSessionFilter extends GenericFilterBean {
 		doFilter((HttpServletRequest) request, (HttpServletResponse) response, chain);
 	}
 
+	/**
+	 * <ul>
+	 *     <li>
+	 *         判断SessionInformation是否过期
+	 *     </li>
+	 *     <li>
+	 *         SessionInformation的过期通常是由 HttpSession认证策略的 ConcurrentSessionControlAuthenticationStrategy 导致的
+	 *     </li>
+	 * </ul>
+	 * @param request
+	 * @param response
+	 * @param chain
+	 * @throws IOException
+	 * @throws ServletException
+	 */
 	private void doFilter(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
 			throws IOException, ServletException {
 		HttpSession session = request.getSession(false);
 		if (session != null) {
+			//获得当前会话对应的SessionInformation
 			SessionInformation info = this.sessionRegistry.getSessionInformation(session.getId());
 			if (info != null) {
+				//如果过期了
 				if (info.isExpired()) {
 					// Expired - abort processing
 					this.logger.debug(LogMessage
 							.of(() -> "Requested session ID " + request.getRequestedSessionId() + " has expired."));
+					//执行登出操作
 					doLogout(request, response);
+					//执行SessionInformation过期策略
 					this.sessionInformationExpiredStrategy
 							.onExpiredSessionDetected(new SessionInformationExpiredEvent(info, request, response));
 					return;
 				}
-				// Non-expired - update last request date/time
+				//如果没有过期，那么就更新操作时间
+				//这是因为如果并发数达到限制，可以根据最后操作时间来踢出用户
 				this.sessionRegistry.refreshLastRequest(info.getSessionId());
 			}
 		}
@@ -161,6 +185,11 @@ public class ConcurrentSessionFilter extends GenericFilterBean {
 		return this.expiredUrl;
 	}
 
+	/**
+	 * 执行登出操作
+	 * @param request
+	 * @param response
+	 */
 	private void doLogout(HttpServletRequest request, HttpServletResponse response) {
 		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 
@@ -194,11 +223,7 @@ public class ConcurrentSessionFilter extends GenericFilterBean {
 	}
 
 	/**
-	 * A {@link SessionInformationExpiredStrategy} that writes an error message to the
-	 * response body.
-	 *
-	 * @author Rob Winch
-	 * @since 4.2
+	 * SessionInformation过期执行的策略，就是往响应体写入数据
 	 */
 	private static final class ResponseBodySessionInformationExpiredStrategy
 			implements SessionInformationExpiredStrategy {

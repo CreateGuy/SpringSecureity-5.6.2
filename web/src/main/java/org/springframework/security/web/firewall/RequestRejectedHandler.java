@@ -23,16 +23,12 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 /**
- * Used by {@link org.springframework.security.web.FilterChainProxy} to handle an
- * <code>RequestRejectedException</code>.
- *
- * @author Leonard Brünings
- * @since 5.4
+ * 请求拒绝处理器：用于在执行SpringSecurity过滤器链的时候抛出异常执行
  */
 public interface RequestRejectedHandler {
 
 	/**
-	 * Handles an request rejected failure.
+	 * 处理请求失败的
 	 * @param request that resulted in an <code>RequestRejectedException</code>
 	 * @param response so that the user agent can be advised of the failure
 	 * @param requestRejectedException that caused the invocation

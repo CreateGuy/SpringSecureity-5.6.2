@@ -44,7 +44,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.util.Assert;
 
 /**
- * The default strategy for publishing authentication events.
+ * 发布身份验证事件的 {@link AuthenticationEventPublisher}
  * <p>
  * Maps well-known <tt>AuthenticationException</tt> types to events and publishes them via
  * the application context. If configured as a bean, it will pick up the
@@ -67,10 +67,19 @@ public class DefaultAuthenticationEventPublisher
 
 	private final Log logger = LogFactory.getLog(getClass());
 
+	/**
+	 * 在SpringBoot中是 {@link AnnotationConfigServletWebServerApplicationContext}
+	 */
 	private ApplicationEventPublisher applicationEventPublisher;
 
+	/**
+	 * 认证异常和对应事件的构造方法的映射关系
+	 */
 	private final HashMap<String, Constructor<? extends AbstractAuthenticationEvent>> exceptionMappings = new HashMap<>();
 
+	/**
+	 * 默认的认证异常事件
+	 */
 	private Constructor<? extends AbstractAuthenticationFailureEvent> defaultAuthenticationFailureEventConstructor;
 
 	public DefaultAuthenticationEventPublisher() {
@@ -79,6 +88,8 @@ public class DefaultAuthenticationEventPublisher
 
 	public DefaultAuthenticationEventPublisher(ApplicationEventPublisher applicationEventPublisher) {
 		this.applicationEventPublisher = applicationEventPublisher;
+
+		// 注册认证异常和对应的事件的构造方法的映射关系
 		addMapping(BadCredentialsException.class.getName(), AuthenticationFailureBadCredentialsEvent.class);
 		addMapping(UsernameNotFoundException.class.getName(), AuthenticationFailureBadCredentialsEvent.class);
 		addMapping(AccountExpiredException.class.getName(), AuthenticationFailureExpiredEvent.class);
@@ -93,6 +104,10 @@ public class DefaultAuthenticationEventPublisher
 				AuthenticationFailureBadCredentialsEvent.class);
 	}
 
+	/**
+	 * 发布认证成事件
+	 * @param authentication
+	 */
 	@Override
 	public void publishAuthenticationSuccess(Authentication authentication) {
 		if (this.applicationEventPublisher != null) {
@@ -100,10 +115,17 @@ public class DefaultAuthenticationEventPublisher
 		}
 	}
 
+	/**
+	 * 发布认证失败事件
+	 * @param exception
+	 * @param authentication
+	 */
 	@Override
 	public void publishAuthenticationFailure(AuthenticationException exception, Authentication authentication) {
+		// 获得此异常对应事件的构造方法
 		Constructor<? extends AbstractAuthenticationEvent> constructor = getEventConstructor(exception);
 		AbstractAuthenticationEvent event = null;
+		// 实例化
 		if (constructor != null) {
 			try {
 				event = constructor.newInstance(authentication, exception);
@@ -111,6 +133,8 @@ public class DefaultAuthenticationEventPublisher
 			catch (IllegalAccessException | InvocationTargetException | InstantiationException ignored) {
 			}
 		}
+
+		// 发布事件
 		if (event != null) {
 			if (this.applicationEventPublisher != null) {
 				this.applicationEventPublisher.publishEvent(event);
@@ -123,6 +147,11 @@ public class DefaultAuthenticationEventPublisher
 		}
 	}
 
+	/**
+	 * 返回此异常对应事件的构造方法
+	 * @param exception
+	 * @return
+	 */
 	private Constructor<? extends AbstractAuthenticationEvent> getEventConstructor(AuthenticationException exception) {
 		Constructor<? extends AbstractAuthenticationEvent> eventConstructor = this.exceptionMappings
 				.get(exception.getClass().getName());
@@ -135,8 +164,7 @@ public class DefaultAuthenticationEventPublisher
 	}
 
 	/**
-	 * Sets additional exception to event mappings. These are automatically merged with
-	 * the default exception to event mappings that <code>ProviderManager</code> defines.
+	 * 添加异常和事件的关系
 	 * @param additionalExceptionMappings where keys are the fully-qualified string name
 	 * of the exception class and the values are the fully-qualified string name of the
 	 * event class to fire.
@@ -160,8 +188,7 @@ public class DefaultAuthenticationEventPublisher
 	}
 
 	/**
-	 * Sets additional exception to event mappings. These are automatically merged with
-	 * the default exception to event mappings that <code>ProviderManager</code> defines.
+	 * 添加异常和事件的关系
 	 * @param mappings where keys are exception classes and values are event classes.
 	 * @since 5.3
 	 */
@@ -179,8 +206,7 @@ public class DefaultAuthenticationEventPublisher
 	}
 
 	/**
-	 * Sets a default authentication failure event as a fallback event for any unmapped
-	 * exceptions not mapped in the exception mappings.
+	 * 设置默认的认证异常和事件的关系
 	 * @param defaultAuthenticationFailureEventClass is the authentication failure event
 	 * class to be fired for unmapped exceptions.
 	 */
@@ -198,6 +224,11 @@ public class DefaultAuthenticationEventPublisher
 		}
 	}
 
+	/**
+	 * 注册异常和事件的关系
+	 * @param exceptionClass
+	 * @param eventClass
+	 */
 	private void addMapping(String exceptionClass, Class<? extends AbstractAuthenticationFailureEvent> eventClass) {
 		try {
 			Constructor<? extends AbstractAuthenticationEvent> constructor = eventClass

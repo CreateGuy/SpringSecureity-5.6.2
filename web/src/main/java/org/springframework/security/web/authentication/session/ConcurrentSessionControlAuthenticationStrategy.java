@@ -37,45 +37,34 @@ import org.springframework.security.web.session.SessionManagementFilter;
 import org.springframework.util.Assert;
 
 /**
- * Strategy which handles concurrent session-control.
- *
- * <p>
- * When invoked following an authentication, it will check whether the user in question
- * should be allowed to proceed, by comparing the number of sessions they already have
- * active with the configured <tt>maximumSessions</tt> value. The {@link SessionRegistry}
- * is used as the source of data on authenticated users and session data.
- * </p>
- * <p>
- * If a user has reached the maximum number of permitted sessions, the behaviour depends
- * on the <tt>exceptionIfMaxExceeded</tt> property. The default behaviour is to expire any
- * sessions that exceed the maximum number of permitted sessions, starting with the least
- * recently used sessions. The expired sessions will be invalidated by the
- * {@link ConcurrentSessionFilter} if accessed again. If <tt>exceptionIfMaxExceeded</tt>
- * is set to <tt>true</tt>, however, the user will be prevented from starting a new
- * authenticated session.
- * </p>
- * <p>
- * This strategy can be injected into both the {@link SessionManagementFilter} and
- * instances of {@link AbstractAuthenticationProcessingFilter} (typically
- * {@link UsernamePasswordAuthenticationFilter}), but is typically combined with
- * {@link RegisterSessionAuthenticationStrategy} using
- * {@link CompositeSessionAuthenticationStrategy}.
- * </p>
- *
- * @author Luke Taylor
- * @author Rob Winch
- * @since 3.2
- * @see CompositeSessionAuthenticationStrategy
+ * 处理并发会话控制的策略
  */
 public class ConcurrentSessionControlAuthenticationStrategy
 		implements MessageSourceAware, SessionAuthenticationStrategy {
 
 	protected MessageSourceAccessor messages = SpringSecurityMessageSource.getAccessor();
 
+	/**
+	 * SessionInformation注册中心
+	 */
 	private final SessionRegistry sessionRegistry;
 
+	/**
+	 * 某个用户的会话数达到maximumSessions的时候，是否阻止登录
+	 * <ul>
+	 *     <li>
+	 * 			true: 后面登录的用户直接抛出异常
+	 *     </li>
+	 *     <li>
+	 *			false：将最先登录的那个会话对应的SessionInformation直接设置为已过期，那么遇到ConcurrentSessionFilter就会有对应的退出操作了
+	 *     </li>
+	 * </ul>
+	 */
 	private boolean exceptionIfMaximumExceeded = false;
 
+	/**
+	 * 最大会话并发数
+	 */
 	private int maximumSessions = 1;
 
 	/**
@@ -88,37 +77,45 @@ public class ConcurrentSessionControlAuthenticationStrategy
 	}
 
 	/**
-	 * In addition to the steps from the superclass, the sessionRegistry will be updated
-	 * with the new session information.
+	 *
+	 * @param authentication 创建的正确的认证对象，而不是由用户输入的用户名和密码构建的
+	 * @param request
+	 * @param response
 	 */
 	@Override
 	public void onAuthentication(Authentication authentication, HttpServletRequest request,
 			HttpServletResponse response) {
+		//先获取最大并发数
 		int allowedSessions = getMaximumSessionsForThisUser(authentication);
+		//如果是-1表示不限制，那么就直接返回
 		if (allowedSessions == -1) {
 			// We permit unlimited logins
 			return;
 		}
+
+		//通过SessionInformation注册中心获得当前用户的所有SessionInformation
 		List<SessionInformation> sessions = this.sessionRegistry.getAllSessions(authentication.getPrincipal(), false);
 		int sessionCount = sessions.size();
+		//如果小于最大并发数据，就可以返回了
 		if (sessionCount < allowedSessions) {
 			// They haven't got too many login sessions running at present
 			return;
 		}
+		//如果数量相等的情况
 		if (sessionCount == allowedSessions) {
 			HttpSession session = request.getSession(false);
 			if (session != null) {
-				// Only permit it though if this request is associated with one of the
-				// already registered sessions
+				//只要当前会话在当前用户的SessionInformation集合里面
+				//比如有最大限制2，有A和B，B进到自然能够匹配sessionId，也就可以继续后面的操作了
 				for (SessionInformation si : sessions) {
 					if (si.getSessionId().equals(session.getId())) {
 						return;
 					}
 				}
 			}
-			// If the session is null, a new one will be created by the parent class,
-			// exceeding the allowed number
+			//走到这里表示已经达到最大限制了，而且并不是其中的一个
 		}
+		//已经超过了最大会话数了，要么踢出某个会话，要么抛出异常
 		allowableSessionsExceeded(sessions, allowedSessions, this.sessionRegistry);
 	}
 
@@ -134,25 +131,29 @@ public class ConcurrentSessionControlAuthenticationStrategy
 	}
 
 	/**
-	 * Allows subclasses to customise behaviour when too many sessions are detected.
-	 * @param sessions either <code>null</code> or all unexpired sessions associated with
-	 * the principal
-	 * @param allowableSessions the number of concurrent sessions the user is allowed to
-	 * have
-	 * @param registry an instance of the <code>SessionRegistry</code> for subclass use
-	 *
+	 * 已经超过了最大会话数了，要么踢出某个会话，要么抛出异常
+	 * @param sessions 当前用户的所有SessionInformation
+	 * @param allowableSessions 最大并发数
+	 * @param registry
+	 * @throws SessionAuthenticationException
 	 */
 	protected void allowableSessionsExceeded(List<SessionInformation> sessions, int allowableSessions,
 			SessionRegistry registry) throws SessionAuthenticationException {
+		//阻止当前会话登录此用户，直接抛出异常
 		if (this.exceptionIfMaximumExceeded || (sessions == null)) {
 			throw new SessionAuthenticationException(
 					this.messages.getMessage("ConcurrentSessionControlAuthenticationStrategy.exceededAllowed",
 							new Object[] { allowableSessions }, "Maximum sessions of {0} for this principal exceeded"));
 		}
-		// Determine least recently used sessions, and mark them for invalidation
+		//踢出最早没有操作的会话
+		//对SessionInformation的最后一次操作时间进行排序
 		sessions.sort(Comparator.comparing(SessionInformation::getLastRequest));
+		//需要踢出的数量
 		int maximumSessionsExceededBy = sessions.size() - allowableSessions + 1;
+		//拿到需要踢出的SessionInformation
 		List<SessionInformation> sessionsToBeExpired = sessions.subList(0, maximumSessionsExceededBy);
+		//标记这些SessionInformation为已过期
+		//这样ConcurrentSessionFilter就会对于这些已过期的SessionInformation对应的会话执行登出操作
 		for (SessionInformation session : sessionsToBeExpired) {
 			session.expireNow();
 		}

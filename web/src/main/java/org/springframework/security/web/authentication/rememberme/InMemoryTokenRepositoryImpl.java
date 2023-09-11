@@ -24,10 +24,7 @@ import java.util.Map;
 import org.springframework.dao.DataIntegrityViolationException;
 
 /**
- * Simple <tt>PersistentTokenRepository</tt> implementation backed by a Map. Intended for
- * testing only.
- *
- * @author Luke Taylor
+ * 由Map支持的简单PersistentTokenRepository实现。仅用于测试
  */
 public class InMemoryTokenRepositoryImpl implements PersistentTokenRepository {
 

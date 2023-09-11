@@ -19,22 +19,11 @@ package org.springframework.security.config.annotation.web.configuration;
 import org.springframework.security.config.annotation.web.builders.WebSecurity;
 
 /**
- * Callback interface for customizing {@link WebSecurity}.
- *
- * Beans of this type will automatically be used by {@link WebSecurityConfiguration} to
- * customize {@link WebSecurity}.
- *
- * Example usage:
- *
- * <pre>
- * &#064;Bean
+ * 貌似是因为WebSecurityConfigurerAdapter 5.7之久的版本会被弃用，所有出现了新的操作WebSecurity的接口，例子如下
+ * @Bean
  * public WebSecurityCustomizer ignoringCustomizer() {
- * 	return (web) -&gt; web.ignoring().antMatchers("/ignore1", "/ignore2");
+ *  return (web) -> web.ignoring().antMatchers("/ignore1", "/ignore2");
  * }
- * </pre>
- *
- * @author Eleftheria Stein
- * @since 5.4
  */
 @FunctionalInterface
 public interface WebSecurityCustomizer {

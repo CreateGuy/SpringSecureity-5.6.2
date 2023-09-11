@@ -26,9 +26,7 @@ import org.springframework.security.access.ConfigAttribute;
 import org.springframework.security.core.Authentication;
 
 /**
- * Simple concrete implementation of
- * {@link org.springframework.security.access.AccessDecisionManager} that requires all
- * voters to abstain or grant access.
+ * 所有投票器都必须投同意票的 访问决策管理器
  */
 public class UnanimousBased extends AbstractAccessDecisionManager {
 
@@ -70,6 +68,7 @@ public class UnanimousBased extends AbstractAccessDecisionManager {
 				case AccessDecisionVoter.ACCESS_GRANTED:
 					grant++;
 					break;
+				//一旦有拒绝票，就直接抛出异常
 				case AccessDecisionVoter.ACCESS_DENIED:
 					throw new AccessDeniedException(
 							this.messages.getMessage("AbstractAccessDecisionManager.accessDenied", "Access is denied"));
@@ -78,11 +77,11 @@ public class UnanimousBased extends AbstractAccessDecisionManager {
 				}
 			}
 		}
-		// To get this far, there were no deny votes
+		//走到这，就代表没有拒绝票，而且有同意票
 		if (grant > 0) {
 			return;
 		}
-		// To get this far, every AccessDecisionVoter abstained
+		//走到这一步，就代表所有访问决策投票器都弃权了
 		checkAllowIfAllAbstainDecisions();
 	}
 

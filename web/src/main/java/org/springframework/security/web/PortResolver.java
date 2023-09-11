@@ -19,15 +19,11 @@ package org.springframework.security.web;
 import javax.servlet.ServletRequest;
 
 /**
- * A <code>PortResolver</code> determines the port a web request was received on.
- *
- * <P>
- * This interface is necessary because <code>ServletRequest.getServerPort()</code> may not
- * return the correct port in certain circumstances. For example, if the browser does not
- * construct the URL correctly after a redirect.
- * </p>
- *
- * @author Ben Alex
+ *	端口解析器确定接收web请求的端口。
+ *	这个接口是必需的，因为在某些情况下ServletRequest.getServerPort()可能不会返回正确的端口
+ *	<li>
+ *	   例如：nginx的监听端口不是默认的80端口，那么request.getServerPort()方法无法获得正确的端口号，仍然拿到到80端口
+ *	</li>
  */
 public interface PortResolver {
 

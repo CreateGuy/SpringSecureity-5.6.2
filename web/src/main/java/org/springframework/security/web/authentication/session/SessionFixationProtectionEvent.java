@@ -21,7 +21,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.util.Assert;
 
 /**
- * Indicates a session ID was changed for the purposes of session fixation protection.
+ * 表示为了防止会话固定保护的目的改变了会话ID
  *
  * @author Nicholas Williams
  * @since 3.2

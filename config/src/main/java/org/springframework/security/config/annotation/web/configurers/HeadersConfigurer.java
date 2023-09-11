@@ -45,13 +45,10 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.util.Assert;
 
 /**
- * <p>
- * Adds the Security HTTP headers to the response. Security HTTP headers is activated by
- * default when using {@link WebSecurityConfigurerAdapter}'s default constructor.
- * </p>
+ * 头部写入器配置类：为了注册HeaderWriterFilter
  *
  * <p>
- * The default headers include are:
+ * 默认的头部写入器:
  * </p>
  *
  * <pre>
@@ -75,8 +72,15 @@ import org.springframework.util.Assert;
 public class HeadersConfigurer<H extends HttpSecurityBuilder<H>>
 		extends AbstractHttpConfigurer<HeadersConfigurer<H>, H> {
 
+	/**
+	 * 由用户注册的头部写入器
+	 */
 	private List<HeaderWriter> headerWriters = new ArrayList<>();
 
+	/**
+	 * 下面全是头部写入器的配置类
+	 * 配置类是全部都new出来的，但是里面的头部写入器可能并没有开启
+	 */
 	private final ContentTypeOptionsConfig contentTypeOptions = new ContentTypeOptionsConfig();
 
 	private final XXssConfig xssProtection = new XXssConfig();
@@ -106,7 +110,7 @@ public class HeadersConfigurer<H extends HttpSecurityBuilder<H>>
 	}
 
 	/**
-	 * Adds a {@link HeaderWriter} instance
+	 * 添加一个 {@link HeaderWriter} 实例
 	 * @param headerWriter the {@link HeaderWriter} instance to add
 	 * @return the {@link HeadersConfigurer} for additional customizations
 	 */
@@ -117,30 +121,16 @@ public class HeadersConfigurer<H extends HttpSecurityBuilder<H>>
 	}
 
 	/**
-	 * Configures the {@link XContentTypeOptionsHeaderWriter} which inserts the
-	 * <a href= "https://msdn.microsoft.com/en-us/library/ie/gg622941(v=vs.85).aspx"
-	 * >X-Content-Type-Options</a>:
-	 *
-	 * <pre>
-	 * X-Content-Type-Options: nosniff
-	 * </pre>
-	 * @return the {@link ContentTypeOptionsConfig} for additional customizations
+	 * 启用这个配置类对应的头部写入器
 	 */
 	public ContentTypeOptionsConfig contentTypeOptions() {
 		return this.contentTypeOptions.enable();
 	}
 
 	/**
-	 * Configures the {@link XContentTypeOptionsHeaderWriter} which inserts the
-	 * <a href= "https://msdn.microsoft.com/en-us/library/ie/gg622941(v=vs.85).aspx"
-	 * >X-Content-Type-Options</a>:
-	 *
-	 * <pre>
-	 * X-Content-Type-Options: nosniff
-	 * </pre>
-	 * @param contentTypeOptionsCustomizer the {@link Customizer} to provide more options
-	 * for the {@link ContentTypeOptionsConfig}
-	 * @return the {@link HeadersConfigurer} for additional customizations
+	 * 开启XContentTypeOptionsHeaderWriter头部写入器，并将配置类传入要执行的函数进行执行
+	 * @param contentTypeOptionsCustomizer
+	 * @return
 	 */
 	public HeadersConfigurer<H> contentTypeOptions(Customizer<ContentTypeOptionsConfig> contentTypeOptionsCustomizer) {
 		contentTypeOptionsCustomizer.customize(this.contentTypeOptions.enable());
@@ -276,8 +266,8 @@ public class HeadersConfigurer<H extends HttpSecurityBuilder<H>>
 
 	/**
 	 * <p>
-	 * Allows configuration for <a href="https://www.w3.org/TR/CSP2/">Content Security
-	 * Policy (CSP) Level 2</a>.
+	 * 允许配置有关 <a href="https://www.w3.org/TR/CSP2/">Content Security
+	 * Policy (CSP) Level 2</a>
 	 * </p>
 	 *
 	 * <p>
@@ -337,14 +327,7 @@ public class HeadersConfigurer<H extends HttpSecurityBuilder<H>>
 	}
 
 	/**
-	 * Clears all of the default headers from the response. After doing so, one can add
-	 * headers back. For example, if you only want to use Spring Security's cache control
-	 * you can use the following:
-	 *
-	 * <pre>
-	 * http.headers().defaultsDisabled().cacheControl();
-	 * </pre>
-	 * @return the {@link HeadersConfigurer} for additional customization
+	 * 从响应中清除所有默认标头。这样做之后，就可以重新添加头文件了
 	 */
 	public HeadersConfigurer<H> defaultsDisabled() {
 		this.contentTypeOptions.disable();
@@ -362,10 +345,10 @@ public class HeadersConfigurer<H extends HttpSecurityBuilder<H>>
 	}
 
 	/**
-	 * Creates the {@link HeaderWriter}
-	 * @return the {@link HeaderWriter}
+	 * 获得头部写入器
 	 */
 	private HeaderWriterFilter createHeaderWriterFilter() {
+		//获得所有的头部写入器
 		List<HeaderWriter> writers = getHeaderWriters();
 		if (writers.isEmpty()) {
 			throw new IllegalStateException(
@@ -377,10 +360,10 @@ public class HeadersConfigurer<H extends HttpSecurityBuilder<H>>
 	}
 
 	/**
-	 * Gets the {@link HeaderWriter} instances and possibly initializes with the defaults.
-	 * @return
+	 * 获得所有的头部写入器
 	 */
 	private List<HeaderWriter> getHeaderWriters() {
+		//添加默认头部写入器(也需要开启的)
 		List<HeaderWriter> writers = new ArrayList<>();
 		addIfNotNull(writers, this.contentTypeOptions.writer);
 		addIfNotNull(writers, this.xssProtection.writer);
@@ -392,6 +375,8 @@ public class HeadersConfigurer<H extends HttpSecurityBuilder<H>>
 		addIfNotNull(writers, this.referrerPolicy.writer);
 		addIfNotNull(writers, this.featurePolicy.writer);
 		addIfNotNull(writers, this.permissionsPolicy.writer);
+
+		//添加用户注册的头部写入器
 		writers.addAll(this.headerWriters);
 		return writers;
 	}

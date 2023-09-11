@@ -59,11 +59,14 @@ public class ChannelDecisionManagerImpl implements ChannelDecisionManager, Initi
 	@Override
 	public void decide(FilterInvocation invocation, Collection<ConfigAttribute> config)
 			throws IOException, ServletException {
+		//权限不能是ANY_CHANNEL
 		for (ConfigAttribute attribute : config) {
 			if (ANY_CHANNEL.equals(attribute.getAttribute())) {
 				return;
 			}
 		}
+
+		//调用通道处理器
 		for (ChannelProcessor processor : this.channelProcessors) {
 			processor.decide(invocation, config);
 			if (invocation.getResponse().isCommitted()) {

@@ -33,6 +33,9 @@ public class RunAsUserToken extends AbstractAuthenticationToken {
 
 	private static final long serialVersionUID = SpringSecurityCoreVersion.SERIAL_VERSION_UID;
 
+	/**
+	 * 源认证对象类型
+	 */
 	private final Class<? extends Authentication> originalAuthentication;
 
 	private final Object credentials;

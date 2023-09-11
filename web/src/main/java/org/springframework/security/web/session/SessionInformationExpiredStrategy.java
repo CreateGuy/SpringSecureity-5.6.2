@@ -21,12 +21,7 @@ import java.io.IOException;
 import javax.servlet.ServletException;
 
 /**
- * Determines the behaviour of the {@code ConcurrentSessionFilter} when an expired session
- * is detected in the {@code ConcurrentSessionFilter}.
- *
- * @author Marten Deinum
- * @author Rob Winch
- * @since 4.2.0
+ * SessionInformation出现过期的时候，由{@code ConcurrentSessionFilter}调用
  */
 public interface SessionInformationExpiredStrategy {
 

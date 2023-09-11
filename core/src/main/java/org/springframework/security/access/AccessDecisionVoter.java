@@ -21,26 +21,27 @@ import java.util.Collection;
 import org.springframework.security.core.Authentication;
 
 /**
- * Indicates a class is responsible for voting on authorization decisions.
- * <p>
- * The coordination of voting (ie polling {@code AccessDecisionVoter}s, tallying their
- * responses, and making the final authorization decision) is performed by an
- * {@link org.springframework.security.access.AccessDecisionManager}.
- *
- * @author Ben Alex
+ * 访问决策投票器
  */
 public interface AccessDecisionVoter<S> {
 
+	/**
+	 * 同意票
+	 */
 	int ACCESS_GRANTED = 1;
 
+	/**
+	 * 弃权票
+	 */
 	int ACCESS_ABSTAIN = 0;
 
+	/**
+	 * 拒绝票
+	 */
 	int ACCESS_DENIED = -1;
 
 	/**
-	 * Indicates whether this {@code AccessDecisionVoter} is able to vote on the passed
-	 * {@code ConfigAttribute}.
-	 * <p>
+	 * 指示这个访问决策投票器是否能够对传递的ConfigAttribute进行投票
 	 * This allows the {@code AbstractSecurityInterceptor} to check every configuration
 	 * attribute can be consumed by the configured {@code AccessDecisionManager} and/or
 	 * {@code RunAsManager} and/or {@code AfterInvocationManager}.
@@ -52,15 +53,14 @@ public interface AccessDecisionVoter<S> {
 	boolean supports(ConfigAttribute attribute);
 
 	/**
-	 * Indicates whether the {@code AccessDecisionVoter} implementation is able to provide
-	 * access control votes for the indicated secured object type.
+	 * 指示这个访问决策投票器是否为指定的安全对象类型提供访问控制投票
 	 * @param clazz the class that is being queried
 	 * @return true if the implementation can process the indicated class
 	 */
 	boolean supports(Class<?> clazz);
 
 	/**
-	 * Indicates whether or not access is granted.
+	 * 投票
 	 * <p>
 	 * The decision must be affirmative ({@code ACCESS_GRANTED}), negative (
 	 * {@code ACCESS_DENIED}) or the {@code AccessDecisionVoter} can abstain (

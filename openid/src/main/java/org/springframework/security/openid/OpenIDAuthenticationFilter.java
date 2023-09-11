@@ -82,6 +82,9 @@ public class OpenIDAuthenticationFilter extends AbstractAuthenticationProcessing
 
 	private OpenIDConsumer consumer;
 
+	/**
+	 * OpenId服务商名称的字段
+	 */
 	private String claimedIdentityFieldName = DEFAULT_CLAIMED_IDENTITY_FIELD;
 
 	private Map<String, String> realmMapping = Collections.emptyMap();
@@ -123,16 +126,21 @@ public class OpenIDAuthenticationFilter extends AbstractAuthenticationProcessing
 			throws AuthenticationException, IOException {
 		OpenIDAuthenticationToken token;
 		String identity = request.getParameter("openid.identity");
+		//确定请求中是否携带了OpenId服务商提供的身份信息
 		if (!StringUtils.hasText(identity)) {
+			//获得OpenId服务器名称
 			String claimedIdentity = obtainUsername(request);
 			try {
+				//获得将被发送到OpenID服务商的return_to URL
 				String returnToUrl = buildReturnToUrl(request);
 				String realm = lookupRealm(returnToUrl);
+				//猜测是服务商的认证页面
 				String openIdUrl = this.consumer.beginConsumption(request, claimedIdentity, returnToUrl, realm);
 				if (this.logger.isDebugEnabled()) {
 					this.logger.debug("return_to is '" + returnToUrl + "', realm is '" + realm + "'");
 					this.logger.debug("Redirecting to " + openIdUrl);
 				}
+				//重定向到OpenId服务商的认证地址
 				response.sendRedirect(openIdUrl);
 				// Indicate to parent class that authentication is continuing.
 				return null;
@@ -146,14 +154,17 @@ public class OpenIDAuthenticationFilter extends AbstractAuthenticationProcessing
 		if (this.logger.isDebugEnabled()) {
 			this.logger.debug("Supplied OpenID identity is " + identity);
 		}
+
+		//到这就说明已经通过OpenId服务器的认证了，并且携带了某些参数了
 		try {
+			//从请求中获取特定参数然后封装成为认证对象
 			token = this.consumer.endConsumption(request);
 		}
 		catch (OpenIDConsumerException ex) {
 			throw new AuthenticationServiceException("Consumer error", ex);
 		}
 		token.setDetails(this.authenticationDetailsSource.buildDetails(request));
-		// delegate to the authentication provider
+		//调用认证管理器进行认证
 		Authentication authentication = this.getAuthenticationManager().authenticate(token);
 		return authentication;
 	}
@@ -180,10 +191,15 @@ public class OpenIDAuthenticationFilter extends AbstractAuthenticationProcessing
 	}
 
 	/**
-	 * Builds the <tt>return_to</tt> URL that will be sent to the OpenID service provider.
-	 * By default returns the URL of the current request.
-	 * @param request the current request which is being processed by this filter
-	 * @return The <tt>return_to</tt> URL.
+	 * 返回将被发送到OpenID服务商的return_to URL
+	 * <ul>
+	 *     <li>
+	 *         默认情况下返回当前request的URL
+	 *     </li>
+	 *     <li>
+	 *         我理解就是在OpenId服务商认证成功后，让浏览器跳转的页面
+	 *     </li>
+	 * </ul>
 	 */
 	protected String buildReturnToUrl(HttpServletRequest request) {
 		StringBuffer sb = request.getRequestURL();
@@ -209,7 +225,9 @@ public class OpenIDAuthenticationFilter extends AbstractAuthenticationProcessing
 	}
 
 	/**
-	 * Reads the <tt>claimedIdentityFieldName</tt> from the submitted request.
+	 * 获得OpenId服务器名称
+	 * @param req
+	 * @return
 	 */
 	protected String obtainUsername(HttpServletRequest req) {
 		String claimedIdentity = req.getParameter(this.claimedIdentityFieldName);

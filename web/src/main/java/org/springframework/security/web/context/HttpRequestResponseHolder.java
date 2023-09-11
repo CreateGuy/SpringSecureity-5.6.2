@@ -20,13 +20,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 /**
- * Used to pass the incoming request to
- * {@link SecurityContextRepository#loadContext(HttpRequestResponseHolder)}, allowing the
- * method to swap the request for a wrapped version, as well as returning the
- * <tt>SecurityContext</tt> value.
- *
- * @author Luke Taylor
- * @since 3.0
+ * 仅仅包装了request和response的包装类，没有特殊的功能
+ * 我看是方便传参
  */
 public final class HttpRequestResponseHolder {
 

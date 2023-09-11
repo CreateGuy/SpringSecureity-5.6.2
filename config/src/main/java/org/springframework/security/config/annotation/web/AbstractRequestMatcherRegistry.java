@@ -54,6 +54,10 @@ public abstract class AbstractRequestMatcherRegistry<C> {
 
 	private ApplicationContext context;
 
+	/**
+	 * 是否已经配置了 任何请求 需要怎么做，
+	 * 之后就不允许配置了某个单独的请求了
+	 */
 	private boolean anyRequestConfigured = false;
 
 	protected final void setApplicationContext(ApplicationContext context) {
@@ -154,14 +158,15 @@ public abstract class AbstractRequestMatcherRegistry<C> {
 	public abstract C mvcMatchers(HttpMethod method, String... mvcPatterns);
 
 	/**
-	 * Creates {@link MvcRequestMatcher} instances for the method and patterns passed in
-	 * @param method the HTTP method to use or null if any should be used
-	 * @param mvcPatterns the Spring MVC patterns to match on
-	 * @return a List of {@link MvcRequestMatcher} instances
+	 * 为请求方式和模式创建MvcRequestMatcher
+	 * @param method
+	 * @param mvcPatterns
+	 * @return
 	 */
 	protected final List<MvcRequestMatcher> createMvcMatchers(HttpMethod method, String... mvcPatterns) {
 		Assert.state(!this.anyRequestConfigured, "Can't configure mvcMatchers after anyRequest");
 		ObjectPostProcessor<Object> opp = this.context.getBean(ObjectPostProcessor.class);
+		//必须保证有SpringMvc的环境
 		if (!this.context.containsBean(HANDLER_MAPPING_INTROSPECTOR_BEAN_NAME)) {
 			throw new NoSuchBeanDefinitionException("A Bean named " + HANDLER_MAPPING_INTROSPECTOR_BEAN_NAME
 					+ " of type " + HandlerMappingIntrospector.class.getName()
@@ -260,10 +265,7 @@ public abstract class AbstractRequestMatcherRegistry<C> {
 	protected abstract C chainRequestMatchers(List<RequestMatcher> requestMatchers);
 
 	/**
-	 * Utilities for creating {@link RequestMatcher} instances.
-	 *
-	 * @author Rob Winch
-	 * @since 3.2
+	 * 用于创建RequestMatcher实例的类
 	 */
 	private static final class RequestMatchers {
 
@@ -271,12 +273,10 @@ public abstract class AbstractRequestMatcherRegistry<C> {
 		}
 
 		/**
-		 * Create a {@link List} of {@link AntPathRequestMatcher} instances.
-		 * @param httpMethod the {@link HttpMethod} to use or {@code null} for any
-		 * {@link HttpMethod}.
-		 * @param antPatterns the ant patterns to create {@link AntPathRequestMatcher}
-		 * from
-		 * @return a {@link List} of {@link AntPathRequestMatcher} instances
+		 * 根据传入的方法和路径创建 AntPathRequestMatcher
+		 * @param httpMethod
+		 * @param antPatterns
+		 * @return
 		 */
 		static List<RequestMatcher> antMatchers(HttpMethod httpMethod, String... antPatterns) {
 			String method = (httpMethod != null) ? httpMethod.toString() : null;
@@ -299,7 +299,7 @@ public abstract class AbstractRequestMatcherRegistry<C> {
 		}
 
 		/**
-		 * Create a {@link List} of {@link RegexRequestMatcher} instances.
+		 * 根据传入的方法和正则表达式创建 RegexRequestMatcher
 		 * @param httpMethod the {@link HttpMethod} to use or {@code null} for any
 		 * {@link HttpMethod}.
 		 * @param regexPatterns the regular expressions to create

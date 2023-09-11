@@ -22,15 +22,12 @@ import org.springframework.aop.framework.AopInfrastructureBean;
 import org.springframework.security.access.intercept.AbstractSecurityInterceptor;
 
 /**
- * Implemented by classes that store and can identify the {@link ConfigAttribute}s that
- * applies to a given secure object invocation.
- *
- * @author Ben Alex
+ * 安全数据源
  */
 public interface SecurityMetadataSource extends AopInfrastructureBean {
 
 	/**
-	 * Accesses the {@code ConfigAttribute}s that apply to a given secure object.
+	 * 根据传入的对象返回 {@link ConfigAttribute}
 	 * @param object the object being secured
 	 * @return the attributes that apply to the passed in secured object. Should return an
 	 * empty collection if there are no applicable attributes.
@@ -40,8 +37,7 @@ public interface SecurityMetadataSource extends AopInfrastructureBean {
 	Collection<ConfigAttribute> getAttributes(Object object) throws IllegalArgumentException;
 
 	/**
-	 * If available, returns all of the {@code ConfigAttribute}s defined by the
-	 * implementing class.
+	 * 返回所有的 {@link ConfigAttribute}
 	 * <p>
 	 * This is used by the {@link AbstractSecurityInterceptor} to perform startup time
 	 * validation of each {@code ConfigAttribute} configured against it.

@@ -24,16 +24,15 @@ import org.springframework.security.core.Authentication;
 import org.springframework.util.Assert;
 
 /**
- * Indicates a secure object invocation failed because the principal could not be
- * authorized for the request.
- *
- * <p>
- * This event might be thrown as a result of either an
- * {@link org.springframework.security.access.AccessDecisionManager AccessDecisionManager}
- * or an {@link org.springframework.security.access.intercept.AfterInvocationManager
- * AfterInvocationManager}.
- *
- * @author Ben Alex
+ * 授权失败异常
+ * <ul>
+ *     <li>
+ *         使用场景1：调用访问决策管理器，失败
+ *     </li>
+ *     <li>
+ *         使用场景2：调用执行后管理器，失败
+ *     </li>
+ * </ul>
  */
 public class AuthorizationFailureEvent extends AbstractAuthorizationEvent {
 

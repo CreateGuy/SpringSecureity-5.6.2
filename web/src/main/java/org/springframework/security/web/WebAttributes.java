@@ -19,25 +19,18 @@ package org.springframework.security.web;
 import org.springframework.security.web.access.WebInvocationPrivilegeEvaluator;
 
 /**
- * Well-known keys which are used to store Spring Security information in request or
- * session scope.
- *
- * @author Luke Taylor
- * @author Rob Winch
- * @since 3.0.3
+ * 用于在 HttpServletRequest 或 HttpSession 内存储Spring Security信息的知名键
  */
 public final class WebAttributes {
 
 	/**
-	 * Used to cache an {@code AccessDeniedException} in the request for rendering.
-	 *
+	 * 通常在AccessDeniedHandler用到
 	 * @see org.springframework.security.web.access.AccessDeniedHandlerImpl
 	 */
 	public static final String ACCESS_DENIED_403 = "SPRING_SECURITY_403_EXCEPTION";
 
 	/**
-	 * Used to cache an authentication-failure exception in the session.
-	 *
+	 * 用于缓存会话中的认证失败异常，比如说认证失败继续跳转到登录页，填充错误原因
 	 * @see org.springframework.security.web.authentication.SimpleUrlAuthenticationFailureHandler
 	 */
 	public static final String AUTHENTICATION_EXCEPTION = "SPRING_SECURITY_LAST_EXCEPTION";

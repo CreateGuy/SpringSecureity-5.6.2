@@ -19,9 +19,7 @@ package org.springframework.security.authentication;
 import org.springframework.security.core.Authentication;
 
 /**
- * Evaluates <code>Authentication</code> tokens
- *
- * @author Ben Alex
+ * 认证对象解析器
  */
 public interface AuthenticationTrustResolver {
 

@@ -87,31 +87,40 @@ public class TokenBasedRememberMeServices extends AbstractRememberMeServices {
 		super(key, userDetailsService);
 	}
 
+	/**
+	 * 将记住我令牌转换为用户对象
+	 * @param cookieTokens 记住我令牌 <p>是用户+过期时间戳+签名组成的数组</p><p>
+	 *                     签名又是通过 用MD5将过期时间戳+用户名+密码+秘钥进行加密得到的
+	 * </p>
+	 * @param request the request
+	 * @param response the response, to allow the cookie to be modified if required.
+	 * @return
+	 */
 	@Override
 	protected UserDetails processAutoLoginCookie(String[] cookieTokens, HttpServletRequest request,
 			HttpServletResponse response) {
+		//使用当前记住我服务只会生成长度为3的记住我令牌
 		if (cookieTokens.length != 3) {
 			throw new InvalidCookieException(
 					"Cookie token did not contain 3" + " tokens, but contained '" + Arrays.asList(cookieTokens) + "'");
 		}
+		//获得过期时间
 		long tokenExpiryTime = getTokenExpiryTime(cookieTokens);
+		//判断记住我令牌是否已经过期
 		if (isTokenExpired(tokenExpiryTime)) {
 			throw new InvalidCookieException("Cookie token[1] has expired (expired on '" + new Date(tokenExpiryTime)
 					+ "'; current time is '" + new Date() + "')");
 		}
-		// Check the user exists. Defer lookup until after expiry time checked, to
-		// possibly avoid expensive database call.
+
+		//通过用户名加载UserDetails
 		UserDetails userDetails = getUserDetailsService().loadUserByUsername(cookieTokens[0]);
 		Assert.notNull(userDetails, () -> "UserDetailsService " + getUserDetailsService()
 				+ " returned null for username " + cookieTokens[0] + ". " + "This is an interface contract violation");
-		// Check signature of token matches remaining details. Must do this after user
-		// lookup, as we need the DAO-derived password. If efficiency was a major issue,
-		// just add in a UserCache implementation, but recall that this method is usually
-		// only called once per HttpSession - if the token is valid, it will cause
-		// SecurityContextHolder population, whilst if invalid, will cause the cookie to
-		// be cancelled.
+
+		//以原有的固定的参数重新生成签名
 		String expectedTokenSignature = makeTokenSignature(tokenExpiryTime, userDetails.getUsername(),
 				userDetails.getPassword());
+		//如果不一样，就抛出异常
 		if (!equals(expectedTokenSignature, cookieTokens[2])) {
 			throw new InvalidCookieException("Cookie token[2] contained signature '" + cookieTokens[2]
 					+ "' but expected '" + expectedTokenSignature + "'");
@@ -119,6 +128,11 @@ public class TokenBasedRememberMeServices extends AbstractRememberMeServices {
 		return userDetails;
 	}
 
+	/**
+	 * 获得过期时间
+	 * @param cookieTokens
+	 * @return
+	 */
 	private long getTokenExpiryTime(String[] cookieTokens) {
 		try {
 			return new Long(cookieTokens[1]);
@@ -130,8 +144,7 @@ public class TokenBasedRememberMeServices extends AbstractRememberMeServices {
 	}
 
 	/**
-	 * Calculates the digital signature to be put in the cookie. Default value is MD5
-	 * ("username:tokenExpiryTime:password:key")
+	 * 生成签名，并通过MD5进行加密
 	 */
 	protected String makeTokenSignature(long tokenExpiryTime, String username, String password) {
 		String data = username + ":" + tokenExpiryTime + ":" + password + ":" + getKey();
@@ -144,23 +157,35 @@ public class TokenBasedRememberMeServices extends AbstractRememberMeServices {
 		}
 	}
 
+	/**
+	 * 判断记住我令牌是否已经过期
+	 * @param tokenExpiryTime
+	 * @return
+	 */
 	protected boolean isTokenExpired(long tokenExpiryTime) {
 		return tokenExpiryTime < System.currentTimeMillis();
 	}
 
+	/**
+	 * 为认证成功的请求新增一个记住我令牌
+	 * @param request
+	 * @param response
+	 * @param successfulAuthentication
+	 */
 	@Override
 	public void onLoginSuccess(HttpServletRequest request, HttpServletResponse response,
 			Authentication successfulAuthentication) {
+		//获得用户名和密码
 		String username = retrieveUserName(successfulAuthentication);
 		String password = retrievePassword(successfulAuthentication);
-		// If unable to find a username and password, just abort as
-		// TokenBasedRememberMeServices is
-		// unable to construct a valid token in this case.
+
+		//如若无法找到用户名和密码就终止创建记住我令牌
 		if (!StringUtils.hasLength(username)) {
 			this.logger.debug("Unable to retrieve username");
 			return;
 		}
 		if (!StringUtils.hasLength(password)) {
+			//尝试通过用户详情服务获取密码
 			UserDetails user = getUserDetailsService().loadUserByUsername(username);
 			password = user.getPassword();
 			if (!StringUtils.hasLength(password)) {
@@ -168,11 +193,15 @@ public class TokenBasedRememberMeServices extends AbstractRememberMeServices {
 				return;
 			}
 		}
+
+		//获得记住我令牌有效时间
 		int tokenLifetime = calculateLoginLifetime(request, successfulAuthentication);
 		long expiryTime = System.currentTimeMillis();
-		// SEC-949
+		//过期时间 = 令牌有效时间 + 当前时间
 		expiryTime += 1000L * ((tokenLifetime < 0) ? TWO_WEEKS_S : tokenLifetime);
+		//生成签名
 		String signatureValue = makeTokenSignature(expiryTime, username, password);
+		//将记住我令牌添加到Cookie中
 		setCookie(new String[] { username, Long.toString(expiryTime), signatureValue }, tokenLifetime, request,
 				response);
 		if (this.logger.isDebugEnabled()) {
@@ -182,28 +211,23 @@ public class TokenBasedRememberMeServices extends AbstractRememberMeServices {
 	}
 
 	/**
-	 * Calculates the validity period in seconds for a newly generated remember-me login.
-	 * After this period (from the current time) the remember-me login will be considered
-	 * expired. This method allows customization based on request parameters supplied with
-	 * the login or information in the <tt>Authentication</tt> object. The default value
-	 * is just the token validity period property, <tt>tokenValiditySeconds</tt>.
-	 * <p>
-	 * The returned value will be used to work out the expiry time of the token and will
-	 * also be used to set the <tt>maxAge</tt> property of the cookie.
-	 *
-	 * See SEC-485.
-	 * @param request the request passed to onLoginSuccess
-	 * @param authentication the successful authentication object.
-	 * @return the lifetime in seconds.
+	 * 返回记住我令牌有效时间
 	 */
 	protected int calculateLoginLifetime(HttpServletRequest request, Authentication authentication) {
 		return getTokenValiditySeconds();
 	}
 
+	/**
+	 * 获得用户名
+	 * @param authentication
+	 * @return
+	 */
 	protected String retrieveUserName(Authentication authentication) {
+		//校验主要信息是否是一个UserDetails
 		if (isInstanceOfUserDetails(authentication)) {
 			return ((UserDetails) authentication.getPrincipal()).getUsername();
 		}
+		//其他情况Principal中就是用户名了
 		return authentication.getPrincipal().toString();
 	}
 
@@ -217,6 +241,11 @@ public class TokenBasedRememberMeServices extends AbstractRememberMeServices {
 		return null;
 	}
 
+	/**
+	 * 校验主要信息是否是一个UserDetails
+	 * @param authentication
+	 * @return
+	 */
 	private boolean isInstanceOfUserDetails(Authentication authentication) {
 		return authentication.getPrincipal() instanceof UserDetails;
 	}

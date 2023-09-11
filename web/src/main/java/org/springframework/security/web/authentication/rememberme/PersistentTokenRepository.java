@@ -19,9 +19,7 @@ package org.springframework.security.web.authentication.rememberme;
 import java.util.Date;
 
 /**
- * The abstraction used by {@link PersistentTokenBasedRememberMeServices} to store the
- * persistent login tokens for a user.
- *
+ * 使用持久化方式来保持记住我令牌
  * @author Luke Taylor
  * @since 2.0
  * @see JdbcTokenRepositoryImpl

@@ -39,36 +39,24 @@ import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 
 /**
- * Represents central information from a {@code HttpServletRequest}.
- * <p>
- * This class is used by
- * {@link org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter}
- * and {@link org.springframework.security.web.savedrequest.SavedRequestAwareWrapper} to
- * reproduce the request after successful authentication. An instance of this class is
- * stored at the time of an authentication exception by
- * {@link org.springframework.security.web.access.ExceptionTranslationFilter}.
- * <p>
- * <em>IMPLEMENTATION NOTE</em>: It is assumed that this object is accessed only from the
- * context of a single thread, so no synchronization around internal collection classes is
- * performed.
- * <p>
- * This class is based on code in Apache Tomcat.
- *
- * @author Craig McClanahan
- * @author Andrey Grebnev
- * @author Ben Alex
- * @author Luke Taylor
+ * 保存Request的信息，通常用在{@link RequestCache}
  */
 public class DefaultSavedRequest implements SavedRequest {
 
 	protected static final Log logger = LogFactory.getLog(DefaultSavedRequest.class);
 
+	/**
+	 * 这个和下面这个是需要缓存的请求头
+	 */
 	private static final String HEADER_IF_NONE_MATCH = "If-None-Match";
 
 	private static final String HEADER_IF_MODIFIED_SINCE = "If-Modified-Since";
 
 	private final ArrayList<SavedCookie> cookies = new ArrayList<>();
 
+	/**
+	 * 本次请求的环境，比如说zh_Cn, zh
+	 */
 	private final ArrayList<Locale> locales = new ArrayList<>();
 
 	private final Map<String, List<String>> headers = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
@@ -77,35 +65,50 @@ public class DefaultSavedRequest implements SavedRequest {
 
 	private final String contextPath;
 
+	/**
+	 * 请求方式
+	 */
 	private final String method;
 
 	private final String pathInfo;
 
 	private final String queryString;
 
+	/**
+	 * 一般情况是路径
+	 */
 	private final String requestURI;
 
+	/**
+	 * 协议://主机名:端口/路径
+	 */
 	private final String requestURL;
 
+	/**
+	 * 协议
+	 */
 	private final String scheme;
 
 	private final String serverName;
 
 	private final String servletPath;
 
+	/**
+	 * 请求的最初端口
+	 */
 	private final int serverPort;
 
 	@SuppressWarnings("unchecked")
 	public DefaultSavedRequest(HttpServletRequest request, PortResolver portResolver) {
 		Assert.notNull(request, "Request required");
 		Assert.notNull(portResolver, "PortResolver required");
-		// Cookies
+		//添加Cookie
 		addCookies(request.getCookies());
-		// Headers
+		//添加请求头
 		Enumeration<String> names = request.getHeaderNames();
 		while (names.hasMoreElements()) {
 			String name = names.nextElement();
-			// Skip If-Modified-Since and If-None-Match header. SEC-1412, SEC-1624.
+			//某些请求头不需要缓存
 			if (HEADER_IF_MODIFIED_SINCE.equalsIgnoreCase(name) || HEADER_IF_NONE_MATCH.equalsIgnoreCase(name)) {
 				continue;
 			}
@@ -114,9 +117,9 @@ public class DefaultSavedRequest implements SavedRequest {
 				this.addHeader(name, values.nextElement());
 			}
 		}
-		// Locales
+		//添加环境
 		addLocales(request.getLocales());
-		// Parameters
+		//添加参数
 		addParameters(request.getParameterMap());
 		// Primitives
 		this.method = request.getMethod();
@@ -203,9 +206,7 @@ public class DefaultSavedRequest implements SavedRequest {
 	}
 
 	/**
-	 * Determines if the current request matches the <code>DefaultSavedRequest</code>.
-	 * <p>
-	 * All URL arguments are considered but not cookies, locales, headers or parameters.
+	 * 确定当前请求是否匹配缓存的请求
 	 * @param request the actual request to be matched against this one
 	 * @param portResolver used to obtain the server port of the request
 	 * @return true if the request is deemed to match this one.
@@ -217,16 +218,20 @@ public class DefaultSavedRequest implements SavedRequest {
 		if (!propertyEquals(this.queryString, request.getQueryString())) {
 			return false;
 		}
+		//确定是否和原请求Uri一样
+		//因为认证成功后会重定向到原来的URL
 		if (!propertyEquals(this.requestURI, request.getRequestURI())) {
 			return false;
 		}
+		//保存的GET请求，不应该匹配非GET请求
 		if (!"GET".equals(request.getMethod()) && "GET".equals(this.method)) {
-			// A save GET should not match an incoming non-GET method
 			return false;
 		}
 		if (!propertyEquals(this.serverPort, portResolver.getServerPort(request))) {
 			return false;
 		}
+		//确定是否和原请求URL一样
+		//因为认证成功后会重定向到原来的URL
 		if (!propertyEquals(this.requestURL, request.getRequestURL().toString())) {
 			return false;
 		}
@@ -257,7 +262,7 @@ public class DefaultSavedRequest implements SavedRequest {
 	}
 
 	/**
-	 * Indicates the URL that the user agent used for this request.
+	 * 返回当时重定向之前的Url
 	 * @return the full URL of this request
 	 */
 	@Override

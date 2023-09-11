@@ -41,50 +41,57 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.util.Assert;
 
 /**
- * Adds logout support. Other {@link SecurityConfigurer} instances may invoke
- * {@link #addLogoutHandler(LogoutHandler)} in the {@link #init(HttpSecurityBuilder)}
- * phase.
- *
- * <h2>Security Filters</h2>
- *
- * The following Filters are populated
- *
- * <ul>
- * <li>{@link LogoutFilter}</li>
- * </ul>
- *
- * <h2>Shared Objects Created</h2>
- *
- * No shared Objects are created
- *
- * <h2>Shared Objects Used</h2>
- *
- * No shared objects are used.
- *
- * @author Rob Winch
- * @author Onur Kagan Ozcan
- * @since 3.2
- * @see RememberMeConfigurer
+ * 登出过滤器配置类
  */
 public final class LogoutConfigurer<H extends HttpSecurityBuilder<H>>
 		extends AbstractHttpConfigurer<LogoutConfigurer<H>, H> {
 
+	/**
+	 * 登出处理器
+	 */
 	private List<LogoutHandler> logoutHandlers = new ArrayList<>();
 
+	/**
+	 * 清空线程级别上下文的登出处理器
+	 * 也是默认添加的登出处理器
+	 */
 	private SecurityContextLogoutHandler contextLogoutHandler = new SecurityContextLogoutHandler();
 
+	/**
+	 * 登出成功跳转的Url，优先使用下面的处理器
+	 */
 	private String logoutSuccessUrl = "/login?logout";
 
+	/**
+	 * 登出成功跳转的处理器
+	 */
 	private LogoutSuccessHandler logoutSuccessHandler;
 
+	/**
+	 * 登出的Url
+	 */
 	private String logoutUrl = "/logout";
 
+	/**
+	 * 判断是否是登出请求的请求匹配器
+	 */
 	private RequestMatcher logoutRequestMatcher;
 
+	/**
+	 * 是否放行登出成功跳转的Url
+	 */
 	private boolean permitAll;
 
+	/**
+	 * 是否用户自定义了登出成功跳转的Url/处理器
+	 */
 	private boolean customLogoutSuccess;
 
+	/**
+	 * 根据请求匹配器执行不同的登出成功处理器
+	 * 使用场景1：默认是GET,POST,PUT,DELETE的/logout作为登出Url，那么就可以执行不同的登出成功处理器
+	 * 使用场景2：直接修改请求匹配器，设定多个Url都可以进行登出操作，那么也以执行不同的登出成功处理器
+	 */
 	private LinkedHashMap<RequestMatcher, LogoutSuccessHandler> defaultLogoutSuccessHandlerMappings = new LinkedHashMap<>();
 
 	/**
@@ -108,11 +115,7 @@ public final class LogoutConfigurer<H extends HttpSecurityBuilder<H>>
 	}
 
 	/**
-	 * Specifies if {@link SecurityContextLogoutHandler} should clear the
-	 * {@link Authentication} at the time of logout.
-	 * @param clearAuthentication true {@link SecurityContextLogoutHandler} should clear
-	 * the {@link Authentication} (default), or false otherwise.
-	 * @return the {@link LogoutConfigurer} for further customization
+	 * 指定SecurityContextLogoutHandler是否应该在登出时清除认证对象
 	 */
 	public LogoutConfigurer<H> clearAuthentication(boolean clearAuthentication) {
 		this.contextLogoutHandler.setClearAuthentication(clearAuthentication);
@@ -120,8 +123,7 @@ public final class LogoutConfigurer<H extends HttpSecurityBuilder<H>>
 	}
 
 	/**
-	 * Configures {@link SecurityContextLogoutHandler} to invalidate the
-	 * {@link HttpSession} at the time of logout.
+	 * 指定SecurityContextLogoutHandler是否应该在登出时使Session无效
 	 * @param invalidateHttpSession true if the {@link HttpSession} should be invalidated
 	 * (default), or false otherwise.
 	 * @return the {@link LogoutConfigurer} for further customization
@@ -132,22 +134,10 @@ public final class LogoutConfigurer<H extends HttpSecurityBuilder<H>>
 	}
 
 	/**
-	 * The URL that triggers log out to occur (default is "/logout"). If CSRF protection
-	 * is enabled (default), then the request must also be a POST. This means that by
-	 * default POST "/logout" is required to trigger a log out. If CSRF protection is
-	 * disabled, then any HTTP method is allowed.
-	 *
-	 * <p>
-	 * It is considered best practice to use an HTTP POST on any action that changes state
-	 * (i.e. log out) to protect against
-	 * <a href="https://en.wikipedia.org/wiki/Cross-site_request_forgery">CSRF
-	 * attacks</a>. If you really want to use an HTTP GET, you can use
-	 * <code>logoutRequestMatcher(new AntPathRequestMatcher(logoutUrl, "GET"));</code>
-	 * </p>
-	 * @param logoutUrl the URL that will invoke logout.
-	 * @return the {@link LogoutConfigurer} for further customization
-	 * @see #logoutRequestMatcher(RequestMatcher)
-	 * @see HttpSecurity#csrf()
+	 * 设置登出的Url
+	 * <p>注意：和登出请求匹配器排斥</p>
+	 * @param logoutUrl
+	 * @return
 	 */
 	public LogoutConfigurer<H> logoutUrl(String logoutUrl) {
 		this.logoutRequestMatcher = null;
@@ -169,32 +159,26 @@ public final class LogoutConfigurer<H extends HttpSecurityBuilder<H>>
 	}
 
 	/**
-	 * The URL to redirect to after logout has occurred. The default is "/login?logout".
-	 * This is a shortcut for invoking {@link #logoutSuccessHandler(LogoutSuccessHandler)}
-	 * with a {@link SimpleUrlLogoutSuccessHandler}.
-	 * @param logoutSuccessUrl the URL to redirect to after logout occurred
-	 * @return the {@link LogoutConfigurer} for further customization
+	 * 设置登出成功Url
+	 * @param logoutSuccessUrl
+	 * @return
 	 */
 	public LogoutConfigurer<H> logoutSuccessUrl(String logoutSuccessUrl) {
+		//标记用户修改过登出成功Url或者登出的成功处理器了
 		this.customLogoutSuccess = true;
 		this.logoutSuccessUrl = logoutSuccessUrl;
 		return this;
 	}
 
 	/**
-	 * A shortcut for {@link #permitAll(boolean)} with <code>true</code> as an argument.
-	 * @return the {@link LogoutConfigurer} for further customizations
+	 * 是否放行登出成功跳转的Url
 	 */
 	public LogoutConfigurer<H> permitAll() {
 		return permitAll(true);
 	}
 
 	/**
-	 * Allows specifying the names of cookies to be removed on logout success. This is a
-	 * shortcut to easily invoke {@link #addLogoutHandler(LogoutHandler)} with a
-	 * {@link CookieClearingLogoutHandler}.
-	 * @param cookieNamesToClear the names of cookies to be removed on logout success.
-	 * @return the {@link LogoutConfigurer} for further customization
+	 * 设定登出时要删除的cookie的名称。
 	 */
 	public LogoutConfigurer<H> deleteCookies(String... cookieNamesToClear) {
 		return addLogoutHandler(new CookieClearingLogoutHandler(cookieNamesToClear));
@@ -246,19 +230,22 @@ public final class LogoutConfigurer<H extends HttpSecurityBuilder<H>>
 	}
 
 	/**
-	 * Gets the {@link LogoutSuccessHandler} if not null, otherwise creates a new
-	 * {@link SimpleUrlLogoutSuccessHandler} using the {@link #logoutSuccessUrl(String)}.
-	 * @return the {@link LogoutSuccessHandler} to use
+	 * 获得登出成功处理器，可能会通过登出成功Url构建
 	 */
 	public LogoutSuccessHandler getLogoutSuccessHandler() {
 		LogoutSuccessHandler handler = this.logoutSuccessHandler;
 		if (handler == null) {
+			//创建默认的登出成功处理器
 			handler = createDefaultSuccessHandler();
 			this.logoutSuccessHandler = handler;
 		}
 		return handler;
 	}
 
+	/**
+	 * 创建默认的登出成功处理器
+	 * @return
+	 */
 	private LogoutSuccessHandler createDefaultSuccessHandler() {
 		SimpleUrlLogoutSuccessHandler urlLogoutHandler = new SimpleUrlLogoutSuccessHandler();
 		urlLogoutHandler.setDefaultTargetUrl(this.logoutSuccessUrl);
@@ -273,13 +260,18 @@ public final class LogoutConfigurer<H extends HttpSecurityBuilder<H>>
 
 	@Override
 	public void init(H http) {
+		//如果允许放行
 		if (this.permitAll) {
+			//两个都是放行登出成功Url
 			PermitAllSupport.permitAll(http, this.logoutSuccessUrl);
 			PermitAllSupport.permitAll(http, this.getLogoutRequestMatcher(http));
 		}
+
 		DefaultLoginPageGeneratingFilter loginPageGeneratingFilter = http
 				.getSharedObject(DefaultLoginPageGeneratingFilter.class);
+		//当有登录页配置类的时候并且用户没有自定义了登出成功跳转的Url/处理器
 		if (loginPageGeneratingFilter != null && !isCustomLogoutSuccess()) {
+			//设置登录页的登出成功Url
 			loginPageGeneratingFilter.setLogoutSuccessUrl(getLogoutSuccessUrl());
 		}
 	}
@@ -318,22 +310,32 @@ public final class LogoutConfigurer<H extends HttpSecurityBuilder<H>>
 	}
 
 	/**
-	 * Creates the {@link LogoutFilter} using the {@link LogoutHandler} instances, the
-	 * {@link #logoutSuccessHandler(LogoutSuccessHandler)} and the
-	 * {@link #logoutUrl(String)}.
-	 * @param http the builder to use
-	 * @return the {@link LogoutFilter} to use.
+	 * 创建登出过滤器
 	 */
 	private LogoutFilter createLogoutFilter(H http) {
+		//添加登出处理器
 		this.logoutHandlers.add(this.contextLogoutHandler);
+		//这里多执行了postProcess()方法，是因为这个登出处理器需要一个ApplicationEventPublisher
 		this.logoutHandlers.add(postProcess(new LogoutSuccessEventPublishingLogoutHandler()));
+
+		//所有的登出处理器
 		LogoutHandler[] handlers = this.logoutHandlers.toArray(new LogoutHandler[0]);
-		LogoutFilter result = new LogoutFilter(getLogoutSuccessHandler(), handlers);
+		//创建过滤器
+		LogoutFilter result = new LogoutFilter(
+				//获得登出成功处理器
+				getLogoutSuccessHandler()
+				, handlers);
+		//设置登出请求的匹配器
 		result.setLogoutRequestMatcher(getLogoutRequestMatcher(http));
 		result = postProcess(result);
 		return result;
 	}
 
+	/**
+	 * 获得登出请求的匹配器
+	 * @param http
+	 * @return
+	 */
 	private RequestMatcher getLogoutRequestMatcher(H http) {
 		if (this.logoutRequestMatcher != null) {
 			return this.logoutRequestMatcher;
@@ -342,6 +344,14 @@ public final class LogoutConfigurer<H extends HttpSecurityBuilder<H>>
 		return this.logoutRequestMatcher;
 	}
 
+	/**
+	 * 创建默认的登出请求的匹配器
+	 * <P>
+	 *     是根据登出Url+四种请求方式创建出来的
+	 * </P>
+	 * @param http
+	 * @return
+	 */
 	@SuppressWarnings("unchecked")
 	private RequestMatcher createLogoutRequestMatcher(H http) {
 		RequestMatcher post = createLogoutRequestMatcher("POST");

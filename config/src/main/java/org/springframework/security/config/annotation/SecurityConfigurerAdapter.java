@@ -37,8 +37,15 @@ import org.springframework.util.Assert;
  */
 public abstract class SecurityConfigurerAdapter<O, B extends SecurityBuilder<O>> implements SecurityConfigurer<O, B> {
 
+	/**
+	 * 设置构建器，这也是为什么可以通过and()回到上一级
+	 */
 	private B securityBuilder;
 
+	/**
+	 * 这是一个混合型的ObjectPostProcessor
+	 * 最开始只有{@link org.springframework.security.config.annotation.configuration.AutowireBeanFactoryObjectPostProcessor}
+	 */
 	private CompositeObjectPostProcessor objectPostProcessor = new CompositeObjectPostProcessor();
 
 	@Override
@@ -99,8 +106,7 @@ public abstract class SecurityConfigurerAdapter<O, B extends SecurityBuilder<O>>
 	}
 
 	/**
-	 * An {@link ObjectPostProcessor} that delegates work to numerous
-	 * {@link ObjectPostProcessor} implementations.
+	 * 将工作委托给众多ObjectPostProcessor的ObjectPostProcessor。
 	 *
 	 * @author Rob Winch
 	 */

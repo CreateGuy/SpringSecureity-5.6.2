@@ -29,58 +29,37 @@ import org.springframework.security.web.authentication.ui.DefaultLogoutPageGener
 import org.springframework.security.web.csrf.CsrfToken;
 
 /**
- * Adds a Filter that will generate a login page if one is not specified otherwise when
- * using {@link WebSecurityConfigurerAdapter}.
- *
- * <p>
- * By default an
- * {@link org.springframework.security.web.access.channel.InsecureChannelProcessor} and a
- * {@link org.springframework.security.web.access.channel.SecureChannelProcessor} will be
- * registered.
- * </p>
- *
- * <h2>Security Filters</h2>
- *
- * The following Filters are conditionally populated
- *
- * <ul>
- * <li>{@link DefaultLoginPageGeneratingFilter} if the {@link FormLoginConfigurer} did not
- * have a login page specified</li>
- * </ul>
- *
- * <h2>Shared Objects Created</h2>
- *
- * No shared objects are created. isLogoutRequest
- * <h2>Shared Objects Used</h2>
- *
- * The following shared objects are used:
- *
- * <ul>
- * <li>{@link org.springframework.security.web.PortMapper} is used to create the default
- * {@link org.springframework.security.web.access.channel.ChannelProcessor} instances</li>
- * <li>{@link FormLoginConfigurer} is used to determine if the
- * {@link DefaultLoginPageConfigurer} should be added and how to configure it.</li>
- * </ul>
- *
- * @author Rob Winch
- * @since 3.2
- * @see WebSecurityConfigurerAdapter
+ * 添加一个登录页和登出页过滤器
  */
 public final class DefaultLoginPageConfigurer<H extends HttpSecurityBuilder<H>>
 		extends AbstractHttpConfigurer<DefaultLoginPageConfigurer<H>, H> {
 
+	/**
+	 * 登入页过滤器
+	 */
 	private DefaultLoginPageGeneratingFilter loginPageGeneratingFilter = new DefaultLoginPageGeneratingFilter();
 
+	/**
+	 * 登出页过滤器
+	 */
 	private DefaultLogoutPageGeneratingFilter logoutPageGeneratingFilter = new DefaultLogoutPageGeneratingFilter();
 
 	@Override
 	public void init(H http) {
+		//为登入和登出页过滤器设置获取Csrf令牌的函数
 		this.loginPageGeneratingFilter.setResolveHiddenInputs(DefaultLoginPageConfigurer.this::hiddenInputs);
 		this.logoutPageGeneratingFilter.setResolveHiddenInputs(DefaultLoginPageConfigurer.this::hiddenInputs);
+		//将过滤器放入sharedObject中
 		http.setSharedObject(DefaultLoginPageGeneratingFilter.class, this.loginPageGeneratingFilter);
 	}
 
+	/**
+	 * 获得Csrf令牌的函数
+	 * @param request
+	 * @return
+	 */
 	private Map<String, String> hiddenInputs(HttpServletRequest request) {
+		//CsrfToken是CsrfFilter放入request中的
 		CsrfToken token = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
 		return (token != null) ? Collections.singletonMap(token.getParameterName(), token.getToken())
 				: Collections.emptyMap();
@@ -90,13 +69,17 @@ public final class DefaultLoginPageConfigurer<H extends HttpSecurityBuilder<H>>
 	@SuppressWarnings("unchecked")
 	public void configure(H http) {
 		AuthenticationEntryPoint authenticationEntryPoint = null;
+		//从异常处理配置类中获取身份验证入口点
 		ExceptionHandlingConfigurer<?> exceptionConf = http.getConfigurer(ExceptionHandlingConfigurer.class);
 		if (exceptionConf != null) {
 			authenticationEntryPoint = exceptionConf.getAuthenticationEntryPoint();
 		}
+		//当过滤器可用并且没有身份验证入口点的时候
 		if (this.loginPageGeneratingFilter.isEnabled() && authenticationEntryPoint == null) {
 			this.loginPageGeneratingFilter = postProcess(this.loginPageGeneratingFilter);
+			//添加登入过滤器到HttpSecurity中
 			http.addFilter(this.loginPageGeneratingFilter);
+			//当配置了登出配置类的时候，才加入登出过滤器
 			LogoutConfigurer<H> logoutConfigurer = http.getConfigurer(LogoutConfigurer.class);
 			if (logoutConfigurer != null) {
 				http.addFilter(this.logoutPageGeneratingFilter);

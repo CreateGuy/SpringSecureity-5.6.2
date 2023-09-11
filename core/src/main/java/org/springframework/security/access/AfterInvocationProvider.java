@@ -22,13 +22,21 @@ import org.springframework.security.access.intercept.AfterInvocationProviderMana
 import org.springframework.security.core.Authentication;
 
 /**
- * Indicates a class is responsible for participating in an
- * {@link AfterInvocationProviderManager} decision.
- *
- * @author Ben Alex
+ * 请求处理方法执行后在 {@link AfterInvocationProviderManager} 中负责调用，确定最后的返回值
+ * <li>比如说过滤返回值，判断权限</li>
  */
 public interface AfterInvocationProvider {
 
+	/**
+	 * 对于返回值和权限进行判断
+	 * <<li>其实就是 {@link org.springframework.security.access.prepost.PostFilter @PostFilter} 和 {@link org.springframework.security.access.prepost.PostAuthorize @PostAuthorize}</li>
+	 * @param authentication
+	 * @param object
+	 * @param attributes
+	 * @param returnedObject
+	 * @return
+	 * @throws AccessDeniedException
+	 */
 	Object decide(Authentication authentication, Object object, Collection<ConfigAttribute> attributes,
 			Object returnedObject) throws AccessDeniedException;
 

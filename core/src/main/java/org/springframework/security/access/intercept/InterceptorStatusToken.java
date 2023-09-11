@@ -32,12 +32,22 @@ import org.springframework.security.core.context.SecurityContext;
  */
 public class InterceptorStatusToken {
 
+	/**
+	 * 最新的安全上下文，也有可能是以前的
+	 * <p>以前的情况是因为 {@link RunAsManager}</p>
+	 */
 	private SecurityContext securityContext;
 
+	/**
+	 * 通过安全元数据获得接口所需权限
+	 */
 	private Collection<ConfigAttribute> attr;
 
 	private Object secureObject;
 
+	/**
+	 * 是否需要恢复认证对象
+	 */
 	private boolean contextHolderRefreshRequired;
 
 	public InterceptorStatusToken(SecurityContext securityContext, boolean contextHolderRefreshRequired,

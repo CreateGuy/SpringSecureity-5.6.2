@@ -24,11 +24,8 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Annotation for specifying a method access-control expression which will be evaluated
- * after a method has been invoked.
- *
- * @author Luke Taylor
- * @since 3.0
+ * 在方法执行后调用
+ * <li>可以用来判断权限，或者对返回值判断</li>
  */
 @Target({ ElementType.METHOD, ElementType.TYPE })
 @Retention(RetentionPolicy.RUNTIME)
@@ -37,8 +34,7 @@ import java.lang.annotation.Target;
 public @interface PostAuthorize {
 
 	/**
-	 * @return the Spring-EL expression to be evaluated after invoking the protected
-	 * method
+	 * 权限表达式，是Spring-EL表达式
 	 */
 	String value();
 

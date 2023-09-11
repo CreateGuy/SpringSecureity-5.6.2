@@ -25,12 +25,7 @@ import org.springframework.security.access.intercept.aopalliance.MethodSecurityM
 import org.springframework.util.MultiValueMap;
 
 /**
- * Creates Spring Security's MethodSecurityMetadataSourceAdvisor only when using proxy
- * based method security (i.e. do not do it when using ASPECTJ). The conditional logic is
- * controlled through {@link GlobalMethodSecuritySelector}.
- *
- * @author Rob Winch
- * @since 4.0.2
+ * 往容器中注册 {@link MethodSecurityMetadataSourceAdvisor} 对应的 {@link BeanDefinition}
  * @see GlobalMethodSecuritySelector
  */
 class MethodSecurityMetadataSourceAdvisorRegistrar implements ImportBeanDefinitionRegistrar {
@@ -42,18 +37,28 @@ class MethodSecurityMetadataSourceAdvisorRegistrar implements ImportBeanDefiniti
 	 */
 	@Override
 	public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
+		// 拿到Advice
 		BeanDefinitionBuilder advisor = BeanDefinitionBuilder
 				.rootBeanDefinition(MethodSecurityMetadataSourceAdvisor.class);
+		// 设置此Bean的角色
 		advisor.setRole(BeanDefinition.ROLE_INFRASTRUCTURE);
+
+		// 设置构造方法参数列表
+		// 详情见MethodSecurityMetadataSourceAdvisor的构造方法
 		advisor.addConstructorArgValue("methodSecurityInterceptor");
+		// 这个指的是第二个参数必须是这个类型的
 		advisor.addConstructorArgReference("methodSecurityMetadataSource");
 		advisor.addConstructorArgValue("methodSecurityMetadataSource");
+
+		// 设置Bean实例化的顺序
 		MultiValueMap<String, Object> attributes = importingClassMetadata
 				.getAllAnnotationAttributes(EnableGlobalMethodSecurity.class.getName());
 		Integer order = (Integer) attributes.getFirst("order");
 		if (order != null) {
 			advisor.addPropertyValue("order", order);
 		}
+
+		// 往Bean工厂中注册此BeanDefinition
 		registry.registerBeanDefinition("metaDataSourceAdvisor", advisor.getBeanDefinition());
 	}
 

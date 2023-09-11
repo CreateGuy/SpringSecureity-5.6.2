@@ -23,17 +23,18 @@ import org.springframework.security.core.Authentication;
 import org.springframework.util.Assert;
 
 /**
- * Event indicating a secure object was invoked successfully.
- * <P>
- * Published just before the secure object attempts to proceed.
- * </p>
- *
- * @author Ben Alex
+ * 指示权限判断成功的事件
  */
 public class AuthorizedEvent extends AbstractAuthorizationEvent {
 
+	/**
+	 * 认证对象
+	 */
 	private final Authentication authentication;
 
+	/**
+	 * 接口所需权限
+	 */
 	private final Collection<ConfigAttribute> configAttributes;
 
 	/**

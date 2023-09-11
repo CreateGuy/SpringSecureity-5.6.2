@@ -36,7 +36,7 @@ import org.springframework.util.Assert;
 import org.springframework.web.filter.GenericFilterBean;
 
 /**
- * Ensures a web request is delivered over the required channel.
+ * 通道处理过滤器
  * <p>
  * Internally uses a {@link FilterInvocation} to represent the request, allowing a
  * {@code FilterInvocationSecurityMetadataSource} to be used to lookup the attributes
@@ -94,18 +94,26 @@ public class ChannelProcessingFilter extends GenericFilterBean {
 	public void afterPropertiesSet() {
 		Assert.notNull(this.securityMetadataSource, "securityMetadataSource must be specified");
 		Assert.notNull(this.channelDecisionManager, "channelDecisionManager must be specified");
+
+		//拿到所有权限
 		Collection<ConfigAttribute> attributes = this.securityMetadataSource.getAllConfigAttributes();
 		if (attributes == null) {
 			this.logger.warn("Could not validate configuration attributes as the "
 					+ "FilterInvocationSecurityMetadataSource did not return any attributes");
 			return;
 		}
+		//确保通道决策管理器都能够支持权限
 		Set<ConfigAttribute> unsupportedAttributes = getUnsupportedAttributes(attributes);
 		Assert.isTrue(unsupportedAttributes.isEmpty(),
 				() -> "Unsupported configuration attributes: " + unsupportedAttributes);
 		this.logger.info("Validated configuration attributes");
 	}
 
+	/**
+	 * 确保通道决策管理器都能够支持权限
+	 * @param attrDefs
+	 * @return
+	 */
 	private Set<ConfigAttribute> getUnsupportedAttributes(Collection<ConfigAttribute> attrDefs) {
 		Set<ConfigAttribute> unsupportedAttributes = new HashSet<>();
 		for (ConfigAttribute attr : attrDefs) {
@@ -119,13 +127,19 @@ public class ChannelProcessingFilter extends GenericFilterBean {
 	@Override
 	public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain)
 			throws IOException, ServletException {
+
+		//包装请求
 		HttpServletRequest request = (HttpServletRequest) req;
 		HttpServletResponse response = (HttpServletResponse) res;
 		FilterInvocation filterInvocation = new FilterInvocation(request, response, chain);
+
+		//通过安全元数据源获得接口所需权限
 		Collection<ConfigAttribute> attributes = this.securityMetadataSource.getAttributes(filterInvocation);
 		if (attributes != null) {
 			this.logger.debug(LogMessage.format("Request: %s; ConfigAttributes: %s", filterInvocation, attributes));
+			//调用通过决策管理器
 			this.channelDecisionManager.decide(filterInvocation, attributes);
+			//是否已经完成
 			if (filterInvocation.getResponse().isCommitted()) {
 				return;
 			}

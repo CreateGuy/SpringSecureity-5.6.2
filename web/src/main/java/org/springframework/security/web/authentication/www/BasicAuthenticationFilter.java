@@ -40,14 +40,7 @@ import org.springframework.util.Assert;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * Processes a HTTP request's BASIC authorization headers, putting the result into the
- * <code>SecurityContextHolder</code>.
- *
- * <p>
- * For a detailed background on what this filter is designed to process, refer to
- * <a href="https://tools.ietf.org/html/rfc1945">RFC 1945, Section 11.1</a>. Any realm
- * name presented in the HTTP request is ignored.
- *
+ * 基本认证过滤器
  * <p>
  * In summary, this filter is responsible for processing any request that has a HTTP
  * request header of <code>Authorization</code> with an authentication scheme of
@@ -91,16 +84,34 @@ import org.springframework.web.filter.OncePerRequestFilter;
  */
 public class BasicAuthenticationFilter extends OncePerRequestFilter {
 
+	/**
+	 * 基本认证出现问题时候，执行的身份认证入口点
+	 */
 	private AuthenticationEntryPoint authenticationEntryPoint;
 
+	/**
+	 * 局部认证管理器
+	 */
 	private AuthenticationManager authenticationManager;
 
+	/**
+	 * 记住我服务
+	 */
 	private RememberMeServices rememberMeServices = new NullRememberMeServices();
 
+	/**
+	 * 是否忽略依赖，让其执行下一个过滤器
+	 */
 	private boolean ignoreFailure = false;
 
+	/**
+	 * 本来应该是解密Basic64用到的编码格式，但是解密的时候直接用UTF-8，而没有使用这个，get方法也没有调用的地方
+	 */
 	private String credentialsCharset = "UTF-8";
 
+	/**
+	 * 认证对象转换器
+	 */
 	private BasicAuthenticationConverter authenticationConverter = new BasicAuthenticationConverter();
 
 	/**
@@ -143,6 +154,7 @@ public class BasicAuthenticationFilter extends OncePerRequestFilter {
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
 			throws IOException, ServletException {
 		try {
+			//通过解析request中的某些参数转为认证对象
 			UsernamePasswordAuthenticationToken authRequest = this.authenticationConverter.convert(request);
 			if (authRequest == null) {
 				this.logger.trace("Did not process authentication request since failed to find "
@@ -152,23 +164,37 @@ public class BasicAuthenticationFilter extends OncePerRequestFilter {
 			}
 			String username = authRequest.getName();
 			this.logger.trace(LogMessage.format("Found username '%s' in Basic Authorization header", username));
+			//确定是否需要认证
 			if (authenticationIsRequired(username)) {
+				//调用认证管理器进行认证
 				Authentication authResult = this.authenticationManager.authenticate(authRequest);
+
+				//重新设置线程级别的安全上下文
 				SecurityContext context = SecurityContextHolder.createEmptyContext();
 				context.setAuthentication(authResult);
 				SecurityContextHolder.setContext(context);
 				if (this.logger.isDebugEnabled()) {
 					this.logger.debug(LogMessage.format("Set SecurityContextHolder to %s", authResult));
 				}
+
+				//添加记住我令牌
 				this.rememberMeServices.loginSuccess(request, response, authResult);
+
+				//执行认证成功后的操作
 				onSuccessfulAuthentication(request, response, authResult);
 			}
 		}
 		catch (AuthenticationException ex) {
+			//先清空线程级别安全上下文
 			SecurityContextHolder.clearContext();
 			this.logger.debug("Failed to process authentication request", ex);
+
+			//删除记住我令牌
 			this.rememberMeServices.loginFail(request, response);
+
 			onUnsuccessfulAuthentication(request, response, ex);
+
+			//是否需要跳过异常
 			if (this.ignoreFailure) {
 				chain.doFilter(request, response);
 			}
@@ -181,27 +207,26 @@ public class BasicAuthenticationFilter extends OncePerRequestFilter {
 		chain.doFilter(request, response);
 	}
 
+	/**
+	 * 确定是否需要认证
+	 * @param username
+	 * @return
+	 */
 	private boolean authenticationIsRequired(String username) {
-		// Only reauthenticate if username doesn't match SecurityContextHolder and user
-		// isn't authenticated (see SEC-53)
+		// 只有在用户名不匹配线程级别安全上下文中的用户名，或者用户未经过认证时才重新进行认证
 		Authentication existingAuth = SecurityContextHolder.getContext().getAuthentication();
 		if (existingAuth == null || !existingAuth.isAuthenticated()) {
 			return true;
 		}
-		// Limit username comparison to providers which use usernames (ie
-		// UsernamePasswordAuthenticationToken) (see SEC-348)
+		// 当是用户用户名和密码进行认证的，且用户名不同的时候，进行认证
 		if (existingAuth instanceof UsernamePasswordAuthenticationToken && !existingAuth.getName().equals(username)) {
 			return true;
 		}
-		// Handle unusual condition where an AnonymousAuthenticationToken is already
-		// present. This shouldn't happen very often, as BasicProcessingFitler is meant to
-		// be earlier in the filter chain than AnonymousAuthenticationFilter.
-		// Nevertheless, presence of both an AnonymousAuthenticationToken together with a
-		// BASIC authentication request header should indicate reauthentication using the
-		// BASIC protocol is desirable. This behaviour is also consistent with that
-		// provided by form and digest, both of which force re-authentication if the
-		// respective header is detected (and in doing so replace/ any existing
-		// AnonymousAuthenticationToken). See SEC-610.
+
+		// 处理匿名认证对象(AnonymousAuthenticationToken)已经存在的异常情况
+		// 这种情况不应该经常发生，因为BasicProcessingFilter在过滤器链中比AnonymousAuthenticationFilter更早
+		// 尽管如此，同时出现AnonymousAuthenticationToken和基本认证，应该表明需要使用BASIC协议进行重新身份认证
+		// 这种行为也与表单认证和摘要认证一致，如果检测到各自的报头，它们都强制重新进行身份认证(并在此过程中替换/任何现有的AnonymousAuthenticationToken)
 		return (existingAuth instanceof AnonymousAuthenticationToken);
 	}
 

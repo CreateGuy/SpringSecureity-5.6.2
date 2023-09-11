@@ -44,8 +44,14 @@ public class CorsConfigurer<H extends HttpSecurityBuilder<H>> extends AbstractHt
 
 	private static final String CORS_CONFIGURATION_SOURCE_BEAN_NAME = "corsConfigurationSource";
 
+	/**
+	 * 从容器中获得Cors过滤器的bean名称
+	 */
 	private static final String CORS_FILTER_BEAN_NAME = "corsFilter";
 
+	/**
+	 * 保存了所有Cors规则的容器
+	 */
 	private CorsConfigurationSource configurationSource;
 
 	/**
@@ -64,20 +70,28 @@ public class CorsConfigurer<H extends HttpSecurityBuilder<H>> extends AbstractHt
 	@Override
 	public void configure(H http) {
 		ApplicationContext context = http.getSharedObject(ApplicationContext.class);
+		// 创建CorsFilter
 		CorsFilter corsFilter = getCorsFilter(context);
 		Assert.state(corsFilter != null, () -> "Please configure either a " + CORS_FILTER_BEAN_NAME + " bean or a "
 				+ CORS_CONFIGURATION_SOURCE_BEAN_NAME + "bean.");
 		http.addFilter(corsFilter);
 	}
 
+	/**
+	 * 创建Cors过滤器
+	 * @param context
+	 * @return
+	 */
 	private CorsFilter getCorsFilter(ApplicationContext context) {
 		if (this.configurationSource != null) {
 			return new CorsFilter(this.configurationSource);
 		}
+		//从容器中获得CorsFilter过滤器
 		boolean containsCorsFilter = context.containsBeanDefinition(CORS_FILTER_BEAN_NAME);
 		if (containsCorsFilter) {
 			return context.getBean(CORS_FILTER_BEAN_NAME, CorsFilter.class);
 		}
+		//获取Cors匹配容器
 		boolean containsCorsSource = context.containsBean(CORS_CONFIGURATION_SOURCE_BEAN_NAME);
 		if (containsCorsSource) {
 			CorsConfigurationSource configurationSource = context.getBean(CORS_CONFIGURATION_SOURCE_BEAN_NAME,

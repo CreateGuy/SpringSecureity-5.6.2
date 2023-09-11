@@ -17,7 +17,7 @@
 package org.springframework.security.core.userdetails;
 
 /**
- * Core interface which loads user-specific data.
+ * 加载UserDetails的核心接口
  * <p>
  * It is used throughout the framework as a user DAO and is the strategy used by the
  * {@link org.springframework.security.authentication.dao.DaoAuthenticationProvider

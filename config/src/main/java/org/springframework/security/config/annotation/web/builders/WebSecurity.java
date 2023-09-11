@@ -68,50 +68,62 @@ import org.springframework.web.context.ServletContextAware;
 import org.springframework.web.filter.DelegatingFilterProxy;
 
 /**
- * <p>
- * The {@link WebSecurity} is created by {@link WebSecurityConfiguration} to create the
- * {@link FilterChainProxy} known as the Spring Security Filter Chain
- * (springSecurityFilterChain). The springSecurityFilterChain is the {@link Filter} that
- * the {@link DelegatingFilterProxy} delegates to.
- * </p>
- *
- * <p>
- * Customizations to the {@link WebSecurity} can be made by creating a
- * {@link WebSecurityConfigurer}, overriding {@link WebSecurityConfigurerAdapter} or
- * exposing a {@link WebSecurityCustomizer} bean.
- * </p>
- *
- * @author Rob Winch
- * @author Evgeniy Cheban
- * @since 3.2
- * @see EnableWebSecurity
- * @see WebSecurityConfiguration
+ * WebSecurity是由WebSecurityConfiguration创建的，用来创建Spring安全过滤器链(springSecurityFilterChain)的FilterchainProxy。
+ * 对过滤器的定制可以通过创建{@link WebSecurityConfigurerAdapter}的实现类来操作
  */
 public final class WebSecurity extends AbstractConfiguredSecurityBuilder<Filter, WebSecurity>
 		implements SecurityBuilder<Filter>, ApplicationContextAware, ServletContextAware {
 
 	private final Log logger = LogFactory.getLog(getClass());
 
+	/**
+	 * 通过WebSecurity配置的不需要经过过滤器的请求匹配器
+	 */
 	private final List<RequestMatcher> ignoredRequests = new ArrayList<>();
 
+	/**
+	 * 默认就只有SpringSecurity的配置类生产的httpSecurity
+	 * 注意：是可以有多个SpringSecurity的配置类的
+	 */
 	private final List<SecurityBuilder<? extends SecurityFilterChain>> securityFilterChainBuilders = new ArrayList<>();
 
+	/**
+	 * 不需要进行SpringSecurity过滤器的请求匹配器 配置类
+	 */
 	private IgnoredRequestConfigurer ignoredRequestRegistry;
 
+	/**
+	 * filterSecurityInterceptor按理来说是进行权限验证的，但是这里的默认是空的
+	 */
 	private FilterSecurityInterceptor filterSecurityInterceptor;
 
+	/**
+	 * 防火墙
+	 */
 	private HttpFirewall httpFirewall;
 
+	/**
+	 * 执行过滤器抛出异常的时候，执行的策略
+	 */
 	private RequestRejectedHandler requestRejectedHandler;
 
+	/**
+	 * 是否打印debug级别日志
+	 */
 	private boolean debugEnabled;
 
+	/**
+	 * 默认为空，不懂
+	 */
 	private WebInvocationPrivilegeEvaluator privilegeEvaluator;
 
 	private DefaultWebSecurityExpressionHandler defaultWebSecurityExpressionHandler = new DefaultWebSecurityExpressionHandler();
 
 	private SecurityExpressionHandler<FilterInvocation> expressionHandler = this.defaultWebSecurityExpressionHandler;
 
+	/**
+	 * 在创建httpSecurity的时候会注入
+	 */
 	private Runnable postBuildAction = () -> {
 	};
 
@@ -287,9 +299,12 @@ public final class WebSecurity extends AbstractConfiguredSecurityBuilder<Filter,
 						+ "or by adding a @Configuration that extends WebSecurityConfigurerAdapter. "
 						+ "More advanced users can invoke " + WebSecurity.class.getSimpleName()
 						+ ".addSecurityFilterChainBuilder directly");
+		//需要设置过滤器链的数量
 		int chainSize = this.ignoredRequests.size() + this.securityFilterChainBuilders.size();
 		List<SecurityFilterChain> securityFilterChains = new ArrayList<>(chainSize);
+		//5.2.2没有
 		List<RequestMatcherEntry<List<WebInvocationPrivilegeEvaluator>>> requestMatcherPrivilegeEvaluatorsEntries = new ArrayList<>();
+		//将通过WebSecurity创建需要放行的URL转为DefaultSecurityFilterChain
 		for (RequestMatcher ignoredRequest : this.ignoredRequests) {
 			WebSecurity.this.logger.warn("You are asking Spring Security to ignore " + ignoredRequest
 					+ ". This is not recommended -- please use permitAll via HttpSecurity#authorizeHttpRequests instead.");
@@ -298,9 +313,11 @@ public final class WebSecurity extends AbstractConfiguredSecurityBuilder<Filter,
 			requestMatcherPrivilegeEvaluatorsEntries
 					.add(getRequestMatcherPrivilegeEvaluatorsEntry(securityFilterChain));
 		}
+		//重点：将构建httpSecurity中的过滤器链了
 		for (SecurityBuilder<? extends SecurityFilterChain> securityFilterChainBuilder : this.securityFilterChainBuilders) {
 			SecurityFilterChain securityFilterChain = securityFilterChainBuilder.build();
 			securityFilterChains.add(securityFilterChain);
+
 			requestMatcherPrivilegeEvaluatorsEntries
 					.add(getRequestMatcherPrivilegeEvaluatorsEntry(securityFilterChain));
 		}
@@ -308,10 +325,13 @@ public final class WebSecurity extends AbstractConfiguredSecurityBuilder<Filter,
 			this.privilegeEvaluator = new RequestMatcherDelegatingWebInvocationPrivilegeEvaluator(
 					requestMatcherPrivilegeEvaluatorsEntries);
 		}
+		//创建FilterChainProxy，这也是SpringSecurity过滤器链的入口
 		FilterChainProxy filterChainProxy = new FilterChainProxy(securityFilterChains);
+		//加入防火墙
 		if (this.httpFirewall != null) {
 			filterChainProxy.setFirewall(this.httpFirewall);
 		}
+		//加入执行过滤器抛出异常的时候，执行的策略
 		if (this.requestRejectedHandler != null) {
 			filterChainProxy.setRequestRejectedHandler(this.requestRejectedHandler);
 		}
@@ -326,6 +346,7 @@ public final class WebSecurity extends AbstractConfiguredSecurityBuilder<Filter,
 					+ "********************************************************************\n\n");
 			result = new DebugFilter(filterChainProxy);
 		}
+		//默认只有一个把httpSecurity中的FilterSecurityInterceptor放入webSecurity中
 		this.postBuildAction.run();
 		return result;
 	}
@@ -354,18 +375,22 @@ public final class WebSecurity extends AbstractConfiguredSecurityBuilder<Filter,
 	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
 		this.defaultWebSecurityExpressionHandler.setApplicationContext(applicationContext);
 		try {
+			//从容器中获得角色继承器
 			this.defaultWebSecurityExpressionHandler.setRoleHierarchy(applicationContext.getBean(RoleHierarchy.class));
 		}
 		catch (NoSuchBeanDefinitionException ex) {
 		}
 		try {
+			//从容器中获得权限评估器
 			this.defaultWebSecurityExpressionHandler
 					.setPermissionEvaluator(applicationContext.getBean(PermissionEvaluator.class));
 		}
 		catch (NoSuchBeanDefinitionException ex) {
 		}
+		//创建忽略过滤器配置类
 		this.ignoredRequestRegistry = new IgnoredRequestConfigurer(applicationContext);
 		try {
+			//从容器中获得防火墙
 			this.httpFirewall = applicationContext.getBean(HttpFirewall.class);
 		}
 		catch (NoSuchBeanDefinitionException ex) {
@@ -383,10 +408,7 @@ public final class WebSecurity extends AbstractConfiguredSecurityBuilder<Filter,
 	}
 
 	/**
-	 * An {@link IgnoredRequestConfigurer} that allows optionally configuring the
-	 * {@link MvcRequestMatcher#setMethod(HttpMethod)}
-	 *
-	 * @author Rob Winch
+	 * mvc不需要进行SpringSecurity过滤器的请求匹配器的配置类
 	 */
 	public final class MvcMatchersIgnoredRequestConfigurer extends IgnoredRequestConfigurer {
 
@@ -407,8 +429,7 @@ public final class WebSecurity extends AbstractConfiguredSecurityBuilder<Filter,
 	}
 
 	/**
-	 * Allows registering {@link RequestMatcher} instances that should be ignored by
-	 * Spring Security.
+	 * 允许注册应该被Spring Security忽略的请求匹配器的配置类
 	 *
 	 * @author Rob Winch
 	 * @since 3.2
@@ -419,6 +440,13 @@ public final class WebSecurity extends AbstractConfiguredSecurityBuilder<Filter,
 			setApplicationContext(context);
 		}
 
+		/**
+		 * 也支持mvc的匹配：满足条件不需要进入springSecurity过滤器
+		 * @param method the HTTP method to match on
+		 * @param mvcPatterns the patterns to match on. The rules for matching are defined by
+		 * Spring MVC
+		 * @return
+		 */
 		@Override
 		public MvcMatchersIgnoredRequestConfigurer mvcMatchers(HttpMethod method, String... mvcPatterns) {
 			List<MvcRequestMatcher> mvcMatchers = createMvcMatchers(method, mvcPatterns);
@@ -431,6 +459,11 @@ public final class WebSecurity extends AbstractConfiguredSecurityBuilder<Filter,
 			return mvcMatchers(null, mvcPatterns);
 		}
 
+		/**
+		 * 注册一个不需要进入springSecurity过滤器的请求匹配器
+		 * @param requestMatchers the {@link RequestMatcher} instances that were created
+		 * @return
+		 */
 		@Override
 		protected IgnoredRequestConfigurer chainRequestMatchers(List<RequestMatcher> requestMatchers) {
 			WebSecurity.this.ignoredRequests.addAll(requestMatchers);

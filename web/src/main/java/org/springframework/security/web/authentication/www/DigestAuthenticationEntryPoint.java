@@ -34,8 +34,7 @@ import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.util.Assert;
 
 /**
- * Used by the <code>SecurityEnforcementFilter</code> to commence authentication via the
- * {@link DigestAuthenticationFilter}.
+ * 通常由DigestAuthenticationFilter使用
  * <p>
  * The nonce sent back to the user agent will be valid for the period indicated by
  * {@link #setNonceValiditySeconds(int)}. By default this is 300 seconds. Shorter times
@@ -51,10 +50,19 @@ public class DigestAuthenticationEntryPoint implements AuthenticationEntryPoint,
 
 	private static final Log logger = LogFactory.getLog(DigestAuthenticationEntryPoint.class);
 
+	/**
+	 * 摘要值的密码，是客户端和服务端都需要知道的值
+	 */
 	private String key;
 
+	/**
+	 * 保护域
+	 */
 	private String realmName;
 
+	/**
+	 * 过期时间
+	 */
 	private int nonceValiditySeconds = 300;
 
 	private int order = Integer.MAX_VALUE; // ~ default
@@ -77,8 +85,8 @@ public class DigestAuthenticationEntryPoint implements AuthenticationEntryPoint,
 	@Override
 	public void commence(HttpServletRequest request, HttpServletResponse response,
 			AuthenticationException authException) throws IOException {
-		// compute a nonce (do not use remote IP address due to proxy farms) format of
-		// nonce is: base64(expirationTime + ":" + md5Hex(expirationTime + ":" + key))
+
+		//通过过期时间和密钥生成nonce
 		long expiryTime = System.currentTimeMillis() + (this.nonceValiditySeconds * 1000);
 		String signatureValue = DigestAuthUtils.md5Hex(expiryTime + ":" + this.key);
 		String nonceValue = expiryTime + ":" + signatureValue;

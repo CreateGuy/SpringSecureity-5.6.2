@@ -79,6 +79,10 @@ final class HttpServlet3RequestFactory implements HttpServletRequestFactory {
 
 	private AuthenticationTrustResolver trustResolver = new AuthenticationTrustResolverImpl();
 
+	/**
+	 * 身份认证入口点
+	 * 一般情况都是重定向到登录页的
+	 */
 	private AuthenticationEntryPoint authenticationEntryPoint;
 
 	private AuthenticationManager authenticationManager;
@@ -163,6 +167,9 @@ final class HttpServlet3RequestFactory implements HttpServletRequestFactory {
 		return new Servlet3SecurityContextHolderAwareRequestWrapper(request, this.rolePrefix, response);
 	}
 
+	/**
+	 * 支持Servlet 3.0的登录，登出，异步等操作的包装类
+	 */
 	private class Servlet3SecurityContextHolderAwareRequestWrapper extends SecurityContextHolderAwareRequestWrapper {
 
 		private final HttpServletResponse response;
@@ -195,8 +202,17 @@ final class HttpServlet3RequestFactory implements HttpServletRequestFactory {
 			return new SecurityContextAsyncContext(startAsync);
 		}
 
+		/**
+		 * 重新认证
+		 * @param response
+		 * @return
+		 * @throws IOException
+		 * @throws ServletException
+		 */
 		@Override
 		public boolean authenticate(HttpServletResponse response) throws IOException, ServletException {
+			//获得身份认证入口点
+			//一般情况都是重定向到登录页的
 			AuthenticationEntryPoint entryPoint = HttpServlet3RequestFactory.this.authenticationEntryPoint;
 			if (entryPoint == null) {
 				HttpServlet3RequestFactory.this.logger.debug(
@@ -206,11 +222,18 @@ final class HttpServlet3RequestFactory implements HttpServletRequestFactory {
 			if (isAuthenticated()) {
 				return true;
 			}
+			//执行
 			entryPoint.commence(this, response,
 					new AuthenticationCredentialsNotFoundException("User is not Authenticated"));
 			return false;
 		}
 
+		/**
+		 * 进行登录
+		 * @param username
+		 * @param password
+		 * @throws ServletException
+		 */
 		@Override
 		public void login(String username, String password) throws ServletException {
 			if (isAuthenticated()) {
@@ -224,12 +247,23 @@ final class HttpServlet3RequestFactory implements HttpServletRequestFactory {
 				super.login(username, password);
 				return;
 			}
+			//调用局部认证管理器进行认证
 			Authentication authentication = getAuthentication(authManager, username, password);
+
+			//创建安全上下文，并放入线程级别的安全上下文策略中
 			SecurityContext context = SecurityContextHolder.createEmptyContext();
 			context.setAuthentication(authentication);
 			SecurityContextHolder.setContext(context);
 		}
 
+		/**
+		 * 调用局部认证管理器进行认证
+		 * @param authManager
+		 * @param username
+		 * @param password
+		 * @return
+		 * @throws ServletException
+		 */
 		private Authentication getAuthentication(AuthenticationManager authManager, String username, String password)
 				throws ServletException {
 			try {
@@ -241,6 +275,10 @@ final class HttpServlet3RequestFactory implements HttpServletRequestFactory {
 			}
 		}
 
+		/**
+		 * 进行登出
+		 * @throws ServletException
+		 */
 		@Override
 		public void logout() throws ServletException {
 			List<LogoutHandler> handlers = HttpServlet3RequestFactory.this.logoutHandlers;
@@ -251,11 +289,17 @@ final class HttpServlet3RequestFactory implements HttpServletRequestFactory {
 				return;
 			}
 			Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+			//调用登出处理器，进行登出
+			//比如说清空Csrf的处理器
 			for (LogoutHandler handler : handlers) {
 				handler.logout(this, this.response, authentication);
 			}
 		}
 
+		/**
+		 * 是否认证过
+		 * @return
+		 */
 		private boolean isAuthenticated() {
 			return getUserPrincipal() != null;
 		}

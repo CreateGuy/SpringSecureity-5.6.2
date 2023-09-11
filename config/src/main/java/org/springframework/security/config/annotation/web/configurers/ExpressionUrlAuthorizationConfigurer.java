@@ -44,7 +44,8 @@ import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 /**
- * Adds URL based authorization based upon SpEL expressions to an application. At least
+ * 添加基于SpEL表达式的URL的鉴权
+ * At least
  * one {@link org.springframework.web.bind.annotation.RequestMapping} needs to be mapped
  * to {@link ConfigAttribute}'s for this {@link SecurityContextConfigurer} to have
  * meaning.
@@ -83,6 +84,10 @@ import org.springframework.util.StringUtils;
 public final class ExpressionUrlAuthorizationConfigurer<H extends HttpSecurityBuilder<H>>
 		extends AbstractInterceptUrlConfigurer<ExpressionUrlAuthorizationConfigurer<H>, H> {
 
+	/**
+	 * 下面这几个都是Url的权限配置
+	 * <p>都允许，都不允许，只有匿名用户，需要认证过，需要完整认证，记住我人认证</p>
+	 */
 	static final String permitAll = "permitAll";
 
 	private static final String denyAll = "denyAll";
@@ -95,10 +100,19 @@ public final class ExpressionUrlAuthorizationConfigurer<H extends HttpSecurityBu
 
 	private static final String rememberMe = "rememberMe";
 
+	/**
+	 * 角色前缀
+	 */
 	private final String rolePrefix;
 
+	/**
+	 * 基于表达式的 Url注册中心
+	 */
 	private final ExpressionInterceptUrlRegistry REGISTRY;
 
+	/**
+	 * Web安全表达式处理器
+	 */
 	private SecurityExpressionHandler<FilterInvocation> expressionHandler;
 
 	/**
@@ -106,7 +120,9 @@ public final class ExpressionUrlAuthorizationConfigurer<H extends HttpSecurityBu
 	 * @see HttpSecurity#authorizeRequests()
 	 */
 	public ExpressionUrlAuthorizationConfigurer(ApplicationContext context) {
+		//从容器中获取角色前缀类
 		String[] grantedAuthorityDefaultsBeanNames = context.getBeanNamesForType(GrantedAuthorityDefaults.class);
+		//只有一个的时候才能自定义角色前缀，否则用默认的 ROLE_
 		if (grantedAuthorityDefaultsBeanNames.length == 1) {
 			GrantedAuthorityDefaults grantedAuthorityDefaults = context.getBean(grantedAuthorityDefaultsBeanNames[0],
 					GrantedAuthorityDefaults.class);
@@ -123,12 +139,9 @@ public final class ExpressionUrlAuthorizationConfigurer<H extends HttpSecurityBu
 	}
 
 	/**
-	 * Allows registering multiple {@link RequestMatcher} instances to a collection of
-	 * {@link ConfigAttribute} instances
-	 * @param requestMatchers the {@link RequestMatcher} instances to register to the
-	 * {@link ConfigAttribute} instances
-	 * @param configAttributes the {@link ConfigAttribute} to be mapped by the
-	 * {@link RequestMatcher} instances
+	 * 注册关联关系
+	 * @param requestMatchers
+	 * @param configAttributes
 	 */
 	private void interceptUrl(Iterable<? extends RequestMatcher> requestMatchers,
 			Collection<ConfigAttribute> configAttributes) {
@@ -138,6 +151,11 @@ public final class ExpressionUrlAuthorizationConfigurer<H extends HttpSecurityBu
 		}
 	}
 
+	/**
+	 * 获得访问访问决策投票器集合
+	 * @param http the builder to use
+	 * @return
+	 */
 	@Override
 	@SuppressWarnings("rawtypes")
 	List<AccessDecisionVoter<?>> getDecisionVoters(H http) {
@@ -148,35 +166,53 @@ public final class ExpressionUrlAuthorizationConfigurer<H extends HttpSecurityBu
 		return decisionVoters;
 	}
 
+	/**
+	 * 获得安全元数据
+	 * @param http the builder to use
+	 * @return
+	 */
 	@Override
 	ExpressionBasedFilterInvocationSecurityMetadataSource createMetadataSource(H http) {
+		//获得请求表达式和权限表达式的映射关系
 		LinkedHashMap<RequestMatcher, Collection<ConfigAttribute>> requestMap = this.REGISTRY.createRequestMap();
 		Assert.state(!requestMap.isEmpty(),
 				"At least one mapping is required (i.e. authorizeRequests().anyRequest().authenticated())");
 		return new ExpressionBasedFilterInvocationSecurityMetadataSource(requestMap, getExpressionHandler(http));
 	}
 
+	/**
+	 * 获得Web安全表达式处理器
+	 * @param http
+	 * @return
+	 */
 	private SecurityExpressionHandler<FilterInvocation> getExpressionHandler(H http) {
 		if (this.expressionHandler != null) {
 			return this.expressionHandler;
 		}
 		DefaultWebSecurityExpressionHandler defaultHandler = new DefaultWebSecurityExpressionHandler();
+
+		//设置认证对象分析器
 		AuthenticationTrustResolver trustResolver = http.getSharedObject(AuthenticationTrustResolver.class);
 		if (trustResolver != null) {
 			defaultHandler.setTrustResolver(trustResolver);
 		}
 		ApplicationContext context = http.getSharedObject(ApplicationContext.class);
 		if (context != null) {
+			//设置角色继承器
 			String[] roleHiearchyBeanNames = context.getBeanNamesForType(RoleHierarchy.class);
 			if (roleHiearchyBeanNames.length == 1) {
 				defaultHandler.setRoleHierarchy(context.getBean(roleHiearchyBeanNames[0], RoleHierarchy.class));
 			}
+
+			//设置角色前缀
 			String[] grantedAuthorityDefaultsBeanNames = context.getBeanNamesForType(GrantedAuthorityDefaults.class);
 			if (grantedAuthorityDefaultsBeanNames.length == 1) {
 				GrantedAuthorityDefaults grantedAuthorityDefaults = context
 						.getBean(grantedAuthorityDefaultsBeanNames[0], GrantedAuthorityDefaults.class);
 				defaultHandler.setDefaultRolePrefix(grantedAuthorityDefaults.getRolePrefix());
 			}
+
+			//设置权限评估器
 			String[] permissionEvaluatorBeanNames = context.getBeanNamesForType(PermissionEvaluator.class);
 			if (permissionEvaluatorBeanNames.length == 1) {
 				PermissionEvaluator permissionEvaluator = context.getBean(permissionEvaluatorBeanNames[0],
@@ -188,11 +224,23 @@ public final class ExpressionUrlAuthorizationConfigurer<H extends HttpSecurityBu
 		return this.expressionHandler;
 	}
 
+	/**
+	 * 封装角色表达式，可以指定角色前缀
+	 * @param rolePrefix
+	 * @param authorities
+	 * @return eg：hasRole('ROLE_admin')
+	 */
 	private static String hasAnyRole(String rolePrefix, String... authorities) {
 		String anyAuthorities = StringUtils.arrayToDelimitedString(authorities, "','" + rolePrefix);
 		return "hasAnyRole('" + rolePrefix + anyAuthorities + "')";
 	}
 
+	/**
+	 * 封装角色表达式
+	 * @param rolePrefix
+	 * @param role
+	 * @return eg：hasRole('ROLE_admin')
+	 */
 	private static String hasRole(String rolePrefix, String role) {
 		Assert.notNull(role, "role cannot be null");
 		Assert.isTrue(rolePrefix.isEmpty() || !role.startsWith(rolePrefix), () -> "role should not start with '"
@@ -200,19 +248,35 @@ public final class ExpressionUrlAuthorizationConfigurer<H extends HttpSecurityBu
 		return "hasRole('" + rolePrefix + role + "')";
 	}
 
+	/**
+	 * 封装权限表达式，与角色的区别只在于有没有一个前缀
+	 * @return eg：hasAuthority('admin')
+	 */
 	private static String hasAuthority(String authority) {
 		return "hasAuthority('" + authority + "')";
 	}
 
+	/**
+	 * 封装权限表达式，是有其中任意一个表达式就可以
+	 * @return eg：hasAuthority('admin')
+	 */
 	private static String hasAnyAuthority(String... authorities) {
 		String anyAuthorities = StringUtils.arrayToDelimitedString(authorities, "','");
 		return "hasAnyAuthority('" + anyAuthorities + "')";
 	}
 
+	/**
+	 * 封装ip地址表达式
+	 * @param ipAddressExpression
+	 * @return
+	 */
 	private static String hasIpAddress(String ipAddressExpression) {
 		return "hasIpAddress('" + ipAddressExpression + "')";
 	}
 
+	/**
+	 * 基于表达式的 Url注册中心
+	 */
 	public final class ExpressionInterceptUrlRegistry extends
 			ExpressionUrlAuthorizationConfigurer<H>.AbstractInterceptUrlRegistry<ExpressionInterceptUrlRegistry, AuthorizedUrl> {
 
@@ -266,10 +330,7 @@ public final class ExpressionUrlAuthorizationConfigurer<H extends HttpSecurityBu
 	}
 
 	/**
-	 * An {@link AuthorizedUrl} that allows optionally configuring the
-	 * {@link MvcRequestMatcher#setMethod(HttpMethod)}
-	 *
-	 * @author Rob Winch
+	 * 基于mvc的，保存请求匹配器的地方，方便为这些请求匹配器指定规则
 	 */
 	public final class MvcMatchersAuthorizedUrl extends AuthorizedUrl {
 
@@ -290,10 +351,17 @@ public final class ExpressionUrlAuthorizationConfigurer<H extends HttpSecurityBu
 
 	}
 
+	/**
+	 * 保存请求匹配器的地方，方便为这些请求匹配器指定规则
+	 * <p>比如说，请求匹配器匹配成功/a的请求，然后这里可以配置需要什么角色或者认证方式了</p>
+	 */
 	public class AuthorizedUrl {
 
 		private List<? extends RequestMatcher> requestMatchers;
 
+		/**
+		 * 是否否定之后的所有规则
+		 */
 		private boolean not;
 
 		/**
@@ -319,13 +387,9 @@ public final class ExpressionUrlAuthorizationConfigurer<H extends HttpSecurityBu
 		}
 
 		/**
-		 * Shortcut for specifying URLs require a particular role. If you do not want to
-		 * have role prefix (default "ROLE_") automatically inserted see
-		 * {@link #hasAuthority(String)}.
-		 * @param role the role to require (i.e. USER, ADMIN, etc). Note, it should not
-		 * start with role prefix as this is automatically inserted.
-		 * @return the {@link ExpressionUrlAuthorizationConfigurer} for further
-		 * customization
+		 * 指定当前请求匹配器匹配成功后，认证对象需要有这个角色
+		 * @param role
+		 * @return
 		 */
 		public ExpressionInterceptUrlRegistry hasRole(String role) {
 			return access(ExpressionUrlAuthorizationConfigurer
@@ -439,13 +503,12 @@ public final class ExpressionUrlAuthorizationConfigurer<H extends HttpSecurityBu
 		}
 
 		/**
-		 * Allows specifying that URLs are secured by an arbitrary expression
-		 * @param attribute the expression to secure the URLs (i.e. "hasRole('ROLE_USER')
-		 * and hasRole('ROLE_SUPER')")
-		 * @return the {@link ExpressionUrlAuthorizationConfigurer} for further
-		 * customization
+		 * 规定当请求匹配器能够匹配成功时，此时的用户需要满足什么样的权限表达式
+		 * @param attribute eg："hasRole('ROLE_USER')
+		 * @return
 		 */
 		public ExpressionInterceptUrlRegistry access(String attribute) {
+			//是否已经否定之后的所有规则
 			if (this.not) {
 				attribute = "!" + attribute;
 			}

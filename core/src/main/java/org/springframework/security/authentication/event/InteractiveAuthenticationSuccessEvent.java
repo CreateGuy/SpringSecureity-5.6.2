@@ -20,17 +20,12 @@ import org.springframework.security.core.Authentication;
 import org.springframework.util.Assert;
 
 /**
- * Indicates an interactive authentication was successful.
- * <P>
- * The <code>ApplicationEvent</code>'s <code>source</code> will be the
- * <code>Authentication</code> object.
- * </p>
- * <p>
- * This does not extend from <code>AuthenticationSuccessEvent</code> to avoid duplicate
- * <code>AuthenticationSuccessEvent</code>s being sent to any listeners.
- * </p>
- *
- * @author Ben Alex
+ * 表示交互认证成功的事件
+ * <ul>
+ *     <li>
+ *         会在 表单认证，记住我认证，CAS单点认证成功后调用
+ *     </li>
+ * </ul>
  */
 public class InteractiveAuthenticationSuccessEvent extends AbstractAuthenticationEvent {
 

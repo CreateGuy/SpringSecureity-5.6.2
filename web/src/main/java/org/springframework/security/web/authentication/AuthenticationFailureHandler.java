@@ -26,16 +26,7 @@ import org.springframework.security.authentication.CredentialsExpiredException;
 import org.springframework.security.core.AuthenticationException;
 
 /**
- * Strategy used to handle a failed authentication attempt.
- * <p>
- * Typical behaviour might be to redirect the user to the authentication page (in the case
- * of a form login) to allow them to try again. More sophisticated logic might be
- * implemented depending on the type of the exception. For example, a
- * {@link CredentialsExpiredException} might cause a redirect to a web controller which
- * allowed the user to change their password.
- *
- * @author Luke Taylor
- * @since 3.0
+ * 认证失败处理器
  */
 public interface AuthenticationFailureHandler {
 

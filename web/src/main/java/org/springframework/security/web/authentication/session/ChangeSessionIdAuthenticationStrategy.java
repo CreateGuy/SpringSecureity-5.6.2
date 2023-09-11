@@ -20,14 +20,16 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
 /**
- * Uses {@code HttpServletRequest.changeSessionId()} to protect against session fixation
- * attacks. This is the default implementation.
- *
- * @author Rob Winch
- * @since 3.2
+ * 使用HttpServletRequest.changeSessionId()来防止会话固定攻击。这是默认实现
  */
 public final class ChangeSessionIdAuthenticationStrategy extends AbstractSessionFixationProtectionStrategy {
 
+	/**
+	 * 由于会话固定攻击是因为攻击者利用自己的sessionId让正常用户进行登录了，所以让用户登录后更改sessionId就好了
+	 * @param request the {@link HttpServletRequest} to apply session fixation protection
+	 * for
+	 * @return
+	 */
 	@Override
 	HttpSession applySessionFixation(HttpServletRequest request) {
 		request.changeSessionId();

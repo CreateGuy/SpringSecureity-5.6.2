@@ -68,6 +68,9 @@ public class SavedRequestAwareAuthenticationSuccessHandler extends SimpleUrlAuth
 
 	protected final Log logger = LogFactory.getLog(this.getClass());
 
+	/**
+	 * 请求缓存器
+	 */
 	private RequestCache requestCache = new HttpSessionRequestCache();
 
 	@Override

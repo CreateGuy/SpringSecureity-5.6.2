@@ -32,10 +32,7 @@ import org.springframework.util.Assert;
 import org.springframework.web.util.WebUtils;
 
 /**
- * A base class for performing session fixation protection.
- *
- * @author Rob Winch
- * @since 3.2
+ * 防止会话固定保护的基类
  */
 public abstract class AbstractSessionFixationProtectionStrategy
 		implements SessionAuthenticationStrategy, ApplicationEventPublisherAware {
@@ -49,8 +46,7 @@ public abstract class AbstractSessionFixationProtectionStrategy
 	private ApplicationEventPublisher applicationEventPublisher = new NullEventPublisher();
 
 	/**
-	 * If set to {@code true}, a session will always be created, even if one didn't exist
-	 * at the start of the request. Defaults to {@code false}.
+	 * 如果设置为true，则将始终创建会话，即使在请求开始时不存在会话
 	 */
 	private boolean alwaysCreateSession;
 
@@ -75,14 +71,15 @@ public abstract class AbstractSessionFixationProtectionStrategy
 			HttpServletResponse response) {
 		boolean hadSessionAlready = request.getSession(false) != null;
 		if (!hadSessionAlready && !this.alwaysCreateSession) {
-			// Session fixation isn't a problem if there's no session
+			// 如果没有会话，就没有会话固定攻击
 			return;
 		}
-		// Create new session if necessary
+		// 如果需要，创建新的会话
 		HttpSession session = request.getSession();
 		if (hadSessionAlready && request.isRequestedSessionIdValid()) {
 			String originalSessionId;
 			String newSessionId;
+			// 获得此HttpSession的互斥锁
 			Object mutex = WebUtils.getSessionMutex(session);
 			synchronized (mutex) {
 				// We need to migrate to a new session
@@ -99,6 +96,7 @@ public abstract class AbstractSessionFixationProtectionStrategy
 					this.logger.debug(LogMessage.format("Changed session id from %s", originalSessionId));
 				}
 			}
+			// 发布会话ID变更事件
 			onSessionChange(originalSessionId, session, authentication);
 		}
 	}

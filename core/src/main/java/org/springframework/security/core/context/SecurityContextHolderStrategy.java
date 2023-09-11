@@ -17,12 +17,7 @@
 package org.springframework.security.core.context;
 
 /**
- * A strategy for storing security context information against a thread.
- *
- * <p>
- * The preferred strategy is loaded by {@link SecurityContextHolder}.
- *
- * @author Ben Alex
+ * 线程级别安全上下文的策略
  */
 public interface SecurityContextHolderStrategy {
 

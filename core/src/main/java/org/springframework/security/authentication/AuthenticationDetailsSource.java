@@ -17,10 +17,10 @@
 package org.springframework.security.authentication;
 
 /**
- * Provides a {@link org.springframework.security.core.Authentication#getDetails()} object
- * for a given web request.
- *
- * @author Ben Alex
+ * 认证信息详情源
+ * <li>
+ *     通常是创建了新的认证对象，然后填充详情信息
+ * </li>
  */
 public interface AuthenticationDetailsSource<C, T> {
 

@@ -29,17 +29,7 @@ import org.springframework.security.web.util.UrlUtils;
 import org.springframework.util.Assert;
 
 /**
- * Uses the internal map of exceptions types to URLs to determine the destination on
- * authentication failure. The keys are the full exception class names.
- * <p>
- * If a match isn't found, falls back to the behaviour of the parent class,
- * {@link SimpleUrlAuthenticationFailureHandler}.
- * <p>
- * The map of exception names to URLs should be injected by setting the
- * <tt>exceptionMappings</tt> property.
- *
- * @author Luke Taylor
- * @since 3.0
+ * 根据抛出异常的不同，转发到不同的地址
  */
 public class ExceptionMappingAuthenticationFailureHandler extends SimpleUrlAuthenticationFailureHandler {
 

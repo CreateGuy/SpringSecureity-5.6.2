@@ -19,15 +19,7 @@ package org.springframework.security.authentication;
 import org.springframework.security.core.Authentication;
 
 /**
- * Basic implementation of {@link AuthenticationTrustResolver}.
- * <p>
- * Makes trust decisions based on whether the passed <code>Authentication</code> is an
- * instance of a defined class.
- * <p>
- * If {@link #anonymousClass} or {@link #rememberMeClass} is <code>null</code>, the
- * corresponding method will always return <code>false</code>.
- *
- * @author Ben Alex
+ * 认证对象解析器的基本实现
  */
 public class AuthenticationTrustResolverImpl implements AuthenticationTrustResolver {
 
@@ -43,11 +35,18 @@ public class AuthenticationTrustResolverImpl implements AuthenticationTrustResol
 		return this.rememberMeClass;
 	}
 
+	/**
+	 * 判断是否是一个匿名用户
+	 * @param authentication to test (may be <code>null</code> in which case the method
+	 * will always return <code>false</code>)
+	 * @return
+	 */
 	@Override
 	public boolean isAnonymous(Authentication authentication) {
 		if ((this.anonymousClass == null) || (authentication == null)) {
 			return false;
 		}
+		//可以看出就是用Class对象进行匹配的
 		return this.anonymousClass.isAssignableFrom(authentication.getClass());
 	}
 
@@ -56,6 +55,7 @@ public class AuthenticationTrustResolverImpl implements AuthenticationTrustResol
 		if ((this.rememberMeClass == null) || (authentication == null)) {
 			return false;
 		}
+		//可以看出就是用Class对象进行匹配的
 		return this.rememberMeClass.isAssignableFrom(authentication.getClass());
 	}
 

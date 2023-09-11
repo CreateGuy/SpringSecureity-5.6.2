@@ -23,31 +23,15 @@ import org.springframework.security.access.ConfigAttribute;
 import org.springframework.security.core.Authentication;
 
 /**
- * Reviews the <code>Object</code> returned from a secure object invocation, being able to
- * modify the <code>Object</code> or throw an {@link AccessDeniedException}.
- * <p>
- * Typically used to ensure the principal is permitted to access the domain object
- * instance returned by a service layer bean. Can also be used to mutate the domain object
- * instance so the principal is only able to access authorised bean properties or
- * <code>Collection</code> elements.
- * <p>
- * Special consideration should be given to using an <code>AfterInvocationManager</code>
- * on bean methods that modify a database. Typically an
- * <code>AfterInvocationManager</code> is used with read-only methods, such as
- * <code>public DomainObject getById(id)</code>. If used with methods that modify a
- * database, a transaction manager should be used to ensure any
- * <code>AccessDeniedException</code> will cause a rollback of the changes made by the
- * transaction.
- * </p>
- *
- * @author Ben Alex
+ * 执行后管理器
+ * <ul>
+ *     <li>是为了在执行目标方法后，继续操作</li>
+ * </ul>
  */
 public interface AfterInvocationManager {
 
 	/**
-	 * Given the details of a secure object invocation including its returned
-	 * <code>Object</code>, make an access control decision or optionally modify the
-	 * returned <code>Object</code>.
+	 * 根据处理方法执行后权限表达式和返回值进行操作
 	 * @param authentication the caller that invoked the method
 	 * @param object the secured object that was called
 	 * @param attributes the configuration attributes associated with the secured object
@@ -64,8 +48,7 @@ public interface AfterInvocationManager {
 			Object returnedObject) throws AccessDeniedException;
 
 	/**
-	 * Indicates whether this <code>AfterInvocationManager</code> is able to process
-	 * "after invocation" requests presented with the passed <code>ConfigAttribute</code>.
+	 * 此 {@link AfterInvocationManager} 是否支持解析 {@link ConfigAttribute}
 	 * <p>
 	 * This allows the <code>AbstractSecurityInterceptor</code> to check every
 	 * configuration attribute can be consumed by the configured

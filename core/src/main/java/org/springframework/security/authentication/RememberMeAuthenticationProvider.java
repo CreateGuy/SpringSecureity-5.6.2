@@ -26,16 +26,15 @@ import org.springframework.security.core.SpringSecurityMessageSource;
 import org.springframework.util.Assert;
 
 /**
- * An {@link AuthenticationProvider} implementation that validates
- * {@link RememberMeAuthenticationToken}s.
- * <p>
- * To be successfully validated, the {@link RememberMeAuthenticationToken#getKeyHash()}
- * must match this class' {@link #getKey()}.
+ * 记住我登录的认证提供者
  */
 public class RememberMeAuthenticationProvider implements AuthenticationProvider, InitializingBean, MessageSourceAware {
 
 	protected MessageSourceAccessor messages = SpringSecurityMessageSource.getAccessor();
 
+	/**
+	 * 记住我秘钥
+	 */
 	private String key;
 
 	public RememberMeAuthenticationProvider(String key) {
@@ -48,11 +47,19 @@ public class RememberMeAuthenticationProvider implements AuthenticationProvider,
 		Assert.notNull(this.messages, "A message source must be set");
 	}
 
+	/**
+	 * 记住我的认证规则很简单，只比较了秘钥
+	 * <p>我理解是因为在通过记住我过滤器生成记住我认证对象的时候，已经比较过签名了</p>
+	 * @param authentication the authentication request object.
+	 * @return
+	 * @throws AuthenticationException
+	 */
 	@Override
 	public Authentication authenticate(Authentication authentication) throws AuthenticationException {
 		if (!supports(authentication.getClass())) {
 			return null;
 		}
+		//比较秘钥是否相同
 		if (this.key.hashCode() != ((RememberMeAuthenticationToken) authentication).getKeyHash()) {
 			throw new BadCredentialsException(this.messages.getMessage("RememberMeAuthenticationProvider.incorrectKey",
 					"The presented RememberMeAuthenticationToken does not contain the expected key"));

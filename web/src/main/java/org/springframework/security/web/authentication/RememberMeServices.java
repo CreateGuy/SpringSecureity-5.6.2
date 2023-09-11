@@ -22,7 +22,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.springframework.security.core.Authentication;
 
 /**
- * Implement by a class that is capable of providing a remember-me service.
+ * 记住我服务
  *
  * <p>
  * Spring Security filters (namely
@@ -49,49 +49,32 @@ import org.springframework.security.core.Authentication;
 public interface RememberMeServices {
 
 	/**
-	 * This method will be called whenever the <code>SecurityContextHolder</code> does not
-	 * contain an <code>Authentication</code> object and Spring Security wishes to provide
-	 * an implementation with an opportunity to authenticate the request using remember-me
-	 * capabilities. Spring Security makes no attempt whatsoever to determine whether the
-	 * browser has requested remember-me services or presented a valid cookie. Such
-	 * determinations are left to the implementation. If a browser has presented an
-	 * unauthorised cookie for whatever reason, it should be silently ignored and
-	 * invalidated using the <code>HttpServletResponse</code> object.
-	 * <p>
-	 * The returned <code>Authentication</code> must be acceptable to
-	 * {@link org.springframework.security.authentication.AuthenticationManager} or
-	 * {@link org.springframework.security.authentication.AuthenticationProvider} defined
-	 * by the web application. It is recommended
-	 * {@link org.springframework.security.authentication.RememberMeAuthenticationToken}
-	 * be used in most cases, as it has a corresponding authentication provider.
-	 * @param request to look for a remember-me token within
-	 * @param response to change, cancel or modify the remember-me token
-	 * @return a valid authentication object, or <code>null</code> if the request should
-	 * not be authenticated
+	 * 将记住我令牌转为认证对象
+	 * @param request
+	 * @param response
+	 * @return
 	 */
 	Authentication autoLogin(HttpServletRequest request, HttpServletResponse response);
 
 	/**
-	 * Called whenever an interactive authentication attempt was made, but the credentials
-	 * supplied by the user were missing or otherwise invalid. Implementations should
-	 * invalidate any and all remember-me tokens indicated in the
-	 * <code>HttpServletRequest</code>.
-	 * @param request that contained an invalid authentication request
-	 * @param response to change, cancel or modify the remember-me token
+	 * 记住我认证失败调用的方法
+	 * <ul>
+	 *     <li>
+	 *         比如说执行autoLogin方法创建的认证对象，认证失败后，清除记住我令牌
+	 *     </li>
+	 * </ul>
+	 * @param request
+	 * @param response
 	 */
 	void loginFail(HttpServletRequest request, HttpServletResponse response);
 
 	/**
-	 * Called whenever an interactive authentication attempt is successful. An
-	 * implementation may automatically set a remember-me token in the
-	 * <code>HttpServletResponse</code>, although this is not recommended. Instead,
-	 * implementations should typically look for a request parameter that indicates the
-	 * browser has presented an explicit request for authentication to be remembered, such
-	 * as the presence of a HTTP POST parameter.
-	 * @param request that contained the valid authentication request
-	 * @param response to change, cancel or modify the remember-me token
-	 * @param successfulAuthentication representing the successfully authenticated
-	 * principal
+	 * 认证成功调用的方法
+	 * <ul>
+	 *     <li>
+	 *         比如说使用表单或者基本认证，认证成功后，可能需要创建一个记住我令牌
+	 *     </li>
+	 * </ul>
 	 */
 	void loginSuccess(HttpServletRequest request, HttpServletResponse response,
 			Authentication successfulAuthentication);

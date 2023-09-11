@@ -29,6 +29,9 @@ public class PersistentRememberMeToken {
 
 	private final String tokenValue;
 
+	/**
+	 * 创建日期
+	 */
 	private final Date date;
 
 	public PersistentRememberMeToken(String username, String series, String tokenValue, Date date) {

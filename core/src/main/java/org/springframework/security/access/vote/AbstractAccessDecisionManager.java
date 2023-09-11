@@ -49,6 +49,9 @@ public abstract class AbstractAccessDecisionManager
 
 	protected MessageSourceAccessor messages = SpringSecurityMessageSource.getAccessor();
 
+	/**
+	 * 是否允许所有投票器都弃权
+	 */
 	private boolean allowIfAllAbstainDecisions = false;
 
 	protected AbstractAccessDecisionManager(List<AccessDecisionVoter<?>> decisionVoters) {
@@ -62,6 +65,9 @@ public abstract class AbstractAccessDecisionManager
 		Assert.notNull(this.messages, "A message source must be set");
 	}
 
+	/**
+	 * 判断是否允许所有投票器都弃权
+	 */
 	protected final void checkAllowIfAllAbstainDecisions() {
 		if (!this.isAllowIfAllAbstainDecisions()) {
 			throw new AccessDeniedException(

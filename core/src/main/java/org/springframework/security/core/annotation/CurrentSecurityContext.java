@@ -23,11 +23,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Annotation that is used to resolve the
- * {@link org.springframework.security.core.context.SecurityContext} as a method argument.
- *
- * @author Dan Zheng
- * @since 5.2
+ * 填充方法入参中的 {@link org.springframework.security.core.context.SecurityContext} 参数
  *
  * <p>
  * See: <a href=
@@ -47,24 +43,12 @@ import java.lang.annotation.Target;
 public @interface CurrentSecurityContext {
 
 	/**
-	 * True if a {@link ClassCastException} should be thrown when the current
-	 * {@link org.springframework.security.core.context.SecurityContext} is the incorrect
-	 * type. Default is false.
-	 * @return whether or not to error on an invalid type
+	 * 如果注解放在参数上，但是参数类型不对，不是 {@link org.springframework.security.core.context.SecurityContext}，是否抛出异常，默认不抛出
 	 */
 	boolean errorOnInvalidType() default false;
 
 	/**
-	 * If specified, will use the provided SpEL expression to resolve the security
-	 * context. This is convenient if applications need to transform the result.
-	 *
-	 * For example, if an application needs to extract its custom {@code Authentication}
-	 * implementation, then it could specify the appropriate SpEL like so:
-	 *
-	 * <pre>
-	 * &#64;CurrentSecurityContext(expression = "authentication") CustomAuthentication authentication
-	 * </pre>
-	 * @return the expression to use
+	 * 以指定的 SpEL 来解析参数，eg： @CurrentSecurityContext(expression="authentication") Authentication authentication
 	 */
 	String expression() default "";
 

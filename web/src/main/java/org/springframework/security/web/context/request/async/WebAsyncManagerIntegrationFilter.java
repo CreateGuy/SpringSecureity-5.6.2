@@ -30,13 +30,7 @@ import org.springframework.web.context.request.async.WebAsyncUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * Provides integration between the {@link SecurityContext} and Spring Web's
- * {@link WebAsyncManager} by using the
- * {@link SecurityContextCallableProcessingInterceptor#beforeConcurrentHandling(org.springframework.web.context.request.NativeWebRequest, Callable)}
- * to populate the {@link SecurityContext} on the {@link Callable}.
- *
- * @author Rob Winch
- * @see SecurityContextCallableProcessingInterceptor
+ * 是为了接口返回异步对象，然后执行异步任务也能获取到安全上下文的过滤器
  */
 public final class WebAsyncManagerIntegrationFilter extends OncePerRequestFilter {
 
@@ -45,10 +39,12 @@ public final class WebAsyncManagerIntegrationFilter extends OncePerRequestFilter
 	@Override
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
 			throws ServletException, IOException {
+		//获得Web异步管理器
 		WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(request);
 		SecurityContextCallableProcessingInterceptor securityProcessingInterceptor = (SecurityContextCallableProcessingInterceptor) asyncManager
 				.getCallableInterceptor(CALLABLE_INTERCEPTOR_KEY);
 		if (securityProcessingInterceptor == null) {
+			//重点就是注册了一个这个拦截器
 			asyncManager.registerCallableInterceptor(CALLABLE_INTERCEPTOR_KEY,
 					new SecurityContextCallableProcessingInterceptor());
 		}

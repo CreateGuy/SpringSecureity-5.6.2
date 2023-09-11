@@ -22,17 +22,12 @@ import javax.servlet.http.HttpServletResponse;
 import org.springframework.security.core.Authentication;
 
 /**
- * Indicates a class that is able to participate in logout handling.
- *
- * <p>
- * Called by {@link LogoutFilter}.
- *
- * @author Ben Alex
+ * 登出处理器
  */
 public interface LogoutHandler {
 
 	/**
-	 * Causes a logout to be completed. The method must complete successfully.
+	 * 进行登出操作，比如说清除Csrf的令牌
 	 * @param request the HTTP request
 	 * @param response the HTTP response
 	 * @param authentication the current principal details

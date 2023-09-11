@@ -22,11 +22,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.springframework.util.Assert;
 
 /**
- * A {@link CsrfTokenRepository} that delays saving new {@link CsrfToken} until the
- * attributes of the {@link CsrfToken} that were generated are accessed.
- *
- * @author Rob Winch
- * @since 4.1
+ * 懒惰机制的 {@link CsrfTokenRepository}，通常情况下是借助 {@link HttpSessionCsrfTokenRepository}
  */
 public final class LazyCsrfTokenRepository implements CsrfTokenRepository {
 
@@ -36,6 +32,9 @@ public final class LazyCsrfTokenRepository implements CsrfTokenRepository {
 	 */
 	private static final String HTTP_RESPONSE_ATTR = HttpServletResponse.class.getName();
 
+	/**
+	 * 真正的存储策略
+	 */
 	private final CsrfTokenRepository delegate;
 
 	/**
@@ -60,10 +59,9 @@ public final class LazyCsrfTokenRepository implements CsrfTokenRepository {
 	}
 
 	/**
-	 * Does nothing if the {@link CsrfToken} is not null. Saving is done only when the
-	 * {@link CsrfToken#getToken()} is accessed from
-	 * {@link #generateToken(HttpServletRequest)}. If it is null, then the save is
-	 * performed immediately.
+	 * 如果{@code CsrfToken}不为空，则不执行任何操作
+	 * <p>只有当从执行 CsrfToken.getToken()时，才会进行保存</p>
+	 * <p>也是懒机制的体现，只有在最后比较token的时候才生成</p>
 	 */
 	@Override
 	public void saveToken(CsrfToken token, HttpServletRequest request, HttpServletResponse response) {
@@ -92,8 +90,14 @@ public final class LazyCsrfTokenRepository implements CsrfTokenRepository {
 		return response;
 	}
 
+	/**
+	 * 体现懒机制的令牌，只有在最后要匹配的时候，才会生成令牌
+	 */
 	private static final class SaveOnAccessCsrfToken implements CsrfToken {
 
+		/**
+		 * 存储策略
+		 */
 		private transient CsrfTokenRepository tokenRepository;
 
 		private transient HttpServletRequest request;
@@ -122,6 +126,7 @@ public final class LazyCsrfTokenRepository implements CsrfTokenRepository {
 
 		@Override
 		public String getToken() {
+			// 生成令牌
 			saveTokenIfNecessary();
 			return this.delegate.getToken();
 		}
@@ -159,13 +164,18 @@ public final class LazyCsrfTokenRepository implements CsrfTokenRepository {
 			return "SaveOnAccessCsrfToken [delegate=" + this.delegate + "]";
 		}
 
+		/**
+		 * 生成令牌
+		 */
 		private void saveTokenIfNecessary() {
 			if (this.tokenRepository == null) {
 				return;
 			}
 			synchronized (this) {
 				if (this.tokenRepository != null) {
+					// 调用真正的存储策略，生成令牌
 					this.tokenRepository.saveToken(this.delegate, this.request, this.response);
+					// 防止第二次生成
 					this.tokenRepository = null;
 					this.request = null;
 					this.response = null;

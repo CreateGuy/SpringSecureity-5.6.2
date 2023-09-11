@@ -34,17 +34,15 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.support.RequestDataValueProcessor;
 
 /**
- * Used to add a {@link RequestDataValueProcessor} for Spring MVC and Spring Security CSRF
- * integration. This configuration is added whenever {@link EnableWebMvc} is added by
- * <a href="
- * {@docRoot}/org/springframework/security/config/annotation/web/configuration/SpringWebMvcImportSelector.html">SpringWebMvcImportSelector</a>
- * and the DispatcherServlet is present on the classpath. It also adds the
- * {@link AuthenticationPrincipalArgumentResolver} as a
- * {@link HandlerMethodArgumentResolver}.
+ * <ol>
+ *     <li>
+ *         为了SpringMvc添加一个 {@link CsrfRequestDataValueProcessor}
+ *     </li>
+ *     <li>
+ *         添加有关SpringSecurity相关的参数解析器
+ *     </li>
+ * </ol>
  *
- * @author Rob Winch
- * @author Dan Zheng
- * @since 3.2
  */
 class WebMvcSecurityConfiguration implements WebMvcConfigurer, ApplicationContextAware {
 
@@ -58,9 +56,11 @@ class WebMvcSecurityConfiguration implements WebMvcConfigurer, ApplicationContex
 		argumentResolvers.add(authenticationPrincipalResolver);
 		argumentResolvers
 				.add(new org.springframework.security.web.bind.support.AuthenticationPrincipalArgumentResolver());
+
 		CurrentSecurityContextArgumentResolver currentSecurityContextArgumentResolver = new CurrentSecurityContextArgumentResolver();
 		currentSecurityContextArgumentResolver.setBeanResolver(this.beanResolver);
 		argumentResolvers.add(currentSecurityContextArgumentResolver);
+		// 注册 CsrfToken 的参数解析器
 		argumentResolvers.add(new CsrfTokenArgumentResolver());
 	}
 

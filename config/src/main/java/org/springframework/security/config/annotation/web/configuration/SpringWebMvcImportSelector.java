@@ -21,15 +21,16 @@ import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.util.ClassUtils;
 
 /**
- * Used by {@link EnableWebSecurity} to conditionally import
- * {@link WebMvcSecurityConfiguration} when the DispatcherServlet is present on the
- * classpath.
- *
- * @author Rob Winch
- * @since 3.2
+ * 当使用了 {@link EnableWebSecurity} 注解会导入此导入选择器
+ * {@link WebMvcSecurityConfiguration}
  */
 class SpringWebMvcImportSelector implements ImportSelector {
 
+	/**
+	 * 当前类加载器能够加载 {@code DispatcherServlet} 的时候，向容器注册 {@code WebMvcSecurityConfiguration}
+	 * @param importingClassMetadata
+	 * @return
+	 */
 	@Override
 	public String[] selectImports(AnnotationMetadata importingClassMetadata) {
 		if (!ClassUtils.isPresent("org.springframework.web.servlet.DispatcherServlet", getClass().getClassLoader())) {

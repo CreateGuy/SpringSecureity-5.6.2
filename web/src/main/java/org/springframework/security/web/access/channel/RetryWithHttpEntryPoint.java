@@ -17,13 +17,7 @@
 package org.springframework.security.web.access.channel;
 
 /**
- * Commences an insecure channel by retrying the original request using HTTP.
- * <p>
- * This entry point should suffice in most circumstances. However, it is not intended to
- * properly handle HTTP POSTs or other usage where a standard redirect would cause an
- * issue.
- *
- * @author Ben Alex
+ * 通过使用HTTP重新尝试原始请求，启动一个不安全的通道
  */
 public class RetryWithHttpEntryPoint extends AbstractRetryEntryPoint {
 

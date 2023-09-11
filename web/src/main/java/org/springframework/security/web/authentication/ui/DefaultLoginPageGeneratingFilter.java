@@ -40,27 +40,37 @@ import org.springframework.web.filter.GenericFilterBean;
 import org.springframework.web.util.HtmlUtils;
 
 /**
- * For internal use with namespace configuration in the case where a user doesn't
- * configure a login page. The configuration code will insert this filter in the chain
- * instead.
  *
- * Will only work if a redirect is used to the login page.
- *
- * @author Luke Taylor
- * @since 2.0
+ * 在用户没有配置登录页面的情况下，创建一个登录页
  */
 public class DefaultLoginPageGeneratingFilter extends GenericFilterBean {
 
+	/**
+	 * 默认的登录页请求Url
+	 */
 	public static final String DEFAULT_LOGIN_PAGE_URL = "/login";
 
 	public static final String ERROR_PARAMETER_NAME = "error";
 
+	/**
+	 * 登录页请求Url
+	 */
 	private String loginPageUrl;
 
+	/**
+	 * 登录成功后的跳转的Url
+	 */
 	private String logoutSuccessUrl;
 
+	/**
+	 * 登录失败后的跳转的Url
+	 */
 	private String failureUrl;
 
+	/**
+	 * 登录页是否开启表单登录
+	 * 如果为True就会添加对应html代码，下面三个一样的
+	 */
 	private boolean formLoginEnabled;
 
 	private boolean openIdEnabled;
@@ -69,14 +79,29 @@ public class DefaultLoginPageGeneratingFilter extends GenericFilterBean {
 
 	private boolean saml2LoginEnabled;
 
+	/**
+	 * 表单登录中：进行身份认证的Url
+	 */
 	private String authenticationUrl;
 
+	/**
+	 * 表单登录中：进用户名参数名
+	 */
 	private String usernameParameter;
 
+	/**
+	 * 表单登录中：进密码参数名
+	 */
 	private String passwordParameter;
 
+	/**
+	 * 表单登录中：进记住我参数名
+	 */
 	private String rememberMeParameter;
 
+	/**
+	 * 下面都是其他登录方式的参数，不懂，没了解过
+	 */
 	private String openIDauthenticationUrl;
 
 	private String openIDusernameParameter;
@@ -87,6 +112,9 @@ public class DefaultLoginPageGeneratingFilter extends GenericFilterBean {
 
 	private Map<String, String> saml2AuthenticationUrlToProviderName;
 
+	/**
+	 * 通常是获得CSRF令牌的函数
+	 */
 	private Function<HttpServletRequest, Map<String, String>> resolveHiddenInputs = (request) -> Collections.emptyMap();
 
 	public DefaultLoginPageGeneratingFilter() {
@@ -106,6 +134,11 @@ public class DefaultLoginPageGeneratingFilter extends GenericFilterBean {
 		init(authFilter, openIDFilter);
 	}
 
+	/**
+	 * 利用传入的认证过滤器对当前过滤器进行初始化
+	 * @param authFilter
+	 * @param openIDFilter
+	 */
 	private void init(UsernamePasswordAuthenticationFilter authFilter,
 			AbstractAuthenticationProcessingFilter openIDFilter) {
 		this.loginPageUrl = DEFAULT_LOGIN_PAGE_URL;
@@ -119,10 +152,17 @@ public class DefaultLoginPageGeneratingFilter extends GenericFilterBean {
 		}
 	}
 
+	/**
+	 * 利用UsernamePasswordAuthenticationFilter进行初始化
+	 * @param authFilter
+	 */
 	private void initAuthFilter(UsernamePasswordAuthenticationFilter authFilter) {
+		//开启表单登录
 		this.formLoginEnabled = true;
+		//设置用户名和密码的参数名称
 		this.usernameParameter = authFilter.getUsernameParameter();
 		this.passwordParameter = authFilter.getPasswordParameter();
+		//如果开启了记住我功能，就是在记住我参数名称
 		if (authFilter.getRememberMeServices() instanceof AbstractRememberMeServices) {
 			this.rememberMeParameter = ((AbstractRememberMeServices) authFilter.getRememberMeServices()).getParameter();
 		}
@@ -138,16 +178,18 @@ public class DefaultLoginPageGeneratingFilter extends GenericFilterBean {
 	}
 
 	/**
-	 * Sets a Function used to resolve a Map of the hidden inputs where the key is the
-	 * name of the input and the value is the value of the input. Typically this is used
-	 * to resolve the CSRF token.
-	 * @param resolveHiddenInputs the function to resolve the inputs
+	 * 设置一个函数，用于获得隐藏输入的Map，其中键是输入的名称，值是输入的值。这通常用于获得CSRF令牌
 	 */
 	public void setResolveHiddenInputs(Function<HttpServletRequest, Map<String, String>> resolveHiddenInputs) {
 		Assert.notNull(resolveHiddenInputs, "resolveHiddenInputs cannot be null");
 		this.resolveHiddenInputs = resolveHiddenInputs;
 	}
 
+	/**
+	 * 确定当前过滤器是否需要添加到HttpSecurity中
+	 * 比如说：用户设置了登录页的时候，这里就会返回false
+	 * @return
+	 */
 	public boolean isEnabled() {
 		return this.formLoginEnabled || this.openIdEnabled || this.oauth2LoginEnabled || this.saml2LoginEnabled;
 	}
@@ -225,8 +267,11 @@ public class DefaultLoginPageGeneratingFilter extends GenericFilterBean {
 
 	private void doFilter(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
 			throws IOException, ServletException {
+		//是否是认证失败Url的请求
 		boolean loginError = isErrorPage(request);
+		//是否是登出成功的请求
 		boolean logoutSuccess = isLogoutSuccess(request);
+		//判断是否需要生产登录页
 		if (isLoginUrlRequest(request) || loginError || logoutSuccess) {
 			String loginPageHtml = generateLoginPageHtml(request, loginError, logoutSuccess);
 			response.setContentType("text/html;charset=UTF-8");
@@ -237,8 +282,16 @@ public class DefaultLoginPageGeneratingFilter extends GenericFilterBean {
 		chain.doFilter(request, response);
 	}
 
+	/**
+	 * 生产登录页的Html代码
+	 * @param request
+	 * @param loginError
+	 * @param logoutSuccess
+	 * @return
+	 */
 	private String generateLoginPageHtml(HttpServletRequest request, boolean loginError, boolean logoutSuccess) {
 		String errorMsg = "Invalid credentials";
+		//当是登录(认证)失败的时候，填充错误原因
 		if (loginError) {
 			HttpSession session = request.getSession(false);
 			if (session != null) {
@@ -264,6 +317,8 @@ public class DefaultLoginPageGeneratingFilter extends GenericFilterBean {
 		sb.append("  </head>\n");
 		sb.append("  <body>\n");
 		sb.append("     <div class=\"container\">\n");
+
+		//开起了表单登录，填充有关的代码
 		if (this.formLoginEnabled) {
 			sb.append("      <form class=\"form-signin\" method=\"post\" action=\"" + contextPath
 					+ this.authenticationUrl + "\">\n");
@@ -334,6 +389,11 @@ public class DefaultLoginPageGeneratingFilter extends GenericFilterBean {
 		return sb.toString();
 	}
 
+	/**
+	 * 填充隐藏预的属性，通常是Csrf令牌
+	 * @param request
+	 * @return
+	 */
 	private String renderHiddenInputs(HttpServletRequest request) {
 		StringBuilder sb = new StringBuilder();
 		for (Map.Entry<String, String> input : this.resolveHiddenInputs.apply(request).entrySet()) {
@@ -346,6 +406,11 @@ public class DefaultLoginPageGeneratingFilter extends GenericFilterBean {
 		return sb.toString();
 	}
 
+	/**
+	 * 判断是否需要创建RememberMe参数
+	 * @param paramName
+	 * @return
+	 */
 	private String createRememberMe(String paramName) {
 		if (paramName == null) {
 			return "";
@@ -353,14 +418,29 @@ public class DefaultLoginPageGeneratingFilter extends GenericFilterBean {
 		return "<p><input type='checkbox' name='" + paramName + "'/> Remember me on this computer.</p>\n";
 	}
 
+	/**
+	 * 判断是否是登出成功Url
+	 * @param request
+	 * @return
+	 */
 	private boolean isLogoutSuccess(HttpServletRequest request) {
 		return this.logoutSuccessUrl != null && matches(request, this.logoutSuccessUrl);
 	}
 
+	/**
+	 * 判断是否是登录页Url
+	 * @param request
+	 * @return
+	 */
 	private boolean isLoginUrlRequest(HttpServletRequest request) {
 		return matches(request, this.loginPageUrl);
 	}
 
+	/**
+	 * 判断是否是认证失败Url的请求
+	 * @param request
+	 * @return
+	 */
 	private boolean isErrorPage(HttpServletRequest request) {
 		return matches(request, this.failureUrl);
 	}
@@ -379,6 +459,12 @@ public class DefaultLoginPageGeneratingFilter extends GenericFilterBean {
 		return "<div class=\"alert alert-success\" role=\"alert\">You have been signed out</div>";
 	}
 
+	/**
+	 * 匹配请求的Url是否和传入的一致
+	 * @param request
+	 * @param url
+	 * @return
+	 */
 	private boolean matches(HttpServletRequest request, String url) {
 		if (!"GET".equals(request.getMethod()) || url == null) {
 			return false;

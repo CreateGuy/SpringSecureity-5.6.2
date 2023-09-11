@@ -34,6 +34,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.util.Assert;
 
 /**
+ * 严格的防火墙
  * <p>
  * A strict implementation of {@link HttpFirewall} that rejects any suspicious requests
  * with a {@link RequestRejectedException}.
@@ -107,12 +108,24 @@ public class StrictHttpFirewall implements HttpFirewall {
 
 	private static final List<String> FORBIDDEN_NULL = Collections.unmodifiableList(Arrays.asList("\0", "%00"));
 
+	/**
+	 * Url中不允许携带的 特殊字符的编码
+	 */
 	private Set<String> encodedUrlBlocklist = new HashSet<>();
 
+	/**
+	 * Url中不允许携带的 特殊字符(已解码的)
+	 */
 	private Set<String> decodedUrlBlocklist = new HashSet<>();
 
+	/**
+	 * 允许的请求方式
+	 */
 	private Set<String> allowedHttpMethods = createDefaultAllowedHttpMethods();
 
+	/**
+	 * 用来判断是否是允许的主机发起的请求
+	 */
 	private Predicate<String> allowedHostnames = (hostname) -> true;
 
 	private static final Pattern ASSIGNED_AND_NOT_ISO_CONTROL_PATTERN = Pattern
@@ -425,13 +438,19 @@ public class StrictHttpFirewall implements HttpFirewall {
 
 	@Override
 	public FirewalledRequest getFirewalledRequest(HttpServletRequest request) throws RequestRejectedException {
+		//判断是否是允许的请求方式
 		rejectForbiddenHttpMethod(request);
+		//检查检查Url中是否是某些特殊字符
 		rejectedBlocklistedUrls(request);
+		//是否是允许的主机发起的请求
 		rejectedUntrustedHosts(request);
+
+		//检查路径是否标准化
 		if (!isNormalized(request)) {
 			throw new RequestRejectedException("The request was rejected because the URL was not normalized.");
 		}
 		String requestUri = request.getRequestURI();
+		//检查是否只包含可打印Ascii字符(32 - 126)
 		if (!containsOnlyPrintableAsciiCharacters(requestUri)) {
 			throw new RequestRejectedException(
 					"The requestURI was rejected because it can only contain printable ASCII characters.");
@@ -439,6 +458,15 @@ public class StrictHttpFirewall implements HttpFirewall {
 		return new StrictFirewalledRequest(request);
 	}
 
+	/**
+	 * 判断是否是允许的请求方式
+	 * <ul>
+	 *     <li>
+	 *         默认就七种 [HEAD, DELETE, POST, GET, OPTIONS, PATCH, PUT]
+	 *     </li>
+	 * </ul>
+	 * @param request
+	 */
 	private void rejectForbiddenHttpMethod(HttpServletRequest request) {
 		if (this.allowedHttpMethods == ALLOW_ANY_HTTP_METHOD) {
 			return;
@@ -450,6 +478,10 @@ public class StrictHttpFirewall implements HttpFirewall {
 		}
 	}
 
+	/**
+	 * 检查检查Url中是否是某些特殊字符
+	 * @param request
+	 */
 	private void rejectedBlocklistedUrls(HttpServletRequest request) {
 		for (String forbidden : this.encodedUrlBlocklist) {
 			if (encodedUrlContains(request, forbidden)) {
@@ -467,6 +499,10 @@ public class StrictHttpFirewall implements HttpFirewall {
 		}
 	}
 
+	/**
+	 * 是否是允许的主机发起的请求
+	 * @param request
+	 */
 	private void rejectedUntrustedHosts(HttpServletRequest request) {
 		String serverName = request.getServerName();
 		if (serverName != null && !this.allowedHostnames.test(serverName)) {
@@ -492,6 +528,11 @@ public class StrictHttpFirewall implements HttpFirewall {
 		return result;
 	}
 
+	/**
+	 * 检查路径是否标准化
+	 * @param request
+	 * @return
+	 */
 	private static boolean isNormalized(HttpServletRequest request) {
 		if (!isNormalized(request.getRequestURI())) {
 			return false;
@@ -525,10 +566,16 @@ public class StrictHttpFirewall implements HttpFirewall {
 		return false;
 	}
 
+	/**
+	 * 检查是否只包含可打印Ascii字符(32 - 126)
+	 * @param uri
+	 * @return
+	 */
 	private static boolean containsOnlyPrintableAsciiCharacters(String uri) {
 		int length = uri.length();
 		for (int i = 0; i < length; i++) {
 			char ch = uri.charAt(i);
+			// \u0020和\u007e是一个Unicode，表示32-126
 			if (ch < '\u0020' || ch > '\u007e') {
 				return false;
 			}
@@ -541,10 +588,9 @@ public class StrictHttpFirewall implements HttpFirewall {
 	}
 
 	/**
-	 * Checks whether a path is normalized (doesn't contain path traversal sequences like
-	 * "./", "/../" or "/.")
-	 * @param path the path to test
-	 * @return true if the path doesn't contain any path-traversal character sequences.
+	 * 检查路径是否标准化(不能包含的序列，如"./", "/../" or "/.")
+	 * @param path
+	 * @return
 	 */
 	private static boolean isNormalized(String path) {
 		if (path == null) {

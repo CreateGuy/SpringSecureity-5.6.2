@@ -22,11 +22,9 @@ import org.springframework.aop.framework.AopInfrastructureBean;
 import org.springframework.security.core.Authentication;
 
 /**
- * Strategy used in expression evaluation to determine whether a user has a permission or
- * permissions for a given domain object.
- *
- * @author Luke Taylor
- * @since 3.0
+ * 权限评估器
+ * 如果在权限注解中写入Spring EL表达式
+ * 当前接口用于确定用户是否具有给定域对象的权限
  */
 public interface PermissionEvaluator extends AopInfrastructureBean {
 

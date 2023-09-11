@@ -229,9 +229,16 @@ public final class FormLoginConfigurer<H extends HttpSecurityBuilder<H>> extends
 	@Override
 	public void init(H http) throws Exception {
 		super.init(http);
+		// 当开启了表单登录，尝试初始化登录页过滤器
 		initDefaultLoginFilter(http);
 	}
 
+	/**
+	 * 创建一个认证请求的请求匹配器
+	 * @param loginProcessingUrl creates the {@link RequestMatcher} based upon the
+	 * loginProcessingUrl
+	 * @return
+	 */
 	@Override
 	protected RequestMatcher createLoginProcessingUrlMatcher(String loginProcessingUrl) {
 		return new AntPathRequestMatcher(loginProcessingUrl, "POST");
@@ -254,13 +261,12 @@ public final class FormLoginConfigurer<H extends HttpSecurityBuilder<H>> extends
 	}
 
 	/**
-	 * If available, initializes the {@link DefaultLoginPageGeneratingFilter} shared
-	 * object.
-	 * @param http the {@link HttpSecurityBuilder} to use
+	 * 当开启了表单登录，尝试初始化登录页过滤器
 	 */
 	private void initDefaultLoginFilter(H http) {
 		DefaultLoginPageGeneratingFilter loginPageGeneratingFilter = http
 				.getSharedObject(DefaultLoginPageGeneratingFilter.class);
+		//首先要有登录页过滤器，其次用户没有设置过登录页，然后创建默认登录页过滤器
 		if (loginPageGeneratingFilter != null && !isCustomLoginPage()) {
 			loginPageGeneratingFilter.setFormLoginEnabled(true);
 			loginPageGeneratingFilter.setUsernameParameter(getUsernameParameter());

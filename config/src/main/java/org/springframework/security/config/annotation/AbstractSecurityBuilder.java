@@ -28,6 +28,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public abstract class AbstractSecurityBuilder<O> implements SecurityBuilder<O> {
 
+	/**
+	 * 当前配置类的是否已经开始构建的标志位
+	 *
+	 */
 	private AtomicBoolean building = new AtomicBoolean();
 
 	private O object;

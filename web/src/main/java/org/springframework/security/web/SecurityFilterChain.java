@@ -22,16 +22,16 @@ import javax.servlet.Filter;
 import javax.servlet.http.HttpServletRequest;
 
 /**
- * Defines a filter chain which is capable of being matched against an
- * {@code HttpServletRequest}. in order to decide whether it applies to that request.
- * <p>
- * Used to configure a {@code FilterChainProxy}.
- *
- * @author Luke Taylor
- * @since 3.1
+ * SpringSecurity的过滤器链。
+ * 一般用于配置在FilterChainProxy中
  */
 public interface SecurityFilterChain {
 
+	/**
+	 * 是否需要执行这个过滤器
+	 * @param request
+	 * @return
+	 */
 	boolean matches(HttpServletRequest request);
 
 	List<Filter> getFilters();

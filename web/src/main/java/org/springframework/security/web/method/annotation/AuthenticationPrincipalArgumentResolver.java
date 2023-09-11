@@ -37,10 +37,7 @@ import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
 
 /**
- * Allows resolving the {@link Authentication#getPrincipal()} using the
- * {@link AuthenticationPrincipal} annotation. For example, the following
- * {@link Controller}:
- *
+ * 专门解析 {@link AuthenticationPrincipal}
  * <pre>
  * &#64;Controller
  * public class MyController {
@@ -100,6 +97,7 @@ public final class AuthenticationPrincipalArgumentResolver implements HandlerMet
 	@Override
 	public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
 			NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
+		// 通过线程级别的安全上下文获取参数
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 		if (authentication == null) {
 			return null;
@@ -107,6 +105,7 @@ public final class AuthenticationPrincipalArgumentResolver implements HandlerMet
 		Object principal = authentication.getPrincipal();
 		AuthenticationPrincipal annotation = findMethodAnnotation(AuthenticationPrincipal.class, parameter);
 		String expressionToParse = annotation.expression();
+		// 解析表达式值
 		if (StringUtils.hasLength(expressionToParse)) {
 			StandardEvaluationContext context = new StandardEvaluationContext();
 			context.setRootObject(principal);

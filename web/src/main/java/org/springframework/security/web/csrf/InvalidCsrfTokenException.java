@@ -19,11 +19,7 @@ package org.springframework.security.web.csrf;
 import javax.servlet.http.HttpServletRequest;
 
 /**
- * Thrown when an expected {@link CsrfToken} exists, but it does not match the value
- * present on the {@link HttpServletRequest}
- *
- * @author Rob Winch
- * @since 3.2
+ * 当 {@link CsrfToken} 不匹配的情况，抛出的异常
  */
 @SuppressWarnings("serial")
 public class InvalidCsrfTokenException extends CsrfException {

@@ -23,9 +23,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.util.Assert;
 
 /**
- * Represents an anonymous <code>Authentication</code>.
- *
- * @author Ben Alex
+ * 表明是通过匿名方式创建的匿名认证对象
  */
 public class AnonymousAuthenticationToken extends AbstractAuthenticationToken implements Serializable {
 
@@ -33,6 +31,9 @@ public class AnonymousAuthenticationToken extends AbstractAuthenticationToken im
 
 	private final Object principal;
 
+	/**
+	 * key的hash，通常用于判断是否是内部创建的匿名认证对象
+	 */
 	private final int keyHash;
 
 	/**

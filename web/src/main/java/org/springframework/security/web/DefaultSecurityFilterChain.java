@@ -30,7 +30,7 @@ import org.springframework.core.log.LogMessage;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 
 /**
- * Standard implementation of {@code SecurityFilterChain}.
+ * {@link SecurityFilterChain}的默认实现，也是{@link FilterChainProxy}中的过滤器链
  *
  * @author Luke Taylor
  * @since 3.1
@@ -39,8 +39,14 @@ public final class DefaultSecurityFilterChain implements SecurityFilterChain {
 
 	private static final Log logger = LogFactory.getLog(DefaultSecurityFilterChain.class);
 
+	/**
+	 * 请求匹配器：比如说这个过滤器链需要满足什么条件才会执行
+	 */
 	private final RequestMatcher requestMatcher;
 
+	/**
+	 * 过滤器集合
+	 */
 	private final List<Filter> filters;
 
 	public DefaultSecurityFilterChain(RequestMatcher requestMatcher, Filter... filters) {

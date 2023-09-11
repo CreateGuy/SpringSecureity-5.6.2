@@ -22,11 +22,8 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 
 /**
- * Simple strategy to match an <tt>HttpServletRequest</tt>.
- *
- * @author Luke Taylor
- * @author Eddú Meléndez
- * @since 3.0.2
+ * 请求匹配器
+ * 比如说判断是否是一个登录(认证)请求
  */
 public interface RequestMatcher {
 

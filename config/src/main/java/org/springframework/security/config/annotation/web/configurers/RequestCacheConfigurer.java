@@ -39,36 +39,10 @@ import org.springframework.web.accept.ContentNegotiationStrategy;
 import org.springframework.web.accept.HeaderContentNegotiationStrategy;
 
 /**
- * Adds request cache for Spring Security. Specifically this ensures that requests that
- * are saved (i.e. after authentication is required) are later replayed. All properties
- * have reasonable defaults, so no additional configuration is required other than
- * applying this {@link org.springframework.security.config.annotation.SecurityConfigurer}
- * .
- *
- * <h2>Security Filters</h2>
- *
- * The following Filters are populated
- *
- * <ul>
- * <li>{@link RequestCacheAwareFilter}</li>
- * </ul>
- *
- * <h2>Shared Objects Created</h2>
- *
- * No shared objects are created.
- *
- * <h2>Shared Objects Used</h2>
- *
- * The following shared objects are used:
- *
- * <ul>
- * <li>If no explicit {@link RequestCache}, is provided a {@link RequestCache} shared
- * object is used to replay the request after authentication is successful</li>
- * </ul>
- *
- * @author Rob Winch
- * @since 3.2
- * @see RequestCache
+ * 请求缓存器
+ * <li>
+ *     使用场景1：当访问一个url出现认证异常或者访问被拒绝(匿名用户)的情况会保存这一次的请求信息，然后重定向到登录页，然后认证成功后，就会通过RequestCache重定向到第一次的请求
+ * </li>
  */
 public final class RequestCacheConfigurer<H extends HttpSecurityBuilder<H>>
 		extends AbstractHttpConfigurer<RequestCacheConfigurer<H>, H> {
@@ -88,6 +62,11 @@ public final class RequestCacheConfigurer<H extends HttpSecurityBuilder<H>>
 		return this;
 	}
 
+	/**
+	 * 关闭此配置类
+	 * 原理是去除HttpSecurity中这个配置类
+	 * @return
+	 */
 	@Override
 	public H disable() {
 		getBuilder().setSharedObject(RequestCache.class, new NullRequestCache());
@@ -101,29 +80,29 @@ public final class RequestCacheConfigurer<H extends HttpSecurityBuilder<H>>
 
 	@Override
 	public void configure(H http) {
+		//获得请求缓存器
 		RequestCache requestCache = getRequestCache(http);
+		//创建对应过滤器
 		RequestCacheAwareFilter requestCacheFilter = new RequestCacheAwareFilter(requestCache);
 		requestCacheFilter = postProcess(requestCacheFilter);
 		http.addFilter(requestCacheFilter);
 	}
 
 	/**
-	 * Gets the {@link RequestCache} to use. If one is defined using
-	 * {@link #requestCache(org.springframework.security.web.savedrequest.RequestCache)},
-	 * then it is used. Otherwise, an attempt to find a {@link RequestCache} shared object
-	 * is made. If that fails, an {@link HttpSessionRequestCache} is used
-	 * @param http the {@link HttpSecurity} to attempt to fined the shared object
-	 * @return the {@link RequestCache} to use
+	 * 获得请求缓存器
 	 */
 	private RequestCache getRequestCache(H http) {
+		//先尝试从sharedObjects中获取
 		RequestCache result = http.getSharedObject(RequestCache.class);
 		if (result != null) {
 			return result;
 		}
+		//尝试从容器中获取
 		result = getBeanOrNull(RequestCache.class);
 		if (result != null) {
 			return result;
 		}
+		//还是没有，就创建一个基于HttpSession的请求缓冲器
 		HttpSessionRequestCache defaultCache = new HttpSessionRequestCache();
 		defaultCache.setRequestMatcher(createDefaultSavedRequestMatcher(http));
 		return defaultCache;
@@ -142,26 +121,46 @@ public final class RequestCacheConfigurer<H extends HttpSecurityBuilder<H>>
 		}
 	}
 
+	/**
+	 * 创建默认请求匹配器(and类型)
+	 * @param http
+	 * @return
+	 */
 	@SuppressWarnings("unchecked")
 	private RequestMatcher createDefaultSavedRequestMatcher(H http) {
+		//第一个：不缓存路径为/**/favicon.*的请求
 		RequestMatcher notFavIcon = new NegatedRequestMatcher(new AntPathRequestMatcher("/**/favicon.*"));
+		//第二个：不缓存异步请求
 		RequestMatcher notXRequestedWith = new NegatedRequestMatcher(
 				new RequestHeaderRequestMatcher("X-Requested-With", "XMLHttpRequest"));
 		boolean isCsrfEnabled = http.getConfigurer(CsrfConfigurer.class) != null;
 		List<RequestMatcher> matchers = new ArrayList<>();
+		//如果开启了Csrf的保护
 		if (isCsrfEnabled) {
+			//第三个：为了安全考虑，只能缓存GET方式的请求
 			RequestMatcher getRequests = new AntPathRequestMatcher("/**", "GET");
 			matchers.add(0, getRequests);
 		}
 		matchers.add(notFavIcon);
+		//第四个：不缓存媒体类型为 application/json 的请求
 		matchers.add(notMatchingMediaType(http, MediaType.APPLICATION_JSON));
 		matchers.add(notXRequestedWith);
+		//第四个：不缓存媒体类型为 multipart/form-data 的请求
 		matchers.add(notMatchingMediaType(http, MediaType.MULTIPART_FORM_DATA));
+		//第四个：不缓存媒体类型为 text/event-stream 的请求
 		matchers.add(notMatchingMediaType(http, MediaType.TEXT_EVENT_STREAM));
 		return new AndRequestMatcher(matchers);
 	}
 
+	/**
+	 * 根据传入的媒体类型，创建一个取反的请求匹配器
+	 * @param http
+	 * @param mediaType
+	 * @return
+	 */
 	private RequestMatcher notMatchingMediaType(H http, MediaType mediaType) {
+		//获得内容协商策略
+		//是为了解析媒体类型
 		ContentNegotiationStrategy contentNegotiationStrategy = http.getSharedObject(ContentNegotiationStrategy.class);
 		if (contentNegotiationStrategy == null) {
 			contentNegotiationStrategy = new HeaderContentNegotiationStrategy();

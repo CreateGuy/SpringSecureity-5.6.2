@@ -21,35 +21,41 @@ import javax.servlet.ServletRequest;
 import org.springframework.util.Assert;
 
 /**
- * Concrete implementation of {@link PortResolver} that obtains the port from
- * <tt>ServletRequest.getServerPort()</tt>.
- * <p>
- * This class is capable of handling the IE bug which results in an incorrect URL being
- * presented in the header subsequent to a redirect to a different scheme and port where
- * the port is not a well-known number (ie 80 or 443). Handling involves detecting an
- * incorrect response from <code>ServletRequest.getServerPort()</code> for the scheme (eg
- * a HTTP request on 8443) and then determining the real server port (eg HTTP request is
- * really on 8080). The map of valid ports is obtained from the configured
- * {@link PortMapper}.
- *
- * @author Ben Alex
+ * PortResolver的具体实现，它从ServletRequest获取端口
  */
 public class PortResolverImpl implements PortResolver {
 
+	/**
+	 * 端口映射器
+	 */
 	private PortMapper portMapper = new PortMapperImpl();
 
 	public PortMapper getPortMapper() {
 		return this.portMapper;
 	}
 
+	/**
+	 * 获得真实端口
+	 * @param request that the method should lookup the port for
+	 * @return
+	 */
 	@Override
 	public int getServerPort(ServletRequest request) {
+		//从Request中获取
 		int serverPort = request.getServerPort();
+		//获得协议名称
 		String scheme = request.getScheme().toLowerCase();
+		//进行端口映射
 		Integer mappedPort = getMappedPort(serverPort, scheme);
 		return (mappedPort != null) ? mappedPort : serverPort;
 	}
 
+	/**
+	 * 进行端口映射
+	 * @param serverPort
+	 * @param scheme
+	 * @return
+	 */
 	private Integer getMappedPort(int serverPort, String scheme) {
 		if ("http".equals(scheme)) {
 			return this.portMapper.lookupHttpPort(serverPort);

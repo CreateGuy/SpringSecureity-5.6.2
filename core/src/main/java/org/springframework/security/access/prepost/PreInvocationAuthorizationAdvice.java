@@ -22,10 +22,8 @@ import org.springframework.aop.framework.AopInfrastructureBean;
 import org.springframework.security.core.Authentication;
 
 /**
- * Performs argument filtering and authorization logic before a method is invoked.
- *
- * @author Luke Taylor
- * @since 3.0
+ * 在调用处理方法之前调用，进行参数过滤和权限判断
+ * <li>在 {@link PreInvocationAuthorizationAdviceVoter} 中被调用</li>
  */
 public interface PreInvocationAuthorizationAdvice extends AopInfrastructureBean {
 

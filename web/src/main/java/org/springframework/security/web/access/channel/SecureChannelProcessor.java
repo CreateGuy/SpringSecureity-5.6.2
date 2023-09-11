@@ -52,6 +52,13 @@ public class SecureChannelProcessor implements InitializingBean, ChannelProcesso
 		Assert.notNull(this.entryPoint, "entryPoint required");
 	}
 
+	/**
+	 * 要求请求必需使用安全通道(如HTTPS)发出
+	 * @param invocation
+	 * @param config
+	 * @throws IOException
+	 * @throws ServletException
+	 */
 	@Override
 	public void decide(FilterInvocation invocation, Collection<ConfigAttribute> config)
 			throws IOException, ServletException {
@@ -81,6 +88,12 @@ public class SecureChannelProcessor implements InitializingBean, ChannelProcesso
 		this.secureKeyword = secureKeyword;
 	}
 
+	/**
+	 * 权限表达式必须是 REQUIRES_SECURE_CHANNEL
+	 * @param attribute a configuration attribute that has been configured against the
+	 * <tt>ChannelProcessingFilter</tt>.
+	 * @return
+	 */
 	@Override
 	public boolean supports(ConfigAttribute attribute) {
 		return (attribute != null) && (attribute.getAttribute() != null)

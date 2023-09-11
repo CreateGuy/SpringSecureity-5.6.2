@@ -35,8 +35,7 @@ import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 
 /**
- * Advisor driven by a {@link MethodSecurityMetadataSource}, used to exclude a
- * {@link MethodInterceptor} from public (non-secure) methods.
+ * 由 {@link MethodSecurityMetadataSource}, 确定哪些Bean能够匹配 {@link MethodInterceptor}
  * <p>
  * Because the AOP framework caches advice calculations, this is normally faster than just
  * letting the <code>MethodInterceptor</code> run and find out itself that it has no work
@@ -54,16 +53,28 @@ import org.springframework.util.CollectionUtils;
  */
 public class MethodSecurityMetadataSourceAdvisor extends AbstractPointcutAdvisor implements BeanFactoryAware {
 
+	/**
+	 * 一般情况下都是{@link org.springframework.security.access.method.DelegatingMethodSecurityMetadataSource DelegatingMethodSecurityMetadataSource}，是委托类，内部保存了三种权限注解对应的安全元数据源
+	 */
 	private transient MethodSecurityMetadataSource attributeSource;
 
+	/**
+	 * 一般情况下是由 {@link GlobalMethodSecurityConfiguration} 注入的 {@link MethodSecurityInterceptor}
+	 */
 	private transient MethodInterceptor interceptor;
 
 	private final Pointcut pointcut = new MethodSecurityMetadataSourcePointcut();
 
 	private BeanFactory beanFactory;
 
+	/**
+	 * 默认是methodSecurityInterceptor，是由于 {@link MethodSecurityMetadataSourceAdvisorRegistrar} 设置的
+	 */
 	private final String adviceBeanName;
 
+	/**
+	 * 默认是methodSecurityInterceptor, 也是由于 {@link MethodSecurityMetadataSourceAdvisorRegistrar} 设置的
+	 */
 	private final String metadataSourceBeanName;
 
 	private transient volatile Object adviceMonitor = new Object();
@@ -101,6 +112,7 @@ public class MethodSecurityMetadataSourceAdvisor extends AbstractPointcutAdvisor
 			if (this.interceptor == null) {
 				Assert.notNull(this.adviceBeanName, "'adviceBeanName' must be set for use with bean factory lookup.");
 				Assert.state(this.beanFactory != null, "BeanFactory must be set to resolve 'adviceBeanName'");
+				// 一般情况下是由 GlobalMethodSecurityConfiguration 注入的 MethodSecurityInterceptor
 				this.interceptor = this.beanFactory.getBean(this.adviceBeanName, MethodInterceptor.class);
 			}
 			return this.interceptor;
@@ -119,6 +131,9 @@ public class MethodSecurityMetadataSourceAdvisor extends AbstractPointcutAdvisor
 				MethodSecurityMetadataSource.class);
 	}
 
+	/**
+	 * 针对三种类型的权限注解进行匹配，本质上是一个 {@link org.springframework.aop.MethodMatcher MethodMatcher}
+	 */
 	class MethodSecurityMetadataSourcePointcut extends StaticMethodMatcherPointcut implements Serializable {
 
 		@Override

@@ -19,7 +19,7 @@ package org.springframework.security.web.util.matcher;
 import javax.servlet.http.HttpServletRequest;
 
 /**
- * Matches any supplied request.
+ * 任何请求都返回true的请求匹配器
  *
  * @author Luke Taylor
  * @since 3.1

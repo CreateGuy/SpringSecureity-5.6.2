@@ -38,77 +38,82 @@ import org.springframework.security.web.authentication.ui.DefaultLoginPageGenera
 import org.springframework.util.Assert;
 
 /**
- * Configures Remember Me authentication. This typically involves the user checking a box
- * when they enter their username and password that states to "Remember Me".
- *
- * <h2>Security Filters</h2>
- *
- * The following Filters are populated
- *
- * <ul>
- * <li>{@link RememberMeAuthenticationFilter}</li>
- * </ul>
- *
- * <h2>Shared Objects Created</h2>
- *
- * The following shared objects are populated
- *
- * <ul>
- * <li>
- * {@link HttpSecurity#authenticationProvider(org.springframework.security.authentication.AuthenticationProvider)}
- * is populated with a {@link RememberMeAuthenticationProvider}</li>
- * <li>{@link RememberMeServices} is populated as a shared object and available on
- * {@link HttpSecurity#getSharedObject(Class)}</li>
- * <li>{@link LogoutConfigurer#addLogoutHandler(LogoutHandler)} is used to add a logout
- * handler to clean up the remember me authentication.</li>
- * </ul>
- *
- * <h2>Shared Objects Used</h2>
- *
- * The following shared objects are used:
- *
- * <ul>
- * <li>{@link AuthenticationManager}</li>
- * <li>{@link UserDetailsService} if no {@link #userDetailsService(UserDetailsService)}
- * was specified.</li>
- * <li>{@link DefaultLoginPageGeneratingFilter} - if present will be populated with
- * information from the configuration</li>
- * </ul>
- *
- * @author Rob Winch
- * @author Eddú Meléndez
- * @since 3.2
+ * 记住我功能的配置类
  */
 public final class RememberMeConfigurer<H extends HttpSecurityBuilder<H>>
 		extends AbstractHttpConfigurer<RememberMeConfigurer<H>, H> {
 
 	/**
-	 * The default name for remember me parameter name and remember me cookie name
+	 * cookie中记住我参数的默认名称
 	 */
 	private static final String DEFAULT_REMEMBER_ME_NAME = "remember-me";
 
+	/**
+	 * 认证成功处理器
+	 */
 	private AuthenticationSuccessHandler authenticationSuccessHandler;
 
+	/**
+	 * 生成记住我参数的加密参数，以及通过认证器进行认证就只是比较这个key
+	 */
 	private String key;
 
+	/**
+	 * 记住我服务
+	 */
 	private RememberMeServices rememberMeServices;
 
+	/**
+	 * 登出处理器
+	 */
 	private LogoutHandler logoutHandler;
 
+	/**
+	 * 表单登录或者其他登录方式中：标记是否开启了记住我功能
+	 */
 	private String rememberMeParameter = DEFAULT_REMEMBER_ME_NAME;
 
+	/**
+	 * 记住我参数放在Cookie中的参数名称
+	 */
 	private String rememberMeCookieName = DEFAULT_REMEMBER_ME_NAME;
 
+	/**
+	 * 指定记住我参令牌可访问的域名
+	 */
 	private String rememberMeCookieDomain;
 
+	/**
+	 * 记住我令牌存储策略：使用持久化方式来保持记住我令牌
+	 */
 	private PersistentTokenRepository tokenRepository;
 
+	/**
+	 * 用户详情服务
+	 */
 	private UserDetailsService userDetailsService;
 
+	/**
+	 * 记住我令牌过期时间
+	 */
 	private Integer tokenValiditySeconds;
 
+	/**
+	 * 为true时必须通过https请求才能携带cookie中的信息
+	 */
 	private Boolean useSecureCookie;
 
+	/**
+	 * 是否需要携带记住我令牌
+	 * <url>
+	 *     <li>
+	 *         true：都携带记住我令牌
+	 *     </li>
+	 *     <li>
+	 *         false：看是否携带了记住我参数
+	 *     </li>
+	 * </url>
+	 */
 	private Boolean alwaysRemember;
 
 	/**
@@ -269,23 +274,34 @@ public final class RememberMeConfigurer<H extends HttpSecurityBuilder<H>>
 	@Override
 	public void init(H http) throws Exception {
 		validateInput();
+		//获取秘钥
 		String key = getKey();
+		//获得记住我服务
 		RememberMeServices rememberMeServices = getRememberMeServices(http, key);
+		//将记住我服务放入SharedObject中，这样表单登录时候就能够创建记住我令牌了
 		http.setSharedObject(RememberMeServices.class, rememberMeServices);
+
+		//记住我服务，通常都实现了登出处理器，提供登出的时候，删除记住我令牌的功能
 		LogoutConfigurer<H> logoutConfigurer = http.getConfigurer(LogoutConfigurer.class);
 		if (logoutConfigurer != null && this.logoutHandler != null) {
 			logoutConfigurer.addLogoutHandler(this.logoutHandler);
 		}
+
+		//创建一个记住我用户的认证提供者
 		RememberMeAuthenticationProvider authenticationProvider = new RememberMeAuthenticationProvider(key);
 		authenticationProvider = postProcess(authenticationProvider);
+		//添加到httpSecurity中
 		http.authenticationProvider(authenticationProvider);
+		//如果有登录页的话，给他设置开启记住我登录的参数名
 		initDefaultLoginFilter(http);
 	}
 
 	@Override
 	public void configure(H http) {
+		//创建对应过滤器
 		RememberMeAuthenticationFilter rememberMeFilter = new RememberMeAuthenticationFilter(
 				http.getSharedObject(AuthenticationManager.class), this.rememberMeServices);
+		//设置认证成功处理器
 		if (this.authenticationSuccessHandler != null) {
 			rememberMeFilter.setAuthenticationSuccessHandler(this.authenticationSuccessHandler);
 		}
@@ -294,8 +310,7 @@ public final class RememberMeConfigurer<H extends HttpSecurityBuilder<H>>
 	}
 
 	/**
-	 * Validate rememberMeServices and rememberMeCookieName have not been set at the same
-	 * time.
+	 * 验证：记住我服务和参数名称必须都存在，不然记住我功能无法正常开启
 	 */
 	private void validateInput() {
 		if (this.rememberMeServices != null && !DEFAULT_REMEMBER_ME_NAME.equals(this.rememberMeCookieName)) {
@@ -312,9 +327,7 @@ public final class RememberMeConfigurer<H extends HttpSecurityBuilder<H>>
 	}
 
 	/**
-	 * If available, initializes the {@link DefaultLoginPageGeneratingFilter} shared
-	 * object.
-	 * @param http the {@link HttpSecurityBuilder} to use
+	 * 如果有登录页的话，给他设置开启记住我登录的参数名
 	 */
 	private void initDefaultLoginFilter(H http) {
 		DefaultLoginPageGeneratingFilter loginPageGeneratingFilter = http
@@ -325,22 +338,27 @@ public final class RememberMeConfigurer<H extends HttpSecurityBuilder<H>>
 	}
 
 	/**
-	 * Gets the {@link RememberMeServices} or creates the {@link RememberMeServices}.
-	 * @param http the {@link HttpSecurity} to lookup shared objects
-	 * @param key the {@link #key(String)}
-	 * @return the {@link RememberMeServices} to use
+	 * 获得记住我服务
+	 * @param http
+	 * @param key
+	 * @return
 	 * @throws Exception
 	 */
 	private RememberMeServices getRememberMeServices(H http, String key) throws Exception {
+		//如果记住我服务也是一个登出处理器
 		if (this.rememberMeServices != null) {
 			if (this.rememberMeServices instanceof LogoutHandler && this.logoutHandler == null) {
 				this.logoutHandler = (LogoutHandler) this.rememberMeServices;
 			}
 			return this.rememberMeServices;
 		}
+		//创建记住我服务
 		AbstractRememberMeServices tokenRememberMeServices = createRememberMeServices(http, key);
+		//设置记住我开启参数名称和记住我参数名称
 		tokenRememberMeServices.setParameter(this.rememberMeParameter);
 		tokenRememberMeServices.setCookieName(this.rememberMeCookieName);
+
+		//设置一些Cookie规则
 		if (this.rememberMeCookieDomain != null) {
 			tokenRememberMeServices.setCookieDomain(this.rememberMeCookieDomain);
 		}
@@ -353,19 +371,19 @@ public final class RememberMeConfigurer<H extends HttpSecurityBuilder<H>>
 		if (this.alwaysRemember != null) {
 			tokenRememberMeServices.setAlwaysRemember(this.alwaysRemember);
 		}
+
 		tokenRememberMeServices.afterPropertiesSet();
+
+		//设置登出处理器和记住我服务
+		//记住我服务也实现了登出处理器
 		this.logoutHandler = tokenRememberMeServices;
 		this.rememberMeServices = tokenRememberMeServices;
 		return tokenRememberMeServices;
 	}
 
 	/**
-	 * Creates the {@link RememberMeServices} to use when none is provided. The result is
-	 * either {@link PersistentTokenRepository} (if a {@link PersistentTokenRepository} is
-	 * specified, else {@link TokenBasedRememberMeServices}.
-	 * @param http the {@link HttpSecurity} to lookup shared objects
-	 * @param key the {@link #key(String)}
-	 * @return the {@link RememberMeServices} to use
+	 * 创建记住我服务
+	 * <p>当没有指定持久化策略的时候，就使用TokenBased</p>
 	 */
 	private AbstractRememberMeServices createRememberMeServices(H http, String key) {
 		return (this.tokenRepository != null) ? createPersistentRememberMeServices(http, key)
@@ -395,11 +413,7 @@ public final class RememberMeConfigurer<H extends HttpSecurityBuilder<H>>
 	}
 
 	/**
-	 * Gets the {@link UserDetailsService} to use. Either the explicitly configure
-	 * {@link UserDetailsService} from {@link #userDetailsService(UserDetailsService)} or
-	 * a shared object from {@link HttpSecurity#getSharedObject(Class)}.
-	 * @param http {@link HttpSecurity} to get the shared {@link UserDetailsService}
-	 * @return the {@link UserDetailsService} to use
+	 * 获得用户详情服务
 	 */
 	private UserDetailsService getUserDetailsService(H http) {
 		if (this.userDetailsService == null) {
@@ -412,12 +426,7 @@ public final class RememberMeConfigurer<H extends HttpSecurityBuilder<H>>
 	}
 
 	/**
-	 * Gets the key to use for validating remember me tokens. If a value was passed into
-	 * {@link #key(String)}, then that is returned. Alternatively, if a key was specified
-	 * in the {@link #rememberMeServices(RememberMeServices)}}, then that is returned. If
-	 * no key was specified in either of those cases, then a secure random string is
-	 * generated.
-	 * @return the remember me key to use
+	 * 获取key
 	 */
 	private String getKey() {
 		if (this.key == null) {

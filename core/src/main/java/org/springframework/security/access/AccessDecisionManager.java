@@ -22,9 +22,7 @@ import org.springframework.security.authentication.InsufficientAuthenticationExc
 import org.springframework.security.core.Authentication;
 
 /**
- * Makes a final access control (authorization) decision.
- *
- * @author Ben Alex
+ * 访问决策管理器
  */
 public interface AccessDecisionManager {
 
@@ -43,8 +41,7 @@ public interface AccessDecisionManager {
 			throws AccessDeniedException, InsufficientAuthenticationException;
 
 	/**
-	 * Indicates whether this <code>AccessDecisionManager</code> is able to process
-	 * authorization requests presented with the passed <code>ConfigAttribute</code>.
+	 * 是否支持解析指定的权限
 	 * <p>
 	 * This allows the <code>AbstractSecurityInterceptor</code> to check every
 	 * configuration attribute can be consumed by the configured

@@ -31,33 +31,41 @@ import org.springframework.security.web.util.matcher.AnyRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 
 /**
- * {@code RequestCache} which stores the {@code SavedRequest} in the HttpSession.
- *
- * The {@link DefaultSavedRequest} class is used as the implementation.
- *
- * @author Luke Taylor
- * @author Eddú Meléndez
- * @since 3.0
- */
+ * 在HttpSession中存储某次请求的缓冲器
+ * 也是SpringSecurity默认的请求缓存器策略
+ * */
 public class HttpSessionRequestCache implements RequestCache {
 
 	static final String SAVED_REQUEST = "SPRING_SECURITY_SAVED_REQUEST";
 
 	protected final Log logger = LogFactory.getLog(this.getClass());
 
+	/**
+	 * 端口解析器
+	 */
 	private PortResolver portResolver = new PortResolverImpl();
 
+	/**
+	 * 是否允许创建Session，默认就需要
+	 */
 	private boolean createSessionAllowed = true;
 
+	/**
+	 * 请求匹配器，由RequestCacheConfigurer负责构建
+	 */
 	private RequestMatcher requestMatcher = AnyRequestMatcher.INSTANCE;
 
+	/**
+	 * 将请求参数保存到Session中的key
+	 */
 	private String sessionAttrName = SAVED_REQUEST;
 
 	/**
-	 * Stores the current request, provided the configuration properties allow it.
+	 * 如果配置属性允许，则存储当前请求
 	 */
 	@Override
 	public void saveRequest(HttpServletRequest request, HttpServletResponse response) {
+		//某些请求不允许缓存请求数据
 		if (!this.requestMatcher.matches(request)) {
 			if (this.logger.isTraceEnabled()) {
 				this.logger.trace(
@@ -65,11 +73,10 @@ public class HttpSessionRequestCache implements RequestCache {
 			}
 			return;
 		}
+		//创建默认保存对象
 		DefaultSavedRequest savedRequest = new DefaultSavedRequest(request, this.portResolver);
+		//保存到Session中
 		if (this.createSessionAllowed || request.getSession(false) != null) {
-			// Store the HTTP request itself. Used by
-			// AbstractAuthenticationProcessingFilter
-			// for redirection after successful authentication (SEC-29)
 			request.getSession().setAttribute(this.sessionAttrName, savedRequest);
 			if (this.logger.isDebugEnabled()) {
 				this.logger.debug(LogMessage.format("Saved request %s to session", savedRequest.getRedirectUrl()));
@@ -86,6 +93,11 @@ public class HttpSessionRequestCache implements RequestCache {
 		return (session != null) ? (SavedRequest) session.getAttribute(this.sessionAttrName) : null;
 	}
 
+	/**
+	 * 从HttpSession中删除请求缓存
+	 * @param currentRequest
+	 * @param response
+	 */
 	@Override
 	public void removeRequest(HttpServletRequest currentRequest, HttpServletResponse response) {
 		HttpSession session = currentRequest.getSession(false);
@@ -95,13 +107,22 @@ public class HttpSessionRequestCache implements RequestCache {
 		}
 	}
 
+	/**
+	 * 如果与当前请求匹配，则返回保存的请求的包装器，保存的请求应该从缓存中删除。
+	 * @param request
+	 * @param response
+	 * @return
+	 */
 	@Override
 	public HttpServletRequest getMatchingRequest(HttpServletRequest request, HttpServletResponse response) {
+		//获得保存的请求缓存
 		SavedRequest saved = getRequest(request, response);
+		//为空就不包装
 		if (saved == null) {
 			this.logger.trace("No saved request");
 			return null;
 		}
+		//确定当前请求是否匹配缓存的请求
 		if (!matchesSavedRequest(request, saved)) {
 			if (this.logger.isTraceEnabled()) {
 				this.logger.trace(LogMessage.format("Did not match request %s to the saved one %s",
@@ -109,18 +130,29 @@ public class HttpSessionRequestCache implements RequestCache {
 			}
 			return null;
 		}
+		//移除缓存的请求
 		removeRequest(request, response);
 		if (this.logger.isDebugEnabled()) {
 			this.logger.debug(LogMessage.format("Loaded matching saved request %s", saved.getRedirectUrl()));
 		}
+		//进行包装
 		return new SavedRequestAwareWrapper(saved, request);
 	}
 
+	/**
+	 * 确定当前请求是否匹配缓存的请求
+	 * @param request
+	 * @param savedRequest
+	 * @return
+	 */
 	private boolean matchesSavedRequest(HttpServletRequest request, SavedRequest savedRequest) {
+		//一般保存的就是这个类型
 		if (savedRequest instanceof DefaultSavedRequest) {
 			DefaultSavedRequest defaultSavedRequest = (DefaultSavedRequest) savedRequest;
+			//确定当前请求是否匹配缓存的请求
 			return defaultSavedRequest.doesRequestMatch(request, this.portResolver);
 		}
+		//构建完整的请求
 		String currentUrl = UrlUtils.buildFullRequestUrl(request);
 		return savedRequest.getRedirectUrl().equals(currentUrl);
 	}

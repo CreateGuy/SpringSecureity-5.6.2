@@ -39,10 +39,24 @@ import org.springframework.util.Assert;
  */
 public abstract class AbstractAuthenticationToken implements Authentication, CredentialsContainer {
 
+	/**
+	 * 权限
+	 */
 	private final Collection<GrantedAuthority> authorities;
 
+	/**
+	 * 详细信息
+	 * <ul>
+	 *     <li>
+	 *			一般情况是请求的Ip地址和sessionId
+	 *     </li>
+	 * </ul>
+	 */
 	private Object details;
 
+	/**
+	 * 判断当前认证对象是否经过认证的
+	 */
 	private boolean authenticated = false;
 
 	/**
@@ -66,6 +80,10 @@ public abstract class AbstractAuthenticationToken implements Authentication, Cre
 		return this.authorities;
 	}
 
+	/**
+	 * 返回当前登录的用户名
+	 * @return
+	 */
 	@Override
 	public String getName() {
 		if (this.getPrincipal() instanceof UserDetails) {

@@ -46,17 +46,22 @@ import javax.servlet.http.HttpServletResponse;
  */
 public class DefaultHttpFirewall implements HttpFirewall {
 
+	/**
+	 * 是否允许编码斜杠
+	 */
 	private boolean allowUrlEncodedSlash;
 
 	@Override
 	public FirewalledRequest getFirewalledRequest(HttpServletRequest request) throws RequestRejectedException {
 		FirewalledRequest firewalledRequest = new RequestWrapper(request);
+		//检查路径是否标准化
 		if (!isNormalized(firewalledRequest.getServletPath()) || !isNormalized(firewalledRequest.getPathInfo())) {
 			throw new RequestRejectedException(
 					"Un-normalized paths are not supported: " + firewalledRequest.getServletPath()
 							+ ((firewalledRequest.getPathInfo() != null) ? firewalledRequest.getPathInfo() : ""));
 		}
 		String requestURI = firewalledRequest.getRequestURI();
+		//是否允许URL编码的斜杠字符
 		if (containsInvalidUrlEncodedSlash(requestURI)) {
 			throw new RequestRejectedException("The requestURI cannot contain encoded slash. Got " + requestURI);
 		}
@@ -83,6 +88,13 @@ public class DefaultHttpFirewall implements HttpFirewall {
 		this.allowUrlEncodedSlash = allowUrlEncodedSlash;
 	}
 
+	/**
+	 * 是否允许URL编码的斜杠字符
+	 * 如果为True(默认为false)，则URL中允许使用斜杠编码的URL
+	 * 在某些情况下，允许编码斜杠可能会导致安全漏洞，这取决于容器如何构造HttpServletRequest。
+	 * @param uri
+	 * @return
+	 */
 	private boolean containsInvalidUrlEncodedSlash(String uri) {
 		if (this.allowUrlEncodedSlash || uri == null) {
 			return false;
@@ -94,10 +106,9 @@ public class DefaultHttpFirewall implements HttpFirewall {
 	}
 
 	/**
-	 * Checks whether a path is normalized (doesn't contain path traversal sequences like
-	 * "./", "/../" or "/.")
-	 * @param path the path to test
-	 * @return true if the path doesn't contain any path-traversal character sequences.
+	 * 检查路径是否标准化(不能包含的序列，如"./", "/../" or "/.")
+	 * @param path
+	 * @return
 	 */
 	private boolean isNormalized(String path) {
 		if (path == null) {

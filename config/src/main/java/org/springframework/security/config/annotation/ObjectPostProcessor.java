@@ -16,24 +16,13 @@
 
 package org.springframework.security.config.annotation;
 
-import org.springframework.beans.factory.Aware;
-import org.springframework.beans.factory.DisposableBean;
-import org.springframework.beans.factory.InitializingBean;
-
 /**
- * Allows initialization of Objects. Typically this is used to call the {@link Aware}
- * methods, {@link InitializingBean#afterPropertiesSet()}, and ensure that
- * {@link DisposableBean#destroy()} has been invoked.
- *
- * @param <T> the bound of the types of Objects this {@link ObjectPostProcessor} supports.
- * @author Rob Winch
- * @since 3.2
+ * 允许对bean的操作
  */
 public interface ObjectPostProcessor<T> {
 
 	/**
-	 * Initialize the object possibly returning a modified instance that should be used
-	 * instead.
+	 * 处理bean，可能返回一个的修改后的实例。
 	 * @param object the object to initialize
 	 * @return the initialized version of the object
 	 */

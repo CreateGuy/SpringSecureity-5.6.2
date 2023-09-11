@@ -44,6 +44,9 @@ public abstract class AbstractSecurityExpressionHandler<T>
 
 	private BeanResolver beanResolver;
 
+	/**
+	 * 角色继承器
+	 */
 	private RoleHierarchy roleHierarchy;
 
 	private PermissionEvaluator permissionEvaluator = new DenyAllPermissionEvaluator();

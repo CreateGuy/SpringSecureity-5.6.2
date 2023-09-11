@@ -57,31 +57,47 @@ public class PrePostAnnotationSecurityMetadataSource extends AbstractMethodSecur
 		this.attributeFactory = attributeFactory;
 	}
 
+	/**
+	 * 返回执行传入的方法需要什么权限
+	 * @param method
+	 * @param targetClass
+	 * @return
+	 */
 	@Override
 	public Collection<ConfigAttribute> getAttributes(Method method, Class<?> targetClass) {
 		if (method.getDeclaringClass() == Object.class) {
 			return Collections.emptyList();
 		}
+		// 在方法和方法的声明类上查找下面四种指定注解
 		PreFilter preFilter = findAnnotation(method, targetClass, PreFilter.class);
 		PreAuthorize preAuthorize = findAnnotation(method, targetClass, PreAuthorize.class);
 		PostFilter postFilter = findAnnotation(method, targetClass, PostFilter.class);
-		// TODO: Can we check for void methods and throw an exception here?
+		// TODO: 由于@PostAuthorize可以针对于返回值，所以可以在这里检查空返回值，然后抛出异常
 		PostAuthorize postAuthorize = findAnnotation(method, targetClass, PostAuthorize.class);
+
+		// 方法上没有这四种注解，直接返回空集合
 		if (preFilter == null && preAuthorize == null && postFilter == null && postAuthorize == null) {
 			// There is no meta-data so return
 			return Collections.emptyList();
 		}
+
+		// 获得这些注解的表达式
 		String preFilterAttribute = (preFilter != null) ? preFilter.value() : null;
 		String filterObject = (preFilter != null) ? preFilter.filterTarget() : null;
 		String preAuthorizeAttribute = (preAuthorize != null) ? preAuthorize.value() : null;
 		String postFilterAttribute = (postFilter != null) ? postFilter.value() : null;
 		String postAuthorizeAttribute = (postAuthorize != null) ? postAuthorize.value() : null;
+
+
 		ArrayList<ConfigAttribute> attrs = new ArrayList<>(2);
+		// 创建方法执行前需要判断的表达式
 		PreInvocationAttribute pre = this.attributeFactory.createPreInvocationAttribute(preFilterAttribute,
 				filterObject, preAuthorizeAttribute);
 		if (pre != null) {
 			attrs.add(pre);
 		}
+
+		// 创建方法执行后需要判断的表达式
 		PostInvocationAttribute post = this.attributeFactory.createPostInvocationAttribute(postFilterAttribute,
 				postAuthorizeAttribute);
 		if (post != null) {
@@ -97,22 +113,18 @@ public class PrePostAnnotationSecurityMetadataSource extends AbstractMethodSecur
 	}
 
 	/**
-	 * See
-	 * {@link org.springframework.security.access.method.AbstractFallbackMethodSecurityMetadataSource#getAttributes(Method, Class)}
-	 * for the logic of this method. The ordering here is slightly different in that we
-	 * consider method-specific annotations on an interface before class-level ones.
+	 * 在方法和方法的声明类上查找指定注解
 	 */
 	private <A extends Annotation> A findAnnotation(Method method, Class<?> targetClass, Class<A> annotationClass) {
-		// The method may be on an interface, but we need attributes from the target
-		// class.
-		// If the target class is null, the method will be unchanged.
+		// 如果方法是重写来的，那就获取实现上的方法
 		Method specificMethod = ClassUtils.getMostSpecificMethod(method, targetClass);
+		// 在指定方法上找到指定注解
 		A annotation = AnnotationUtils.findAnnotation(specificMethod, annotationClass);
 		if (annotation != null) {
 			this.logger.debug(LogMessage.format("%s found on specific method: %s", annotation, specificMethod));
 			return annotation;
 		}
-		// Check the original (e.g. interface) method
+		// 检查原来的(例如接口)方法
 		if (specificMethod != method) {
 			annotation = AnnotationUtils.findAnnotation(method, annotationClass);
 			if (annotation != null) {
@@ -120,8 +132,7 @@ public class PrePostAnnotationSecurityMetadataSource extends AbstractMethodSecur
 				return annotation;
 			}
 		}
-		// Check the class-level (note declaringClass, not targetClass, which may not
-		// actually implement the method)
+		// 检查类上是否有指定注解(注意是DeclaringClass，而不是targetClass，后者可能没有实际实现该方法)
 		annotation = AnnotationUtils.findAnnotation(specificMethod.getDeclaringClass(), annotationClass);
 		if (annotation != null) {
 			this.logger.debug(

@@ -45,63 +45,63 @@ import org.springframework.util.Assert;
 import org.springframework.web.filter.GenericFilterBean;
 
 /**
- * Base class for processing filters that handle pre-authenticated authentication
- * requests, where it is assumed that the principal has already been authenticated by an
- * external system.
+ * <ul>
+ *     <li>
+ *         首先是一个基类：用于处理已经在外部系统进行过认证的身份认证过滤器，其中假定主体(principal)已经由外部系统进行了身份认证
+ *     </li>
+ *     <li>
+ *         这样做的目的只是从请求中提取有关主体的必要信息，而不是对它们进行身份认证。外部身份认证系统可以通过预先身份认证系统从Head或cookie中提取用户们和密码。假定外部系统负责数据的准确性和防止伪造值的提交
+ *     </li>
+ * </ul>
  * <p>
- * The purpose is then only to extract the necessary information on the principal from the
- * incoming request, rather than to authenticate them. External authentication systems may
- * provide this information via request data such as headers or cookies which the
- * pre-authentication system can extract. It is assumed that the external system is
- * responsible for the accuracy of the data and preventing the submission of forged
- * values.
- *
- * Subclasses must implement the {@code getPreAuthenticatedPrincipal()} and
- * {@code getPreAuthenticatedCredentials()} methods. Subclasses of this filter are
- * typically used in combination with a {@code PreAuthenticatedAuthenticationProvider},
- * which is used to load additional data for the user. This provider will reject null
- * credentials, so the {@link #getPreAuthenticatedCredentials} method should not return
- * null for a valid principal.
- * <p>
- * If the security context already contains an {@code Authentication} object (either from
- * a invocation of the filter or because of some other authentication mechanism), the
- * filter will do nothing by default. You can force it to check for a change in the
- * principal by setting the {@link #setCheckForPrincipalChanges(boolean)
- * checkForPrincipalChanges} property.
- * <p>
- * By default, the filter chain will proceed when an authentication attempt fails in order
- * to allow other authentication mechanisms to process the request. To reject the
- * credentials immediately, set the
- * <tt>continueFilterChainOnUnsuccessfulAuthentication</tt> flag to false. The exception
- * raised by the <tt>AuthenticationManager</tt> will the be re-thrown. Note that this will
- * not affect cases where the principal returned by {@link #getPreAuthenticatedPrincipal}
- * is null, when the chain will still proceed as normal.
- *
- * @author Luke Taylor
- * @author Ruud Senden
- * @author Rob Winch
- * @author Tadaya Tsuyukubo
- * @since 2.0
  */
 public abstract class AbstractPreAuthenticatedProcessingFilter extends GenericFilterBean
 		implements ApplicationEventPublisherAware {
 
+	/**
+	 * 事件推送器
+	 */
 	private ApplicationEventPublisher eventPublisher = null;
 
+	/**
+	 * 认证信息详情源
+	 */
 	private AuthenticationDetailsSource<HttpServletRequest, ?> authenticationDetailsSource = new WebAuthenticationDetailsSource();
 
+	/**
+	 * 一般是是自己设置的局部认证管理器
+	 */
 	private AuthenticationManager authenticationManager = null;
 
+	/**
+	 * 认证失败是否抛出异常
+	 */
 	private boolean continueFilterChainOnUnsuccessfulAuthentication = true;
 
+	/**
+	 * 当预先认证过滤器已经执行过一次后，当前系统就会为其分配本系统的认证对象，
+	 * 这样后面执行当前过滤器的时候，就由这个标志位来确保是否检查用户名发送了变化
+	 */
 	private boolean checkForPrincipalChanges;
 
+	/**
+	 * 当用户名发送了变化的是否，是否使其原Session无效
+	 */
 	private boolean invalidateSessionOnPrincipalChange = true;
 
+	/**
+	 * 认证成功处理器
+	 */
 	private AuthenticationSuccessHandler authenticationSuccessHandler = null;
 
+	/**
+	 * 认证失败处理器
+	 */
 	private AuthenticationFailureHandler authenticationFailureHandler = null;
 
+	/**
+	 * 请求匹配器：此时用于确定是否是认证请求
+	 */
 	private RequestMatcher requiresAuthenticationRequestMatcher = new PreAuthenticatedProcessingRequestMatcher();
 
 	/**
@@ -126,11 +126,13 @@ public abstract class AbstractPreAuthenticatedProcessingFilter extends GenericFi
 	@Override
 	public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
 			throws IOException, ServletException {
+		//确定是否是一个认证请求
 		if (this.requiresAuthenticationRequestMatcher.matches((HttpServletRequest) request)) {
 			if (logger.isDebugEnabled()) {
 				logger.debug(LogMessage
 						.of(() -> "Authenticating " + SecurityContextHolder.getContext().getAuthentication()));
 			}
+			//尝试认证
 			doAuthenticate((HttpServletRequest) request, (HttpServletResponse) response);
 		}
 		else {
@@ -143,28 +145,19 @@ public abstract class AbstractPreAuthenticatedProcessingFilter extends GenericFi
 	}
 
 	/**
-	 * Determines if the current principal has changed. The default implementation tries
-	 *
-	 * <ul>
-	 * <li>If the {@link #getPreAuthenticatedPrincipal(HttpServletRequest)} is a String,
-	 * the {@link Authentication#getName()} is compared against the pre authenticated
-	 * principal</li>
-	 * <li>Otherwise, the {@link #getPreAuthenticatedPrincipal(HttpServletRequest)} is
-	 * compared against the {@link Authentication#getPrincipal()}
-	 * </ul>
-	 *
-	 * <p>
-	 * Subclasses can override this method to determine when a principal has changed.
-	 * </p>
+	 * 确认用户名是否发生了变化
 	 * @param request
 	 * @param currentAuthentication
-	 * @return true if the principal has changed, else false
+	 * @return
 	 */
 	protected boolean principalChanged(HttpServletRequest request, Authentication currentAuthentication) {
+		//通常情况下这是获取用户名
 		Object principal = getPreAuthenticatedPrincipal(request);
+		//确认用户名是否发生了变化
 		if ((principal instanceof String) && currentAuthentication.getName().equals(principal)) {
 			return false;
 		}
+		//确认用户名是否发生了变化
 		if (principal != null && principal.equals(currentAuthentication.getPrincipal())) {
 			return false;
 		}
@@ -174,25 +167,31 @@ public abstract class AbstractPreAuthenticatedProcessingFilter extends GenericFi
 	}
 
 	/**
-	 * Do the actual authentication for a pre-authenticated user.
+	 * 为预认证的用户创建实际的认证对象
 	 */
 	private void doAuthenticate(HttpServletRequest request, HttpServletResponse response)
 			throws IOException, ServletException {
+		//获得用户名
 		Object principal = getPreAuthenticatedPrincipal(request);
 		if (principal == null) {
 			this.logger.debug("No pre-authenticated principal found in request");
 			return;
 		}
 		this.logger.debug(LogMessage.format("preAuthenticatedPrincipal = %s, trying to authenticate", principal));
+		//获得密码
 		Object credentials = getPreAuthenticatedCredentials(request);
 		try {
+			//封装成功认证对象，然后调用认证管理器进行认证
 			PreAuthenticatedAuthenticationToken authenticationRequest = new PreAuthenticatedAuthenticationToken(
 					principal, credentials);
 			authenticationRequest.setDetails(this.authenticationDetailsSource.buildDetails(request));
 			Authentication authenticationResult = this.authenticationManager.authenticate(authenticationRequest);
+
+			//执行认证成功的操作
 			successfulAuthentication(request, response, authenticationResult);
 		}
 		catch (AuthenticationException ex) {
+			//认证失败的处理流程
 			unsuccessfulAuthentication(request, response, ex);
 			if (!this.continueFilterChainOnUnsuccessfulAuthentication) {
 				throw ex;
@@ -201,28 +200,34 @@ public abstract class AbstractPreAuthenticatedProcessingFilter extends GenericFi
 	}
 
 	/**
-	 * Puts the <code>Authentication</code> instance returned by the authentication
-	 * manager into the secure context.
+	 * 执行认证成功的操作
+	 * @param request
+	 * @param response
+	 * @param authResult
+	 * @throws IOException
+	 * @throws ServletException
 	 */
 	protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response,
 			Authentication authResult) throws IOException, ServletException {
 		this.logger.debug(LogMessage.format("Authentication success: %s", authResult));
+		//设置认证对象到线程级别的安全上下文中
 		SecurityContext context = SecurityContextHolder.createEmptyContext();
 		context.setAuthentication(authResult);
 		SecurityContextHolder.setContext(context);
+
+		//推送交互认证成功的事件
 		if (this.eventPublisher != null) {
 			this.eventPublisher.publishEvent(new InteractiveAuthenticationSuccessEvent(authResult, this.getClass()));
 		}
+
+		//执行认证成功处理器
 		if (this.authenticationSuccessHandler != null) {
 			this.authenticationSuccessHandler.onAuthenticationSuccess(request, response, authResult);
 		}
 	}
 
 	/**
-	 * Ensures the authentication object in the secure context is set to null when
-	 * authentication fails.
-	 * <p>
-	 * Caches the failure exception as a request attribute
+	 * 认证失败的处理流程
 	 */
 	protected void unsuccessfulAuthentication(HttpServletRequest request, HttpServletResponse response,
 			AuthenticationException failed) throws IOException, ServletException {
@@ -319,14 +324,14 @@ public abstract class AbstractPreAuthenticatedProcessingFilter extends GenericFi
 	}
 
 	/**
-	 * Override to extract the principal information from the current request
+	 * 获取Principal，此时一般是用户名
 	 */
 	protected abstract Object getPreAuthenticatedPrincipal(HttpServletRequest request);
 
 	/**
-	 * Override to extract the credentials (if applicable) from the current request.
-	 * Should not return null for a valid principal, though some implementations may
-	 * return a dummy value.
+	 * 获取密码
+	 * @param request
+	 * @return
 	 */
 	protected abstract Object getPreAuthenticatedCredentials(HttpServletRequest request);
 
@@ -338,23 +343,32 @@ public abstract class AbstractPreAuthenticatedProcessingFilter extends GenericFi
 		@Override
 		public boolean matches(HttpServletRequest request) {
 			Authentication currentUser = SecurityContextHolder.getContext().getAuthentication();
+			//如果没有认证对象，就视为是认证请求
 			if (currentUser == null) {
 				return true;
 			}
+			//是否检查用户名发送了变化
 			if (!AbstractPreAuthenticatedProcessingFilter.this.checkForPrincipalChanges) {
 				return false;
 			}
+			//确认用户名是否发生了变化
 			if (!principalChanged(request, currentUser)) {
 				return false;
 			}
+
+			//到这就说明用户名发送了变化
 			AbstractPreAuthenticatedProcessingFilter.this.logger
 					.debug("Pre-authenticated principal has changed and will be reauthenticated");
+
+			//是否清除Session
 			if (AbstractPreAuthenticatedProcessingFilter.this.invalidateSessionOnPrincipalChange) {
 				SecurityContextHolder.clearContext();
 				HttpSession session = request.getSession(false);
 				if (session != null) {
 					AbstractPreAuthenticatedProcessingFilter.this.logger.debug("Invalidating existing session");
+					//使原Session无效
 					session.invalidate();
+					//重新创建新的
 					request.getSession();
 				}
 			}

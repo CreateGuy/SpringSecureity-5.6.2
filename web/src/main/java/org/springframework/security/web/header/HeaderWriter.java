@@ -20,19 +20,15 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 /**
- * Contract for writing headers to a {@link HttpServletResponse}
- *
- * @author Marten Deinum
- * @author Rob Winch
- * @since 3.2
+ * 用户将某些请求头放入{@link HttpServletResponse}中
  * @see HeaderWriterFilter
  */
 public interface HeaderWriter {
 
 	/**
-	 * Create a {@code Header} instance.
-	 * @param request the request
-	 * @param response the response
+	 * 将请求头写入响应头中
+	 * @param request
+	 * @param response
 	 */
 	void writeHeaders(HttpServletRequest request, HttpServletResponse response);
 

@@ -61,77 +61,103 @@ import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 
 /**
- * Allows configuring session management.
- *
- * <h2>Security Filters</h2>
- *
- * The following Filters are populated
- *
+ * 会话管理配置类
+ * 安全过滤器填充以下过滤器
  * <ul>
  * <li>{@link SessionManagementFilter}</li>
  * <li>{@link ConcurrentSessionFilter} if there are restrictions on how many concurrent
- * sessions a user can have</li>
- * </ul>
- *
- * <h2>Shared Objects Created</h2>
- *
- * The following shared objects are created:
- *
- * <ul>
- * <li>{@link RequestCache}</li>
- * <li>{@link SecurityContextRepository}</li>
- * <li>{@link SessionManagementConfigurer}</li>
- * <li>{@link InvalidSessionStrategy}</li>
- * </ul>
- *
- * <h2>Shared Objects Used</h2>
- *
- * <ul>
- * <li>{@link SecurityContextRepository}</li>
- * <li>{@link AuthenticationTrustResolver} is optionally used to populate the
- * {@link HttpSessionSecurityContextRepository} and {@link SessionManagementFilter}</li>
- * </ul>
- *
- * @author Rob Winch
- * @author Onur Kagan Ozcan
- * @since 3.2
- * @see SessionManagementFilter
- * @see ConcurrentSessionFilter
  */
 public final class SessionManagementConfigurer<H extends HttpSecurityBuilder<H>>
 		extends AbstractHttpConfigurer<SessionManagementConfigurer<H>, H> {
 
+	/**
+	 * 会话固定身份验证策略
+	 */
 	private final SessionAuthenticationStrategy DEFAULT_SESSION_FIXATION_STRATEGY = createDefaultSessionFixationProtectionStrategy();
 
+	/**
+	 * 默认的HttpSession认证策略
+	 * 实际上也由public的set方法可以改变
+	 */
 	private SessionAuthenticationStrategy sessionFixationAuthenticationStrategy = this.DEFAULT_SESSION_FIXATION_STRATEGY;
 
+	/**
+	 * 最后将各个地方的HttpSession证策略组合在一起的 session认证策略
+	 * 是{@link CompositeSessionAuthenticationStrategy}
+	 */
 	private SessionAuthenticationStrategy sessionAuthenticationStrategy;
 
+	/**
+	 * 这个和下面这个都有Public的set方法，是让用户设置HttpSession认证策略
+	 * 但是这个和sessionFixationAuthenticationStrategy有冲突
+	 */
 	private SessionAuthenticationStrategy providedSessionAuthenticationStrategy;
-
-	private InvalidSessionStrategy invalidSessionStrategy;
-
-	private SessionInformationExpiredStrategy expiredSessionStrategy;
 
 	private List<SessionAuthenticationStrategy> sessionAuthenticationStrategies = new ArrayList<>();
 
-	private SessionRegistry sessionRegistry;
+	/**
+	 * HttpSession过期(无效)策略
+	 */
+	private InvalidSessionStrategy invalidSessionStrategy;
 
-	private Integer maximumSessions;
+	/**
+	 * HttpSession过期(无效)之后跳转的Url
+	 * 就是创建一个跳转的策略
+	 */
+	private String invalidSessionUrl;
 
+	/**
+	 * SessionInformation过期策略
+	 */
+	private SessionInformationExpiredStrategy expiredSessionStrategy;
+
+	/**
+	 * SessionInformation过期之后跳转的Url
+	 * 就是创建一个跳转的策略
+	 */
 	private String expiredUrl;
 
+	/**
+	 * SessionInformation注册中心
+	 */
+	private SessionRegistry sessionRegistry;
+
+	/**
+	 * 限制用户会话并发数
+	 */
+	private Integer maximumSessions;
+
+	/**
+	 * 某个用户的会话数达到maximumSessions的时候，是否阻止登录
+	 * <ul>
+	 *     <li>
+	 * 			true: 后面登录的用户直接抛出异常
+	 *     </li>
+	 *     <li>
+	 *			false：将最先登录的那个会话对应的SessionInformation直接设置为已过期，那么遇到ConcurrentSessionFilter就会有对应的退出操作了
+	 *     </li>
+	 * </ul>
+	 */
 	private boolean maxSessionsPreventsLogin;
 
+	/**
+	 * SpringSecurity创建session的策略
+	 */
 	private SessionCreationPolicy sessionPolicy;
 
 	private boolean enableSessionUrlRewriting;
 
-	private String invalidSessionUrl;
-
-	private String sessionAuthenticationErrorUrl;
-
+	/**
+	 * 在执行HttpSession认证策略的时候出现异常执行的处理器
+	 * 和下面这个一样
+	 */
 	private AuthenticationFailureHandler sessionAuthenticationFailureHandler;
+
+	/**
+	 * 在执行HttpSession认证策略的时候出现异常跳转了Url
+	 * 就是创建一个跳转的策略
+	 */
+	private String sessionAuthenticationErrorUrl;
 
 	/**
 	 * Creates a new instance
@@ -212,12 +238,9 @@ public final class SessionManagementConfigurer<H extends HttpSecurityBuilder<H>>
 	}
 
 	/**
-	 * Allows specifying the {@link SessionCreationPolicy}
-	 * @param sessionCreationPolicy the {@link SessionCreationPolicy} to use. Cannot be
-	 * null.
-	 * @return the {@link SessionManagementConfigurer} for further customizations
-	 * @throws IllegalArgumentException if {@link SessionCreationPolicy} is null.
-	 * @see SessionCreationPolicy
+	 * 设置SpringSecurity创建session的策略
+	 * @param sessionCreationPolicy
+	 * @return
 	 */
 	public SessionManagementConfigurer<H> sessionCreationPolicy(SessionCreationPolicy sessionCreationPolicy) {
 		Assert.notNull(sessionCreationPolicy, "sessionCreationPolicy cannot be null");
@@ -259,8 +282,8 @@ public final class SessionManagementConfigurer<H extends HttpSecurityBuilder<H>>
 	}
 
 	/**
-	 * Allows changing the default {@link SessionFixationProtectionStrategy}.
-	 * @return the {@link SessionFixationConfigurer} for further customizations
+	 * 返回一个防止固定会话攻击的配置类
+	 * 通常是用来 通过配置类设置外部配置类的属性
 	 */
 	public SessionFixationConfigurer sessionFixation() {
 		return new SessionFixationConfigurer();
@@ -309,62 +332,92 @@ public final class SessionManagementConfigurer<H extends HttpSecurityBuilder<H>>
 	 */
 	private void setSessionFixationAuthenticationStrategy(
 			SessionAuthenticationStrategy sessionFixationAuthenticationStrategy) {
+		//与providedSessionAuthenticationStrategy的区别是会多执行postProcess方法
 		this.sessionFixationAuthenticationStrategy = postProcess(sessionFixationAuthenticationStrategy);
 	}
 
 	@Override
 	public void init(H http) {
+		//获得安全上下文存储库
 		SecurityContextRepository securityContextRepository = http.getSharedObject(SecurityContextRepository.class);
+		//判断是否完全不需要创建session
 		boolean stateless = isStateless();
 		if (securityContextRepository == null) {
 			if (stateless) {
+				//如果没有安全上下文存储库，又不需要创建session
+				//那么就将安全上下文存储库设置为NullSecurityContextRepository
+				//那么程序在执行的时候就无法判断当前用户的认证信息了
 				http.setSharedObject(SecurityContextRepository.class, new NullSecurityContextRepository());
 			}
 			else {
+				//默认安全上下文存储库的策略是基于HttpSession的
 				HttpSessionSecurityContextRepository httpSecurityRepository = new HttpSessionSecurityContextRepository();
 				httpSecurityRepository.setDisableUrlRewriting(!this.enableSessionUrlRewriting);
 				httpSecurityRepository.setAllowSessionCreation(isAllowSessionCreation());
+				//设置认证对象分析器
 				AuthenticationTrustResolver trustResolver = http.getSharedObject(AuthenticationTrustResolver.class);
 				if (trustResolver != null) {
 					httpSecurityRepository.setTrustResolver(trustResolver);
 				}
+				//将HttpSession级别的安全上下文策略保存到SharedObject中
 				http.setSharedObject(SecurityContextRepository.class, httpSecurityRepository);
 			}
 		}
+		//从SharedObject中获取请求缓冲器
 		RequestCache requestCache = http.getSharedObject(RequestCache.class);
 		if (requestCache == null) {
+			//如果没有请求缓冲器并且又不需要创建HttpSession，那就注入一个空实现的请求缓冲器
+			//因为请求缓冲器的有效实现类只有HttpSessionRequestCache和CookieRequestCache
+			//CookieRequestCache不需要存储在服务端，而HttpSessionRequestCache是基于HttpSession,没有HttpSession也就不用请求缓冲器了
 			if (stateless) {
 				http.setSharedObject(RequestCache.class, new NullRequestCache());
 			}
 		}
+		//设置HttpSession认证策略
 		http.setSharedObject(SessionAuthenticationStrategy.class, getSessionAuthenticationStrategy(http));
+		//设置HttpSession过期(无效)策略
 		http.setSharedObject(InvalidSessionStrategy.class, getInvalidSessionStrategy());
 	}
 
 	@Override
 	public void configure(H http) {
+		//获得HttpSession级别的安全上下文存储策略
 		SecurityContextRepository securityContextRepository = http.getSharedObject(SecurityContextRepository.class);
+		//创建第一个过滤器
 		SessionManagementFilter sessionManagementFilter = new SessionManagementFilter(securityContextRepository,
 				getSessionAuthenticationStrategy(http));
+
+		//设置出现异常跳转的Url
 		if (this.sessionAuthenticationErrorUrl != null) {
 			sessionManagementFilter.setAuthenticationFailureHandler(
 					new SimpleUrlAuthenticationFailureHandler(this.sessionAuthenticationErrorUrl));
 		}
+
+		//获得HttpSession过期(无效)策略
 		InvalidSessionStrategy strategy = getInvalidSessionStrategy();
 		if (strategy != null) {
 			sessionManagementFilter.setInvalidSessionStrategy(strategy);
 		}
+
+		//获得执行HttpSession认证策略的时候出现异常的 失败策略
 		AuthenticationFailureHandler failureHandler = getSessionAuthenticationFailureHandler();
 		if (failureHandler != null) {
 			sessionManagementFilter.setAuthenticationFailureHandler(failureHandler);
 		}
+
+		//获得认证对象解析器
 		AuthenticationTrustResolver trustResolver = http.getSharedObject(AuthenticationTrustResolver.class);
 		if (trustResolver != null) {
 			sessionManagementFilter.setTrustResolver(trustResolver);
 		}
+
+		// 大部分Filter必执行的postProcess方法
 		sessionManagementFilter = postProcess(sessionManagementFilter);
+		//添加到HttpSecurity的过滤器集合中
 		http.addFilter(sessionManagementFilter);
+		//当开启了并发会话的限制
 		if (isConcurrentSessionControlEnabled()) {
+			//创建第二个过滤器
 			ConcurrentSessionFilter concurrentSessionFilter = createConcurrencyFilter(http);
 
 			concurrentSessionFilter = postProcess(concurrentSessionFilter);
@@ -372,16 +425,30 @@ public final class SessionManagementConfigurer<H extends HttpSecurityBuilder<H>>
 		}
 	}
 
+	/**
+	 * 创建一个有关并发会话限制的过滤器
+	 * @param http
+	 * @return
+	 */
 	private ConcurrentSessionFilter createConcurrencyFilter(H http) {
+		//获得SessionInformation过期策略
 		SessionInformationExpiredStrategy expireStrategy = getExpiredSessionStrategy();
+		//获得SessionInformation注册中心
 		SessionRegistry sessionRegistry = getSessionRegistry(http);
+
+		//创建过滤器
 		ConcurrentSessionFilter concurrentSessionFilter = (expireStrategy != null)
 				? new ConcurrentSessionFilter(sessionRegistry, expireStrategy)
+				//虽然这里没传SessionInformation过期策略，但是构造方法实际上创建了默认的
 				: new ConcurrentSessionFilter(sessionRegistry);
+
+		//重点：从httpSecurity中获得登出配置类
 		LogoutConfigurer<H> logoutConfigurer = http.getConfigurer(LogoutConfigurer.class);
 		if (logoutConfigurer != null) {
+			//拿到登出处理器
 			List<LogoutHandler> logoutHandlers = logoutConfigurer.getLogoutHandlers();
 			if (!CollectionUtils.isEmpty(logoutHandlers)) {
+				//设置到ConcurrentSessionFilter过滤器中了，这样这个过滤器就可以做登出操作了
 				concurrentSessionFilter.setLogoutHandlers(logoutHandlers);
 			}
 		}
@@ -389,10 +456,7 @@ public final class SessionManagementConfigurer<H extends HttpSecurityBuilder<H>>
 	}
 
 	/**
-	 * Gets the {@link InvalidSessionStrategy} to use. If null and
-	 * {@link #invalidSessionUrl} is not null defaults to
-	 * {@link SimpleRedirectInvalidSessionStrategy}.
-	 * @return the {@link InvalidSessionStrategy} to use
+	 * 获得HttpSession过期(无效)策略
 	 */
 	InvalidSessionStrategy getInvalidSessionStrategy() {
 		if (this.invalidSessionStrategy != null) {
@@ -405,6 +469,10 @@ public final class SessionManagementConfigurer<H extends HttpSecurityBuilder<H>>
 		return this.invalidSessionStrategy;
 	}
 
+	/**
+	 * 获得SessionInformation过期策略
+	 * @return
+	 */
 	SessionInformationExpiredStrategy getExpiredSessionStrategy() {
 		if (this.expiredSessionStrategy != null) {
 			return this.expiredSessionStrategy;
@@ -416,6 +484,10 @@ public final class SessionManagementConfigurer<H extends HttpSecurityBuilder<H>>
 		return this.expiredSessionStrategy;
 	}
 
+	/**
+	 * 获得执行HttpSession认证策略的时候出现异常的 失败策略
+	 * @return
+	 */
 	AuthenticationFailureHandler getSessionAuthenticationFailureHandler() {
 		if (this.sessionAuthenticationFailureHandler != null) {
 			return this.sessionAuthenticationFailureHandler;
@@ -429,21 +501,20 @@ public final class SessionManagementConfigurer<H extends HttpSecurityBuilder<H>>
 	}
 
 	/**
-	 * Gets the {@link SessionCreationPolicy}. Can not be null.
-	 * @return the {@link SessionCreationPolicy}
+	 * 获得创建session的策略
 	 */
 	SessionCreationPolicy getSessionCreationPolicy() {
 		if (this.sessionPolicy != null) {
 			return this.sessionPolicy;
 		}
+		//尝试从构建器的sharedObjects获取创建session策略
 		SessionCreationPolicy sessionPolicy = getBuilder().getSharedObject(SessionCreationPolicy.class);
+		//如果没有设置就设置为需要就创建
 		return (sessionPolicy != null) ? sessionPolicy : SessionCreationPolicy.IF_REQUIRED;
 	}
 
 	/**
-	 * Returns true if the {@link SessionCreationPolicy} allows session creation, else
-	 * false
-	 * @return true if the {@link SessionCreationPolicy} allows session creation
+	 * 是否允许创建HttpSession
 	 */
 	private boolean isAllowSessionCreation() {
 		SessionCreationPolicy sessionPolicy = getSessionCreationPolicy();
@@ -451,69 +522,93 @@ public final class SessionManagementConfigurer<H extends HttpSecurityBuilder<H>>
 	}
 
 	/**
-	 * Returns true if the {@link SessionCreationPolicy} is stateless
-	 * @return
+	 * 如果完全不需要创建session就返回true
 	 */
 	private boolean isStateless() {
+		//获得创建session的策略
 		SessionCreationPolicy sessionPolicy = getSessionCreationPolicy();
+		//判断是否是完全不需要
 		return SessionCreationPolicy.STATELESS == sessionPolicy;
 	}
 
 	/**
-	 * Gets the customized {@link SessionAuthenticationStrategy} if
-	 * {@link #sessionAuthenticationStrategy(SessionAuthenticationStrategy)} was
-	 * specified. Otherwise creates a default {@link SessionAuthenticationStrategy}.
-	 * @return the {@link SessionAuthenticationStrategy} to use
+	 * 获得HttpSession认证策略
 	 */
 	private SessionAuthenticationStrategy getSessionAuthenticationStrategy(H http) {
+		//如果以前执行过本方法那么这个就不为空
 		if (this.sessionAuthenticationStrategy != null) {
 			return this.sessionAuthenticationStrategy;
 		}
+		//获得用户设置过的session认证策略
 		List<SessionAuthenticationStrategy> delegateStrategies = this.sessionAuthenticationStrategies;
 		SessionAuthenticationStrategy defaultSessionAuthenticationStrategy;
+		//默认session策略取哪一个
+		//可以看出一个会执行postProcess方法
 		if (this.providedSessionAuthenticationStrategy == null) {
-			// If the user did not provide a SessionAuthenticationStrategy
-			// then default to sessionFixationAuthenticationStrategy
 			defaultSessionAuthenticationStrategy = postProcess(this.sessionFixationAuthenticationStrategy);
 		}
 		else {
 			defaultSessionAuthenticationStrategy = this.providedSessionAuthenticationStrategy;
 		}
+
+		//是否需要限制用户的并发数
 		if (isConcurrentSessionControlEnabled()) {
+			//获得SessionInformation注册中心
 			SessionRegistry sessionRegistry = getSessionRegistry(http);
+			//创建一个处理并发会话控制的策略
 			ConcurrentSessionControlAuthenticationStrategy concurrentSessionControlStrategy = new ConcurrentSessionControlAuthenticationStrategy(
 					sessionRegistry);
 			concurrentSessionControlStrategy.setMaximumSessions(this.maximumSessions);
 			concurrentSessionControlStrategy.setExceptionIfMaximumExceeded(this.maxSessionsPreventsLogin);
 			concurrentSessionControlStrategy = postProcess(concurrentSessionControlStrategy);
 
+			//创建一个注册SessionInformation的策略
 			RegisterSessionAuthenticationStrategy registerSessionStrategy = new RegisterSessionAuthenticationStrategy(
 					sessionRegistry);
 			registerSessionStrategy = postProcess(registerSessionStrategy);
 
+			//通常来说是添加一个防止固定会话攻击的策略
 			delegateStrategies.addAll(Arrays.asList(concurrentSessionControlStrategy,
 					defaultSessionAuthenticationStrategy, registerSessionStrategy));
+			//也就说只要开启了限制会话并发数，那么就至少有这三个策略
 		}
 		else {
+			//否则默认就只有防止固定会话攻击的策略
 			delegateStrategies.add(defaultSessionAuthenticationStrategy);
 		}
+		//变成一个混合型的HttpSession认证策略，并设置到对应的位置上
 		this.sessionAuthenticationStrategy = postProcess(
 				new CompositeSessionAuthenticationStrategy(delegateStrategies));
 		return this.sessionAuthenticationStrategy;
 	}
 
+	/**
+	 * 获得SessionInformation注册中心
+	 * @param http
+	 * @return
+	 */
 	private SessionRegistry getSessionRegistry(H http) {
+		//可能已经配置了注册中心
+		//尝试从容器中获取
 		if (this.sessionRegistry == null) {
 			this.sessionRegistry = getBeanOrNull(SessionRegistry.class);
 		}
+		//自己创建默认的实现
 		if (this.sessionRegistry == null) {
 			SessionRegistryImpl sessionRegistry = new SessionRegistryImpl();
+			//重点：注册监听器
 			registerDelegateApplicationListener(http, sessionRegistry);
 			this.sessionRegistry = sessionRegistry;
 		}
 		return this.sessionRegistry;
 	}
 
+	/**
+	 * 注册一个监听器
+	 * 这是为了当HttpSession过期了或者sessionId改变了，那么与之对应的SessionInformation也要发生改变
+	 * @param http
+	 * @param delegate
+	 */
 	private void registerDelegateApplicationListener(H http, ApplicationListener<?> delegate) {
 		DelegatingApplicationListener delegating = getBeanOrNull(DelegatingApplicationListener.class);
 		if (delegating == null) {
@@ -524,7 +619,7 @@ public final class SessionManagementConfigurer<H extends HttpSecurityBuilder<H>>
 	}
 
 	/**
-	 * Returns true if the number of concurrent sessions per user should be restricted.
+	 * 如果需要限制每个用户的并发会话数，则返回true。
 	 * @return
 	 */
 	private boolean isConcurrentSessionControlEnabled() {
@@ -553,16 +648,13 @@ public final class SessionManagementConfigurer<H extends HttpSecurityBuilder<H>>
 	}
 
 	/**
-	 * Allows configuring SessionFixation protection
-	 *
-	 * @author Rob Winch
+	 * 防止固定会话攻击的策略 的配置类
+	 * 有两种不同的方案，但归根结底都是将认证前后的Session发生变化
 	 */
 	public final class SessionFixationConfigurer {
 
 		/**
-		 * Specifies that a new session should be created, but the session attributes from
-		 * the original {@link HttpSession} should not be retained.
-		 * @return the {@link SessionManagementConfigurer} for further customizations
+		 * 开启防止固定会话攻击的策略
 		 */
 		public SessionManagementConfigurer<H> newSession() {
 			SessionFixationProtectionStrategy sessionFixationProtectionStrategy = new SessionFixationProtectionStrategy();
@@ -572,9 +664,8 @@ public final class SessionManagementConfigurer<H extends HttpSecurityBuilder<H>>
 		}
 
 		/**
-		 * Specifies that a new session should be created and the session attributes from
-		 * the original {@link HttpSession} should be retained.
-		 * @return the {@link SessionManagementConfigurer} for further customizations
+		 * 开启防止固定会话攻击的策略
+		 * 是重新创建Session的策略
 		 */
 		public SessionManagementConfigurer<H> migrateSession() {
 			setSessionFixationAuthenticationStrategy(new SessionFixationProtectionStrategy());
@@ -582,11 +673,8 @@ public final class SessionManagementConfigurer<H extends HttpSecurityBuilder<H>>
 		}
 
 		/**
-		 * Specifies that the Servlet container-provided session fixation protection
-		 * should be used. When a session authenticates, the Servlet method
-		 * {@code HttpServletRequest#changeSessionId()} is called to change the session ID
-		 * and retain all session attributes.
-		 * @return the {@link SessionManagementConfigurer} for further customizations
+		 * 开启防止固定会话攻击的策略
+		 * 是改变SessionId的策略
 		 */
 		public SessionManagementConfigurer<H> changeSessionId() {
 			setSessionFixationAuthenticationStrategy(new ChangeSessionIdAuthenticationStrategy());
@@ -594,11 +682,7 @@ public final class SessionManagementConfigurer<H extends HttpSecurityBuilder<H>>
 		}
 
 		/**
-		 * Specifies that no session fixation protection should be enabled. This may be
-		 * useful when utilizing other mechanisms for protecting against session fixation.
-		 * For example, if application container session fixation protection is already in
-		 * use. Otherwise, this option is not recommended.
-		 * @return the {@link SessionManagementConfigurer} for further customizations
+		 * 关闭防止固定会话攻击的策略
 		 */
 		public SessionManagementConfigurer<H> none() {
 			setSessionFixationAuthenticationStrategy(new NullAuthenticatedSessionStrategy());
@@ -608,9 +692,7 @@ public final class SessionManagementConfigurer<H extends HttpSecurityBuilder<H>>
 	}
 
 	/**
-	 * Allows configuring controlling of multiple sessions.
-	 *
-	 * @author Rob Winch
+	 * 并发会话的 配置类
 	 */
 	public final class ConcurrencyControlConfigurer {
 
@@ -618,10 +700,9 @@ public final class SessionManagementConfigurer<H extends HttpSecurityBuilder<H>>
 		}
 
 		/**
-		 * Controls the maximum number of sessions for a user. The default is to allow any
-		 * number of users.
-		 * @param maximumSessions the maximum number of sessions for a user
-		 * @return the {@link ConcurrencyControlConfigurer} for further customizations
+		 * 控制用户的最大会话数。默认情况下允许任意数量的用户
+		 * @param maximumSessions
+		 * @return
 		 */
 		public ConcurrencyControlConfigurer maximumSessions(int maximumSessions) {
 			SessionManagementConfigurer.this.maximumSessions = maximumSessions;

@@ -24,11 +24,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Annotation for specifying a method access-control expression which will be evaluated to
- * decide whether a method invocation is allowed or not.
- *
- * @author Luke Taylor
- * @since 3.0
+ * 在方法执行前调用，判断是否有指定权限
  */
 @Target({ ElementType.METHOD, ElementType.TYPE })
 @Retention(RetentionPolicy.RUNTIME)
@@ -37,8 +33,7 @@ import java.lang.annotation.Target;
 public @interface PreAuthorize {
 
 	/**
-	 * @return the Spring-EL expression to be evaluated before invoking the protected
-	 * method
+	 * 权限表达式，是Spring-EL表达式
 	 */
 	String value();
 

@@ -35,26 +35,26 @@ import org.springframework.security.web.util.UrlUtils;
 import org.springframework.util.Assert;
 
 /**
- * <tt>AuthenticationFailureHandler</tt> which performs a redirect to the value of the
- * {@link #setDefaultFailureUrl defaultFailureUrl} property when the
- * <tt>onAuthenticationFailure</tt> method is called. If the property has not been set it
- * will send a 401 response to the client, with the error message from the
- * <tt>AuthenticationException</tt> which caused the failure.
- * <p>
- * If the {@code useForward} property is set, a {@code RequestDispatcher.forward} call
- * will be made to the destination instead of a redirect.
- *
- * @author Luke Taylor
- * @since 3.0
+ * 出现认证异常而执行的失败策略
+ * 使用场景1：执行HttpSession认证策略抛出了异常，然后就有可能执行此方法(需配置)
  */
 public class SimpleUrlAuthenticationFailureHandler implements AuthenticationFailureHandler {
 
 	protected final Log logger = LogFactory.getLog(getClass());
 
+	/**
+	 * 默认跳转的Url
+	 */
 	private String defaultFailureUrl;
 
+	/**
+	 * 是转发还重定向
+	 */
 	private boolean forwardToDestination = false;
 
+	/**
+	 * 是否在HttpSession中保存抛出异常的原因
+	 */
 	private boolean allowSessionCreation = true;
 
 	private RedirectStrategy redirectStrategy = new DefaultRedirectStrategy();
@@ -67,11 +67,8 @@ public class SimpleUrlAuthenticationFailureHandler implements AuthenticationFail
 	}
 
 	/**
-	 * Performs the redirect or forward to the {@code defaultFailureUrl} if set, otherwise
-	 * returns a 401 error code.
-	 * <p>
-	 * If redirecting or forwarding, {@code saveException} will be called to cache the
-	 * exception for use in the target view.
+	 * 如果没有设置错误的Url就返回401错误码
+	 * 如果设置了错误的Url，再判断是重定向还是转发，将调用saveException来缓存异常以便在目标视图中使用。
 	 */
 	@Override
 	public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response,
@@ -97,18 +94,19 @@ public class SimpleUrlAuthenticationFailureHandler implements AuthenticationFail
 	}
 
 	/**
-	 * Caches the {@code AuthenticationException} for use in view rendering.
-	 * <p>
+	 * 在Request或者HttpSession中保存认证异常
 	 * If {@code forwardToDestination} is set to true, request scope will be used,
 	 * otherwise it will attempt to store the exception in the session. If there is no
 	 * session and {@code allowSessionCreation} is {@code true} a session will be created.
 	 * Otherwise the exception will not be stored.
 	 */
 	protected final void saveException(HttpServletRequest request, AuthenticationException exception) {
+		//如果是转发，那么是同一个Request，保存在Request就好了
 		if (this.forwardToDestination) {
 			request.setAttribute(WebAttributes.AUTHENTICATION_EXCEPTION, exception);
 			return;
 		}
+		//是重定向，没办法只有保存到HttpSession中
 		HttpSession session = request.getSession(false);
 		if (session != null || this.allowSessionCreation) {
 			request.getSession().setAttribute(WebAttributes.AUTHENTICATION_EXCEPTION, exception);

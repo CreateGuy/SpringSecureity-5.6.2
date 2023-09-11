@@ -42,18 +42,7 @@ import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 /**
- * Holds objects associated with a HTTP filter.
- * <P>
- * Guarantees the request and response are instances of <code>HttpServletRequest</code>
- * and <code>HttpServletResponse</code>, and that there are no <code>null</code> objects.
- * <p>
- * Required so that security system classes can obtain access to the filter environment,
- * as well as the request and response.
- *
- * @author Ben Alex
- * @author colin sampaleanu
- * @author Luke Taylor
- * @author Rob Winch
+ * 保存请求和响应以及 FilterChainProxy 的的对象
  */
 public class FilterInvocation {
 

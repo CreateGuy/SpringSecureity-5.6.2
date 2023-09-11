@@ -20,8 +20,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * A password encoder that delegates to another PasswordEncoder based upon a prefixed
- * identifier.
+ * 基于前缀标识符委托给另一个PasswordEncoder的密码编码器。
+ * 好处1：兼容性
+ * 好处2：便捷性
+ * 好处3：稳定性
  *
  * <h2>Constructing an instance</h2>
  *
@@ -125,21 +127,31 @@ public class DelegatingPasswordEncoder implements PasswordEncoder {
 
 	private static final String SUFFIX = "}";
 
+	/**
+	 * 当前系统指定的密码编码器名称
+	 */
 	private final String idForEncode;
 
+	/**
+	 * 当前系统指定的密码编码器
+	 */
 	private final PasswordEncoder passwordEncoderForEncode;
 
+	/**
+	 * 密码编码器集合
+	 * 用于适配其他加密方式的密码(比如说加密方式进行了升级，但是老数据的密码还是要支持)
+	 */
 	private final Map<String, PasswordEncoder> idToPasswordEncoder;
 
+	/**
+	 * 无法通过密码格式获取密码编码器的时候而使用密码编码器
+	 */
 	private PasswordEncoder defaultPasswordEncoderForMatches = new UnmappedIdPasswordEncoder();
 
 	/**
-	 * Creates a new instance
-	 * @param idForEncode the id used to lookup which {@link PasswordEncoder} should be
-	 * used for {@link #encode(CharSequence)}
-	 * @param idToPasswordEncoder a Map of id to {@link PasswordEncoder} used to determine
-	 * which {@link PasswordEncoder} should be used for
-	 * {@link #matches(CharSequence, String)}
+	 * 设置密码编码器集合，同时也会设置默认的密码编码器
+	 * @param idForEncode 默认密码编码器名称
+	 * @param idToPasswordEncoder
 	 */
 	public DelegatingPasswordEncoder(String idForEncode, Map<String, PasswordEncoder> idToPasswordEncoder) {
 		if (idForEncode == null) {
@@ -153,9 +165,11 @@ public class DelegatingPasswordEncoder implements PasswordEncoder {
 			if (id == null) {
 				continue;
 			}
+			//密码编码器名称不能以{开头
 			if (id.contains(PREFIX)) {
 				throw new IllegalArgumentException("id " + id + " cannot contain " + PREFIX);
 			}
+			//密码编码器名称不能以}开头
 			if (id.contains(SUFFIX)) {
 				throw new IllegalArgumentException("id " + id + " cannot contain " + SUFFIX);
 			}
@@ -166,18 +180,8 @@ public class DelegatingPasswordEncoder implements PasswordEncoder {
 	}
 
 	/**
-	 * Sets the {@link PasswordEncoder} to delegate to for
-	 * {@link #matches(CharSequence, String)} if the id is not mapped to a
-	 * {@link PasswordEncoder}.
-	 *
-	 * <p>
-	 * The encodedPassword provided will be the full password passed in including the
-	 * {"id"} portion.* For example, if the password of "{notmapped}foobar" was used, the
-	 * "id" would be "notmapped" and the encodedPassword passed into the
-	 * {@link PasswordEncoder} would be "{notmapped}foobar".
-	 * </p>
-	 * @param defaultPasswordEncoderForMatches the encoder to use. The default is to throw
-	 * an {@link IllegalArgumentException}
+	 * 设置保底的密码编码器
+	 * @param defaultPasswordEncoderForMatches
 	 */
 	public void setDefaultPasswordEncoderForMatches(PasswordEncoder defaultPasswordEncoderForMatches) {
 		if (defaultPasswordEncoderForMatches == null) {
@@ -186,25 +190,47 @@ public class DelegatingPasswordEncoder implements PasswordEncoder {
 		this.defaultPasswordEncoderForMatches = defaultPasswordEncoderForMatches;
 	}
 
+	/**
+	 * 对密码进行编码，可以看到密码的格式就是 {密码编码器名称} + 编码后的密码
+	 * 这样为什么能通过密码解析出密码编码器的原因
+	 * @param rawPassword
+	 * @return
+	 */
 	@Override
 	public String encode(CharSequence rawPassword) {
 		return PREFIX + this.idForEncode + SUFFIX + this.passwordEncoderForEncode.encode(rawPassword);
 	}
 
+	/**
+	 * 对密码进行匹配
+	 * @param rawPassword 用户输入的密码
+	 * @param prefixEncodedPassword 保存的密码 eg：{bcrypt}12q31s23
+	 * @return
+	 */
 	@Override
 	public boolean matches(CharSequence rawPassword, String prefixEncodedPassword) {
 		if (rawPassword == null && prefixEncodedPassword == null) {
 			return true;
 		}
+		//获得密码编码器名称
 		String id = extractId(prefixEncodedPassword);
+		//获得密码编码器
 		PasswordEncoder delegate = this.idToPasswordEncoder.get(id);
 		if (delegate == null) {
+			//到这就说明无法通过密码获取密码编码器，只能用默认的密码编码器
 			return this.defaultPasswordEncoderForMatches.matches(rawPassword, prefixEncodedPassword);
 		}
+		//取出真实密码
 		String encodedPassword = extractEncodedPassword(prefixEncodedPassword);
+		//真正开始匹配的地方
 		return delegate.matches(rawPassword, encodedPassword);
 	}
 
+	/**
+	 * 获得密码编码器名称
+	 * @param prefixEncodedPassword
+	 * @return
+	 */
 	private String extractId(String prefixEncodedPassword) {
 		if (prefixEncodedPassword == null) {
 			return null;
@@ -220,9 +246,15 @@ public class DelegatingPasswordEncoder implements PasswordEncoder {
 		return prefixEncodedPassword.substring(start + 1, end);
 	}
 
+	/**
+	 * 是否能对密码进行更新
+	 * @param prefixEncodedPassword 编码后的密码
+	 * @return
+	 */
 	@Override
 	public boolean upgradeEncoding(String prefixEncodedPassword) {
 		String id = extractId(prefixEncodedPassword);
+		//如果当密码不是由当前系统指定密码编码器创建出来的，那就直接返回false
 		if (!this.idForEncode.equalsIgnoreCase(id)) {
 			return true;
 		}
@@ -232,14 +264,18 @@ public class DelegatingPasswordEncoder implements PasswordEncoder {
 		}
 	}
 
+	/**
+	 * 取出真实密码
+	 * @param prefixEncodedPassword
+	 * @return
+	 */
 	private String extractEncodedPassword(String prefixEncodedPassword) {
 		int start = prefixEncodedPassword.indexOf(SUFFIX);
 		return prefixEncodedPassword.substring(start + 1);
 	}
 
 	/**
-	 * Default {@link PasswordEncoder} that throws an exception telling that a suitable
-	 * {@link PasswordEncoder} for the id could not be found.
+	 * 默认的PasswordEncoder，它会直接抛出一个异常
 	 */
 	private class UnmappedIdPasswordEncoder implements PasswordEncoder {
 

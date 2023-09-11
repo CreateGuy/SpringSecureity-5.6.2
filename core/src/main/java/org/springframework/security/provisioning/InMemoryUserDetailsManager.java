@@ -40,21 +40,21 @@ import org.springframework.security.core.userdetails.memory.UserAttributeEditor;
 import org.springframework.util.Assert;
 
 /**
- * Non-persistent implementation of {@code UserDetailsManager} which is backed by an
- * in-memory map.
- * <p>
- * Mainly intended for testing and demonstration purposes, where a full blown persistent
- * system isn't required.
- *
- * @author Luke Taylor
- * @since 3.1
+ * {@link UserDetailsManager} 的非持久实现，它由内存映射支持。
+ * 主要用于测试和演示目的，其中不需要完整的持久系统
  */
 public class InMemoryUserDetailsManager implements UserDetailsManager, UserDetailsPasswordService {
 
 	protected final Log logger = LogFactory.getLog(getClass());
 
+	/**
+	 * 存储在内存中的用户
+	 */
 	private final Map<String, MutableUserDetails> users = new HashMap<>();
 
+	/**
+	 * 认证管理器
+	 */
 	private AuthenticationManager authenticationManager;
 
 	public InMemoryUserDetailsManager() {
@@ -111,6 +111,11 @@ public class InMemoryUserDetailsManager implements UserDetailsManager, UserDetai
 		return this.users.containsKey(username.toLowerCase());
 	}
 
+	/**
+	 * 基于内存的更新密码
+	 * @param oldPassword current password (for re-authentication if required)
+	 * @param newPassword the password to change to
+	 */
 	@Override
 	public void changePassword(String oldPassword, String newPassword) {
 		Authentication currentUser = SecurityContextHolder.getContext().getAuthentication();
@@ -121,8 +126,7 @@ public class InMemoryUserDetailsManager implements UserDetailsManager, UserDetai
 		}
 		String username = currentUser.getName();
 		this.logger.debug(LogMessage.format("Changing password for user '%s'", username));
-		// If an authentication manager has been set, re-authenticate the user with the
-		// supplied password.
+		// 如果设置了认证管理器，使用旧密码再验证一次
 		if (this.authenticationManager != null) {
 			this.logger.debug(LogMessage.format("Reauthenticating user '%s' for password change request.", username));
 			this.authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username, oldPassword));
@@ -130,11 +134,19 @@ public class InMemoryUserDetailsManager implements UserDetailsManager, UserDetai
 		else {
 			this.logger.debug("No authentication manager set. Password won't be re-checked.");
 		}
+
+		// 更新密码
 		MutableUserDetails user = this.users.get(username);
 		Assert.state(user != null, "Current user doesn't exist in database.");
 		user.setPassword(newPassword);
 	}
 
+	/**
+	 * 基于内存的更新密码
+	 * @param user 源UserDetails
+	 * @param newPassword 新密码
+	 * @return
+	 */
 	@Override
 	public UserDetails updatePassword(UserDetails user, String newPassword) {
 		String username = user.getUsername();
@@ -143,6 +155,12 @@ public class InMemoryUserDetailsManager implements UserDetailsManager, UserDetai
 		return mutableUser;
 	}
 
+	/**
+	 * 根据用户名加载用户对象
+	 * @param username the username identifying the user whose data is required.
+	 * @return
+	 * @throws UsernameNotFoundException
+	 */
 	@Override
 	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
 		UserDetails user = this.users.get(username.toLowerCase());

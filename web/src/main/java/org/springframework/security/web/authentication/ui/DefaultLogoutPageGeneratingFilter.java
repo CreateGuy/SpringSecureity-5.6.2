@@ -33,21 +33,27 @@ import org.springframework.util.Assert;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * Generates a default log out page.
- *
- * @author Rob Winch
- * @since 5.1
+ * 生成一个默认的注销页面
  */
 public class DefaultLogoutPageGeneratingFilter extends OncePerRequestFilter {
 
+	/**
+	 * 请求匹配器：用于匹配是否是登出请求
+	 * 默认的登出和登出页都是GET方式的/logout，所以默认是看不到登出页的，只有改变登出的Url或者方式
+	 */
 	private RequestMatcher matcher = new AntPathRequestMatcher("/logout", "GET");
 
+	/**
+	 * 解析隐藏域的函数，一般是获取Csrf令牌的
+	 */
 	private Function<HttpServletRequest, Map<String, String>> resolveHiddenInputs = (request) -> Collections.emptyMap();
 
 	@Override
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
 			throws ServletException, IOException {
+		//确定是否是登出请求
 		if (this.matcher.matches(request)) {
+			// 生成登出页
 			renderLogout(request, response);
 		}
 		else {
@@ -59,6 +65,12 @@ public class DefaultLogoutPageGeneratingFilter extends OncePerRequestFilter {
 		}
 	}
 
+	/**
+	 * 生成登出页
+	 * @param request
+	 * @param response
+	 * @throws IOException
+	 */
 	private void renderLogout(HttpServletRequest request, HttpServletResponse response) throws IOException {
 		StringBuilder sb = new StringBuilder();
 		sb.append("<!DOCTYPE html>\n");
@@ -91,16 +103,19 @@ public class DefaultLogoutPageGeneratingFilter extends OncePerRequestFilter {
 	}
 
 	/**
-	 * Sets a Function used to resolve a Map of the hidden inputs where the key is the
-	 * name of the input and the value is the value of the input. Typically this is used
-	 * to resolve the CSRF token.
-	 * @param resolveHiddenInputs the function to resolve the inputs
+	 * 设置一个函数，用于解析隐藏输入的Map，其中键是输入的名称，值是输入的值。这通常用于解析CSRF令牌。
+	 * @param resolveHiddenInputs
 	 */
 	public void setResolveHiddenInputs(Function<HttpServletRequest, Map<String, String>> resolveHiddenInputs) {
 		Assert.notNull(resolveHiddenInputs, "resolveHiddenInputs cannot be null");
 		this.resolveHiddenInputs = resolveHiddenInputs;
 	}
 
+	/**
+	 * 设置隐藏域参数，通常是Csrf令牌
+	 * @param request
+	 * @return
+	 */
 	private String renderHiddenInputs(HttpServletRequest request) {
 		StringBuilder sb = new StringBuilder();
 		for (Map.Entry<String, String> input : this.resolveHiddenInputs.apply(request).entrySet()) {

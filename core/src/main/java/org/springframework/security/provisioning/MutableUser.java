@@ -23,6 +23,7 @@ import org.springframework.security.core.SpringSecurityCoreVersion;
 import org.springframework.security.core.userdetails.UserDetails;
 
 /**
+ * 可以修改用户密码的 {@link UserDetails}，一般是基于内存的采用的
  * @author Luke Taylor
  * @since 3.1
  */
@@ -32,6 +33,9 @@ class MutableUser implements MutableUserDetails {
 
 	private String password;
 
+	/**
+	 * 原 {@link UserDetails}
+	 */
 	private final UserDetails delegate;
 
 	MutableUser(UserDetails user) {

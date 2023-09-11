@@ -23,10 +23,7 @@ import org.springframework.security.authentication.AuthenticationCredentialsNotF
 import org.springframework.util.Assert;
 
 /**
- * Indicates a secure object invocation failed because the <code>Authentication</code>
- * could not be obtained from the <code>SecurityContextHolder</code>.
- *
- * @author Ben Alex
+ * 认证对象未找到事件
  */
 public class AuthenticationCredentialsNotFoundEvent extends AbstractAuthorizationEvent {
 

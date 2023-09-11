@@ -24,30 +24,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 
 /**
- * Votes if any {@link ConfigAttribute#getAttribute()} starts with a prefix indicating
- * that it is a role. The default prefix string is <Code>ROLE_</code>, but this may be
- * overridden to any value. It may also be set to empty, which means that essentially any
- * attribute will be voted on. As described further below, the effect of an empty prefix
- * may not be quite desirable.
- * <p>
- * Abstains from voting if no configuration attribute commences with the role prefix.
- * Votes to grant access if there is an exact matching
- * {@link org.springframework.security.core.GrantedAuthority} to a
- * <code>ConfigAttribute</code> starting with the role prefix. Votes to deny access if
- * there is no exact matching <code>GrantedAuthority</code> to a
- * <code>ConfigAttribute</code> starting with the role prefix.
- * <p>
- * An empty role prefix means that the voter will vote for every ConfigAttribute. When
- * there are different categories of ConfigAttributes used, this will not be optimal since
- * the voter will be voting for attributes which do not represent roles. However, this
- * option may be of some use when using pre-existing role names without a prefix, and no
- * ability exists to prefix them with a role prefix on reading them in, such as provided
- * for example in {@link org.springframework.security.core.userdetails.jdbc.JdbcDaoImpl}.
- * <p>
- * All comparisons and prefixes are case sensitive.
- *
- * @author Ben Alex
- * @author colin sampaleanu
+ * 用于判断认证对象是否有任何一个访问接口的角色，就投同意票
  */
 public class RoleVoter implements AccessDecisionVoter<Object> {
 
@@ -82,17 +59,26 @@ public class RoleVoter implements AccessDecisionVoter<Object> {
 		return true;
 	}
 
+	/**
+	 * 判断认证对象是否有任何一个访问此接口的角色，就投同意票
+	 * @param authentication the caller making the invocation
+	 * @param object the secured object being invoked
+	 * @param attributes the configuration attributes associated with the secured object
+	 * @return
+	 */
 	@Override
 	public int vote(Authentication authentication, Object object, Collection<ConfigAttribute> attributes) {
+		//如果认证对象为空 直接投拒绝票
 		if (authentication == null) {
 			return ACCESS_DENIED;
 		}
 		int result = ACCESS_ABSTAIN;
+		//获得认证对象权限
 		Collection<? extends GrantedAuthority> authorities = extractAuthorities(authentication);
 		for (ConfigAttribute attribute : attributes) {
 			if (this.supports(attribute)) {
 				result = ACCESS_DENIED;
-				// Attempt to find a matching granted authority
+				//匹配权限
 				for (GrantedAuthority authority : authorities) {
 					if (attribute.getAttribute().equals(authority.getAuthority())) {
 						return ACCESS_GRANTED;
@@ -103,6 +89,11 @@ public class RoleVoter implements AccessDecisionVoter<Object> {
 		return result;
 	}
 
+	/**
+	 * 获得认证对象权限
+	 * @param authentication
+	 * @return
+	 */
 	Collection<? extends GrantedAuthority> extractAuthorities(Authentication authentication) {
 		return authentication.getAuthorities();
 	}

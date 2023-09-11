@@ -37,6 +37,9 @@ public class AnonymousAuthenticationProvider implements AuthenticationProvider, 
 
 	protected MessageSourceAccessor messages = SpringSecurityMessageSource.getAccessor();
 
+	/**
+	 * 比较是否是匿名用户过滤器创建的认证对象
+	 */
 	private String key;
 
 	public AnonymousAuthenticationProvider(String key) {
@@ -46,9 +49,11 @@ public class AnonymousAuthenticationProvider implements AuthenticationProvider, 
 
 	@Override
 	public Authentication authenticate(Authentication authentication) throws AuthenticationException {
+		//判断是否是匿名认证对象
 		if (!supports(authentication.getClass())) {
 			return null;
 		}
+		//比较key
 		if (this.key.hashCode() != ((AnonymousAuthenticationToken) authentication).getKeyHash()) {
 			throw new BadCredentialsException(this.messages.getMessage("AnonymousAuthenticationProvider.incorrectKey",
 					"The presented AnonymousAuthenticationToken does not contain the expected key"));

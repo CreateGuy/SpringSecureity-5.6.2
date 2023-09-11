@@ -20,31 +20,33 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 /**
- * Implements "saved request" logic, allowing a single request to be retrieved and
- * restarted after redirecting to an authentication mechanism.
- *
- * @author Luke Taylor
- * @since 3.0
+ * 请求缓存器：
  */
 public interface RequestCache {
 
 	/**
-	 * Caches the current request for later retrieval, once authentication has taken
-	 * place. Used by <tt>ExceptionTranslationFilter</tt>.
-	 * @param request the request to be stored
+	 * <ul>
+	 *     <li>
+	 *          在身份验证发生后，缓存当前请求以供以后使用
+	 * 			比如说：在一个论坛的帖子中，进行回帖，然后因为没有登录，先将回帖的信息保存到请求缓存器中，再重定向到登录页
+	 * 	 		然后登陆成功后就会获取请求缓存器中上次保存的回帖信息，然后将当前request进行包装，变成一个回帖请求
+	 *     </li>
+	 *     <li>
+	 *         通常发生在{@link org.springframework.security.web.access.ExceptionTranslationFilter}中
+	 *     </li>
+	 * </ul>
 	 */
 	void saveRequest(HttpServletRequest request, HttpServletResponse response);
 
 	/**
-	 * Returns the saved request, leaving it cached.
+	 * 返回已保存的请求，保留其缓存状态。
 	 * @param request the current request
 	 * @return the saved request which was previously cached, or null if there is none.
 	 */
 	SavedRequest getRequest(HttpServletRequest request, HttpServletResponse response);
 
 	/**
-	 * Returns a wrapper around the saved request, if it matches the current request. The
-	 * saved request should be removed from the cache.
+	 * 如果与当前请求匹配，则返回保存的请求的包装器。保存的请求应该从缓存中删除。
 	 * @param request
 	 * @param response
 	 * @return the wrapped save request, if it matches the original, or null if there is
@@ -53,7 +55,7 @@ public interface RequestCache {
 	HttpServletRequest getMatchingRequest(HttpServletRequest request, HttpServletResponse response);
 
 	/**
-	 * Removes the cached request.
+	 * 删除缓存的请求缓存
 	 * @param request the current request, allowing access to the cache.
 	 */
 	void removeRequest(HttpServletRequest request, HttpServletResponse response);

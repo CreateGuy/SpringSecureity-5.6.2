@@ -25,10 +25,7 @@ import org.springframework.security.authentication.event.LogoutSuccessEvent;
 import org.springframework.security.core.Authentication;
 
 /**
- * A logout handler which publishes {@link LogoutSuccessEvent}
- *
- * @author Onur Kagan Ozcan
- * @since 5.2.0
+ * 发布登出事件的登出处理器
  */
 public final class LogoutSuccessEventPublishingLogoutHandler implements LogoutHandler, ApplicationEventPublisherAware {
 

@@ -47,6 +47,7 @@ import org.springframework.web.filter.DelegatingFilterProxy;
 import org.springframework.web.filter.GenericFilterBean;
 
 /**
+ * 是SpringSecurity提供给Web原生过滤器链的对象
  * Delegates {@code Filter} requests to a list of Spring-managed filter beans. As of
  * version 2.0, you shouldn't need to explicitly configure a {@code FilterChainProxy} bean
  * in your application context unless you need very fine control over the filter chain
@@ -144,14 +145,29 @@ public class FilterChainProxy extends GenericFilterBean {
 
 	private static final Log logger = LogFactory.getLog(FilterChainProxy.class);
 
+	/**
+	 * 表明是否已经情况线程级别安全上下文的标志位
+	 */
 	private static final String FILTER_APPLIED = FilterChainProxy.class.getName().concat(".APPLIED");
 
+	/**
+	 * 重点：过滤器链集合
+	 */
 	private List<SecurityFilterChain> filterChains;
 
+	/**
+	 * FilterChainProxy配置完成的验证器
+	 */
 	private FilterChainValidator filterChainValidator = new NullFilterChainValidator();
 
+	/**
+	 * 防火墙
+	 */
 	private HttpFirewall firewall = new StrictHttpFirewall();
 
+	/**
+	 * 执行过滤器抛出异常的时候，执行的策略
+	 */
 	private RequestRejectedHandler requestRejectedHandler = new DefaultRequestRejectedHandler();
 
 	public FilterChainProxy() {
@@ -167,12 +183,14 @@ public class FilterChainProxy extends GenericFilterBean {
 
 	@Override
 	public void afterPropertiesSet() {
+		//检查过滤器链
 		this.filterChainValidator.validate(this);
 	}
 
 	@Override
 	public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
 			throws IOException, ServletException {
+		//判断是否执行过清空线程级别安全上下文的标志位
 		boolean clearContext = request.getAttribute(FILTER_APPLIED) == null;
 		if (!clearContext) {
 			doFilterInternal(request, response, chain);
@@ -186,21 +204,41 @@ public class FilterChainProxy extends GenericFilterBean {
 			this.requestRejectedHandler.handle((HttpServletRequest) request, (HttpServletResponse) response, ex);
 		}
 		finally {
+			//到这就表明已经执行过所有的过滤器
+			//注意这里是不仅仅是指的是SpringSecurity的过滤器
+			//甚至已经执行过Controller了
+
+			//清理线程级别的安全上下文
 			SecurityContextHolder.clearContext();
 			request.removeAttribute(FILTER_APPLIED);
 		}
 	}
 
+	/**
+	 *
+	 * @param request
+	 * @param response
+	 * @param chain Web的原生过滤器链
+	 * @throws IOException
+	 * @throws ServletException
+	 */
 	private void doFilterInternal(ServletRequest request, ServletResponse response, FilterChain chain)
 			throws IOException, ServletException {
+		//检查请求路径的合法性
 		FirewalledRequest firewallRequest = this.firewall.getFirewalledRequest((HttpServletRequest) request);
 		HttpServletResponse firewallResponse = this.firewall.getFirewalledResponse((HttpServletResponse) response);
+
+		//根据请求的Url匹配第一个能够匹配的过滤器链
 		List<Filter> filters = getFilters(firewallRequest);
+
+		//一般情况不会为空
+		//通过WebSecurity放行的Url的过滤器链就会空
 		if (filters == null || filters.size() == 0) {
 			if (logger.isTraceEnabled()) {
 				logger.trace(LogMessage.of(() -> "No security for " + requestLine(firewallRequest)));
 			}
 			firewallRequest.reset();
+			//执行Web原生过滤器链的下一个过滤器
 			chain.doFilter(firewallRequest, firewallResponse);
 			return;
 		}
@@ -212,9 +250,9 @@ public class FilterChainProxy extends GenericFilterBean {
 	}
 
 	/**
-	 * Returns the first filter chain matching the supplied URL.
-	 * @param request the request to match
-	 * @return an ordered array of Filters defining the filter chain
+	 * 根据请求的Url匹配第一个能够匹配的过滤器链
+	 * @param request
+	 * @return
 	 */
 	private List<Filter> getFilters(HttpServletRequest request) {
 		int count = 0;
@@ -298,14 +336,29 @@ public class FilterChainProxy extends GenericFilterBean {
 	 */
 	private static final class VirtualFilterChain implements FilterChain {
 
+		/**
+		 * Web原生的过滤器链
+		 */
 		private final FilterChain originalChain;
 
+		/**
+		 * 匹配当前请求的SpringSecurity过滤器链
+		 */
 		private final List<Filter> additionalFilters;
 
+		/**
+		 * 包装后的request
+		 */
 		private final FirewalledRequest firewalledRequest;
 
+		/**
+		 * additionalFilters集合的大小
+		 */
 		private final int size;
 
+		/**
+		 * 正在执行的过滤器在additionalFilters集合中的位置
+		 */
 		private int currentPosition = 0;
 
 		private VirtualFilterChain(FirewalledRequest firewalledRequest, FilterChain chain,
@@ -318,12 +371,14 @@ public class FilterChainProxy extends GenericFilterBean {
 
 		@Override
 		public void doFilter(ServletRequest request, ServletResponse response) throws IOException, ServletException {
+			//判断是否已经执行完此过滤器链的最后一个过滤器了
 			if (this.currentPosition == this.size) {
 				if (logger.isDebugEnabled()) {
 					logger.debug(LogMessage.of(() -> "Secured " + requestLine(this.firewalledRequest)));
 				}
 				// Deactivate path stripping as we exit the security filter chain
 				this.firewalledRequest.reset();
+				//执行Web原生过滤器链的下一个过滤器
 				this.originalChain.doFilter(request, response);
 				return;
 			}

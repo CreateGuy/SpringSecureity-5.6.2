@@ -31,10 +31,7 @@ import org.springframework.security.web.FilterInvocation;
 import org.springframework.util.Assert;
 
 /**
- * Voter which handles web authorisation decisions.
- *
- * @author Luke Taylor
- * @since 3.0
+ * 基于表达式权限控制的投票器，具体不懂
  */
 public class WebExpressionVoter implements AccessDecisionVoter<FilterInvocation> {
 

@@ -43,49 +43,30 @@ import org.springframework.security.web.servlet.util.matcher.MvcRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 
 /**
- * Adds channel security (i.e. requires HTTPS or HTTP) to an application. In order for
- * {@link ChannelSecurityConfigurer} to be useful, at least one {@link RequestMatcher}
- * should be mapped to HTTP or HTTPS.
- *
- * <p>
- * By default an {@link InsecureChannelProcessor} and a {@link SecureChannelProcessor}
- * will be registered.
- * </p>
- *
- * <h2>Security Filters</h2>
- *
- * The following Filters are populated
- *
- * <ul>
- * <li>{@link ChannelProcessingFilter}</li>
- * </ul>
- *
- * <h2>Shared Objects Created</h2>
- *
- * No shared objects are created.
- *
- * <h2>Shared Objects Used</h2>
- *
- * The following shared objects are used:
- *
- * <ul>
- * <li>{@link PortMapper} is used to create the default {@link ChannelProcessor} instances
- * </li>
- * </ul>
- *
- * @param <H> the type of {@link HttpSecurityBuilder} that is being configured
- * @author Rob Winch
- * @since 3.2
+ * 为应用程序添加通道安全性(即需要HTTPS或HTTP)
+ * 为了使配置类有用，至少应该将一个RequestMatcher映射到HTTP或HTTPS
  */
 public final class ChannelSecurityConfigurer<H extends HttpSecurityBuilder<H>>
 		extends AbstractHttpConfigurer<ChannelSecurityConfigurer<H>, H> {
 
+	/**
+	 * 通道处理过滤器
+	 */
 	private ChannelProcessingFilter channelFilter = new ChannelProcessingFilter();
 
+	/**
+	 * 请求匹配器和具体权限的映射关系
+	 */
 	private LinkedHashMap<RequestMatcher, Collection<ConfigAttribute>> requestMap = new LinkedHashMap<>();
 
+	/**
+	 * 通道处理器
+	 */
 	private List<ChannelProcessor> channelProcessors;
 
+	/**
+	 * Url注册中心
+	 */
 	private final ChannelRequestMatcherRegistry REGISTRY;
 
 	/**
@@ -103,9 +84,13 @@ public final class ChannelSecurityConfigurer<H extends HttpSecurityBuilder<H>>
 	@Override
 	public void configure(H http) {
 		ChannelDecisionManagerImpl channelDecisionManager = new ChannelDecisionManagerImpl();
+		//设置通道处理器
 		channelDecisionManager.setChannelProcessors(getChannelProcessors(http));
 		channelDecisionManager = postProcess(channelDecisionManager);
+		//设置通道决策管理器
 		this.channelFilter.setChannelDecisionManager(channelDecisionManager);
+
+		//设置安全元数据源
 		DefaultFilterInvocationSecurityMetadataSource filterInvocationSecurityMetadataSource = new DefaultFilterInvocationSecurityMetadataSource(
 				this.requestMap);
 		this.channelFilter.setSecurityMetadataSource(filterInvocationSecurityMetadataSource);
@@ -113,17 +98,28 @@ public final class ChannelSecurityConfigurer<H extends HttpSecurityBuilder<H>>
 		http.addFilter(this.channelFilter);
 	}
 
+	/**
+	 * 获得通道处理器
+	 * @param http
+	 * @return
+	 */
 	private List<ChannelProcessor> getChannelProcessors(H http) {
 		if (this.channelProcessors != null) {
 			return this.channelProcessors;
 		}
+
+		//创建安全通过处理器
 		InsecureChannelProcessor insecureChannelProcessor = new InsecureChannelProcessor();
 		SecureChannelProcessor secureChannelProcessor = new SecureChannelProcessor();
+
+
 		PortMapper portMapper = http.getSharedObject(PortMapper.class);
 		if (portMapper != null) {
+
 			RetryWithHttpEntryPoint httpEntryPoint = new RetryWithHttpEntryPoint();
 			httpEntryPoint.setPortMapper(portMapper);
 			insecureChannelProcessor.setEntryPoint(httpEntryPoint);
+			//创建不安全通过处理器
 			RetryWithHttpsEntryPoint httpsEntryPoint = new RetryWithHttpsEntryPoint();
 			httpsEntryPoint.setPortMapper(portMapper);
 			secureChannelProcessor.setEntryPoint(httpsEntryPoint);
@@ -133,6 +129,12 @@ public final class ChannelSecurityConfigurer<H extends HttpSecurityBuilder<H>>
 		return Arrays.asList(insecureChannelProcessor, secureChannelProcessor);
 	}
 
+	/**
+	 * 添加一个属性
+	 * @param attribute
+	 * @param matchers
+	 * @return
+	 */
 	private ChannelRequestMatcherRegistry addAttribute(String attribute, List<? extends RequestMatcher> matchers) {
 		for (RequestMatcher matcher : matchers) {
 			Collection<ConfigAttribute> attrs = Arrays.asList(new SecurityConfig(attribute));

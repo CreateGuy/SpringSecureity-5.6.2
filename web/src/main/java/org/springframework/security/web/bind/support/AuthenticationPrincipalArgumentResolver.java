@@ -30,10 +30,7 @@ import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
 
 /**
- * Allows resolving the {@link Authentication#getPrincipal()} using the
- * {@link AuthenticationPrincipal} annotation. For example, the following
- * {@link Controller}:
- *
+ * 专门解析 @{@link AuthenticationPrincipal}.例如
  * <pre>
  * &#64;Controller
  * public class MyController {
@@ -95,11 +92,14 @@ public final class AuthenticationPrincipalArgumentResolver implements HandlerMet
 	@Override
 	public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
 			NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
+		// 通过线程级别的安全上下文获得认证对象
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 		if (authentication == null) {
 			return null;
 		}
+		// 获得用户对象
 		Object principal = authentication.getPrincipal();
+		// 如果两者类型不匹配是否抛出异常
 		if (principal != null && !parameter.getParameterType().isAssignableFrom(principal.getClass())) {
 			AuthenticationPrincipal authPrincipal = findMethodAnnotation(AuthenticationPrincipal.class, parameter);
 			if (authPrincipal.errorOnInvalidType()) {
@@ -111,11 +111,7 @@ public final class AuthenticationPrincipalArgumentResolver implements HandlerMet
 	}
 
 	/**
-	 * Obtains the specified {@link Annotation} on the specified {@link MethodParameter}.
-	 * @param annotationClass the class of the {@link Annotation} to find on the
-	 * {@link MethodParameter}
-	 * @param parameter the {@link MethodParameter} to search for an {@link Annotation}
-	 * @return the {@link Annotation} that was found or null.
+	 * 获得指定注解
 	 */
 	private <T extends Annotation> T findMethodAnnotation(Class<T> annotationClass, MethodParameter parameter) {
 		T annotation = parameter.getParameterAnnotation(annotationClass);

@@ -22,17 +22,13 @@ import java.util.Map;
 import org.springframework.util.Assert;
 
 /**
- * Concrete implementation of {@link PortMapper} that obtains HTTP:HTTPS pairs from the
- * application context.
- * <p>
- * By default the implementation will assume 80:443 and 8080:8443 are HTTP:HTTPS pairs
- * respectively. If different pairs are required, use {@link #setPortMappings(Map)}.
- *
- * @author Ben Alex
- * @author colin sampaleanu
+ * PortMapper的默认实现，继续端口映射
  */
 public class PortMapperImpl implements PortMapper {
 
+	/**
+	 * 可以进行端口映射的集合
+	 */
 	private final Map<Integer, Integer> httpsPortMappings;
 
 	public PortMapperImpl() {
@@ -49,6 +45,11 @@ public class PortMapperImpl implements PortMapper {
 		return this.httpsPortMappings;
 	}
 
+	/**
+	 * 返回与指定HTTPS端口关联的HTTP端口
+	 * @param httpsPort
+	 * @return
+	 */
 	@Override
 	public Integer lookupHttpPort(Integer httpsPort) {
 		for (Integer httpPort : this.httpsPortMappings.keySet()) {
@@ -59,6 +60,11 @@ public class PortMapperImpl implements PortMapper {
 		return null;
 	}
 
+	/**
+	 * 返回与指定HTTP端口关联的HTTPs端口
+	 * @param httpPort
+	 * @return
+	 */
 	@Override
 	public Integer lookupHttpsPort(Integer httpPort) {
 		return this.httpsPortMappings.get(httpPort);

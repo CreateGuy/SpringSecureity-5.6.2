@@ -40,27 +40,39 @@ import org.springframework.util.Assert;
 import org.springframework.web.filter.GenericFilterBean;
 
 /**
- * Detects that a user has been authenticated since the start of the request and, if they
- * have, calls the configured {@link SessionAuthenticationStrategy} to perform any
- * session-related activity such as activating session-fixation protection mechanisms or
- * checking for multiple concurrent logins.
- *
- * @author Martin Algesten
- * @author Luke Taylor
- * @since 2.0
+ * 检测从执行 SecurityContextPersistenceFilter 到执行本过滤器之间是否就已经通过身份验证
+ * 如果已经通过，那么就执行HttpSession认证策略，和检查HttpSession是否已经无效
  */
 public class SessionManagementFilter extends GenericFilterBean {
 
+	/**
+	 * 表明当前请求是否已经执行过当前过滤器的标志位
+	 */
 	static final String FILTER_APPLIED = "__spring_security_session_mgmt_filter_applied";
 
+	/**
+	 * HttpSession级别的安全上下文存储策略
+	 */
 	private final SecurityContextRepository securityContextRepository;
 
+	/**
+	 * HttpSession认证策略
+	 */
 	private SessionAuthenticationStrategy sessionAuthenticationStrategy;
 
+	/**
+	 * 认证对象解析器
+	 */
 	private AuthenticationTrustResolver trustResolver = new AuthenticationTrustResolverImpl();
 
+	/**
+	 * HttpSession过期(无效)策略
+	 */
 	private InvalidSessionStrategy invalidSessionStrategy = null;
 
+	/**
+	 * 执行HttpSession认证策略抛出异常，执行的失败策略
+	 */
 	private AuthenticationFailureHandler failureHandler = new SimpleUrlAuthenticationFailureHandler();
 
 	public SessionManagementFilter(SecurityContextRepository securityContextRepository) {
@@ -87,36 +99,42 @@ public class SessionManagementFilter extends GenericFilterBean {
 			chain.doFilter(request, response);
 			return;
 		}
+		//标记为当前request已经执行过
 		request.setAttribute(FILTER_APPLIED, Boolean.TRUE);
+		//没有在HttpSession级别安全上下文策略找到安全上下文
 		if (!this.securityContextRepository.containsContext(request)) {
 			Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+			//但是在线程级别安全上下文策略中找到，并且是一个不是一个匿名用户
+			//比如通过rememberMe登录的，因为
 			if (authentication != null && !this.trustResolver.isAnonymous(authentication)) {
-				// The user has been authenticated during the current request, so call the
-				// session strategy
+				//用户在当前请求中已经通过身份验证，因此调用HttpSession认证策略
+				//比如说rememberMe的方法进行登录，因为RememberMeAuthenticationFilter在SecurityContextPersistenceFilter之前，在本过滤器之后执行
 				try {
+					//执行HttpSession认证策略
 					this.sessionAuthenticationStrategy.onAuthentication(authentication, request, response);
 				}
 				catch (SessionAuthenticationException ex) {
-					// The session strategy can reject the authentication
+					//会话策略可以拒绝认证，比如说并发会话可能会抛出异常
 					this.logger.debug("SessionAuthenticationStrategy rejected the authentication object", ex);
+					//清空线程级别的安全上下文
 					SecurityContextHolder.clearContext();
+					//执行失败策略
 					this.failureHandler.onAuthenticationFailure(request, response, ex);
 					return;
 				}
-				// Eagerly save the security context to make it available for any possible
-				// re-entrant requests which may occur before the current request
-				// completes. SEC-1396.
+				//紧急在HttpSession级别的安全上下文存储策略中保存一个空的安全上下文
+				//我猜是通过记住我认证的时候没有将SecurityContext保存在SecurityContextRepository中，所以这里紧急保存下
 				this.securityContextRepository.saveContext(SecurityContextHolder.getContext(), request, response);
 			}
 			else {
-				// No security context or authentication present. Check for a session
-				// timeout
+				//没有安全上下文或者是一个匿名用户的时候，检查会话过期(无效)
 				if (request.getRequestedSessionId() != null && !request.isRequestedSessionIdValid()) {
 					if (this.logger.isDebugEnabled()) {
 						this.logger.debug(LogMessage.format("Request requested invalid session id %s",
 								request.getRequestedSessionId()));
 					}
 					if (this.invalidSessionStrategy != null) {
+						//执行HttpSession过期(无效)策略
 						this.invalidSessionStrategy.onInvalidSessionDetected(request, response);
 						return;
 					}

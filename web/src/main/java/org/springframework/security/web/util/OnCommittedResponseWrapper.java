@@ -26,14 +26,14 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpServletResponseWrapper;
 
 /**
- * Base class for response wrappers which encapsulate the logic for handling an event when
- * the {@link javax.servlet.http.HttpServletResponse} is committed.
- *
- * @author Rob Winch
- * @since 4.0.2
+ *响应包装器的基类，它封装了{@link javax.servlet.http.HttpServletResponse}的处理逻辑
  */
 public abstract class OnCommittedResponseWrapper extends HttpServletResponseWrapper {
 
+	/**
+	 * 不懂具体是什么类型的标志位
+	 * 比如在HeaderWriterResponse中，是用来判断是否需要执行头部写入的操作
+	 */
 	private boolean disableOnCommitted;
 
 	/**

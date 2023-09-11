@@ -31,7 +31,8 @@ import org.springframework.security.access.intercept.InterceptorStatusToken;
 import org.springframework.security.web.FilterInvocation;
 
 /**
- * Performs security handling of HTTP resources via a filter implementation.
+ * 通过 {@link WebSecurityConfigurerAdapter} 配置的权限，在这进行校验
+ * <li>通过注解配置的在 {@link org.springframework.security.access.intercept.aopalliance.MethodSecurityInterceptor} 中负责校验</li>
  * <p>
  * The <code>SecurityMetadataSource</code> required by this security interceptor is of
  * type {@link FilterInvocationSecurityMetadataSource}.
@@ -44,10 +45,19 @@ import org.springframework.security.web.FilterInvocation;
  */
 public class FilterSecurityInterceptor extends AbstractSecurityInterceptor implements Filter {
 
+	/**
+	 * 用于表示请求是否已经执行过此过滤器了
+	 */
 	private static final String FILTER_APPLIED = "__spring_security_filterSecurityInterceptor_filterApplied";
 
+	/**
+	 * 安全元数据
+	 */
 	private FilterInvocationSecurityMetadataSource securityMetadataSource;
 
+	/**
+	 * 是否跳过检查
+	 */
 	private boolean observeOncePerRequest = true;
 
 	/**
@@ -100,26 +110,36 @@ public class FilterSecurityInterceptor extends AbstractSecurityInterceptor imple
 	}
 
 	public void invoke(FilterInvocation filterInvocation) throws IOException, ServletException {
+		//确定是否跳过安全检查
 		if (isApplied(filterInvocation) && this.observeOncePerRequest) {
 			// filter already applied to this request and user wants us to observe
 			// once-per-request handling, so don't re-do security checking
 			filterInvocation.getChain().doFilter(filterInvocation.getRequest(), filterInvocation.getResponse());
 			return;
 		}
-		// first time this request being called, so perform security checking
+		//判断此请求是否是第一次调用此过滤器
 		if (filterInvocation.getRequest() != null && this.observeOncePerRequest) {
+			//标记为已经执行过安全检查了
 			filterInvocation.getRequest().setAttribute(FILTER_APPLIED, Boolean.TRUE);
 		}
+		//执行调用前的权限判断
 		InterceptorStatusToken token = super.beforeInvocation(filterInvocation);
 		try {
 			filterInvocation.getChain().doFilter(filterInvocation.getRequest(), filterInvocation.getResponse());
 		}
 		finally {
+			//是否需要将认证对象恢复到 判断权限之前
 			super.finallyInvocation(token);
 		}
+		//执行调用后的权限判断
 		super.afterInvocation(token, null);
 	}
 
+	/**
+	 * 确定是否跳过安全检查
+	 * @param filterInvocation
+	 * @return
+	 */
 	private boolean isApplied(FilterInvocation filterInvocation) {
 		return (filterInvocation.getRequest() != null)
 				&& (filterInvocation.getRequest().getAttribute(FILTER_APPLIED) != null);
