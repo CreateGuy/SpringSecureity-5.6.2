@@ -83,7 +83,7 @@ public class RunAsManagerImpl implements RunAsManager, InitializingBean {
 		}
 		//新增替换后的权限
 		newAuthorities.addAll(authentication.getAuthorities());
-		//创建西新的认证对象
+		//创建新的认证对象
 		return new RunAsUserToken(this.key, authentication.getPrincipal(), authentication.getCredentials(),
 				newAuthorities, authentication.getClass());
 	}

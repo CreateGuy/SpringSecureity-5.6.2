@@ -75,7 +75,7 @@ public class PrePostAnnotationSecurityMetadataSource extends AbstractMethodSecur
 		// TODO: 由于@PostAuthorize可以针对于返回值，所以可以在这里检查空返回值，然后抛出异常
 		PostAuthorize postAuthorize = findAnnotation(method, targetClass, PostAuthorize.class);
 
-		// 没有安全元数据源那就代表不需要代理，直接返回空集合
+		// 方法上没有这四种注解，直接返回空集合
 		if (preFilter == null && preAuthorize == null && postFilter == null && postAuthorize == null) {
 			// There is no meta-data so return
 			return Collections.emptyList();

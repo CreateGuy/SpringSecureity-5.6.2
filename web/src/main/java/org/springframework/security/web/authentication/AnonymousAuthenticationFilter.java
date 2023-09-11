@@ -90,7 +90,7 @@ public class AnonymousAuthenticationFilter extends GenericFilterBean implements 
 
 	@Override
 	public void afterPropertiesSet() {
-		Assert.hasLength(this.key, "key must have length");
+		Assert.hasLength(this.key,  "key must have length");
 		Assert.notNull(this.principal, "Anonymous authentication principal must be set");
 		Assert.notNull(this.authorities, "Anonymous authorities must be set");
 	}

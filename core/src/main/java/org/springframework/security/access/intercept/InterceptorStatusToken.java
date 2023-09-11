@@ -33,7 +33,8 @@ import org.springframework.security.core.context.SecurityContext;
 public class InterceptorStatusToken {
 
 	/**
-	 * 安全上下文
+	 * 最新的安全上下文，也有可能是以前的
+	 * <p>以前的情况是因为 {@link RunAsManager}</p>
 	 */
 	private SecurityContext securityContext;
 

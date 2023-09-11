@@ -19,8 +19,7 @@ package org.springframework.security.authentication;
 import org.springframework.security.core.AuthenticationException;
 
 /**
- * Thrown if an authentication request is rejected because the credentials are not
- * sufficiently trusted.
+ * 由于认证级别不够而拒绝身份认证请求时抛出
  * <p>
  * {@link org.springframework.security.access.AccessDecisionVoter}s will typically throw
  * this exception if they are dissatisfied with the level of the authentication, such as

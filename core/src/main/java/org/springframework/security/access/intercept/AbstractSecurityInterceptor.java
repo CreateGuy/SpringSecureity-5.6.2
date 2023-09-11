@@ -217,7 +217,7 @@ public abstract class AbstractSecurityInterceptor
 	 */
 	protected InterceptorStatusToken beforeInvocation(Object object) {
 		Assert.notNull(object, "Object was null");
-		//不懂具体应用场景
+		// 当前类支持的类型
 		if (!getSecureObjectClass().isAssignableFrom(object.getClass())) {
 			throw new IllegalArgumentException("Security invocation attempted for object " + object.getClass().getName()
 					+ " but AbstractSecurityInterceptor only configured to support secure objects of type: "
@@ -252,7 +252,7 @@ public abstract class AbstractSecurityInterceptor
 		if (this.logger.isTraceEnabled()) {
 			this.logger.trace(LogMessage.format("Authorizing %s with attributes %s", object, attributes));
 		}
-		//尝试进行权限判断
+		// 调用访问决策管理器进行权限判断
 		attemptAuthorization(object, attributes, authenticated);
 		if (this.logger.isDebugEnabled()) {
 			this.logger.debug(LogMessage.format("Authorized %s with attributes %s", object, attributes));
@@ -286,7 +286,7 @@ public abstract class AbstractSecurityInterceptor
 	}
 
 	/**
-	 * 尝试进行权限判断
+	 * 调用访问决策管理器进行权限判断
 	 * @param object
 	 * @param attributes 接口所需权限
 	 * @param authenticated 认证对象
@@ -319,7 +319,6 @@ public abstract class AbstractSecurityInterceptor
 		/*
 			这个if成立的情况一般都是RunAsUserToken的认证对象的情况
 			由于RunAsUserToken是新增了一些权限的，所以需要刷新回去
-			但是这样SecurityContextPersistenceFilter就无法更新Session级别的安全上下文了？？？
 		 */
 		if (token != null && token.isContextHolderRefreshRequired()) {
 			SecurityContextHolder.setContext(token.getSecurityContext());

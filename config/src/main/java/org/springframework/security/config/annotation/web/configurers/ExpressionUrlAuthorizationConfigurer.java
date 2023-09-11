@@ -44,7 +44,7 @@ import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 /**
- * 添加基于SpEL表达式的URL的授权
+ * 添加基于SpEL表达式的URL的鉴权
  * At least
  * one {@link org.springframework.web.bind.annotation.RequestMapping} needs to be mapped
  * to {@link ConfigAttribute}'s for this {@link SecurityContextConfigurer} to have
@@ -139,7 +139,7 @@ public final class ExpressionUrlAuthorizationConfigurer<H extends HttpSecurityBu
 	}
 
 	/**
-	 * 将已经配置了规则的请求匹配器，保存到响应的位置上
+	 * 注册关联关系
 	 * @param requestMatchers
 	 * @param configAttributes
 	 */
@@ -503,12 +503,12 @@ public final class ExpressionUrlAuthorizationConfigurer<H extends HttpSecurityBu
 		}
 
 		/**
-		 * 指定当前请求匹配器能够匹配成功的请求 的表达式
+		 * 规定当请求匹配器能够匹配成功时，此时的用户需要满足什么样的权限表达式
 		 * @param attribute eg："hasRole('ROLE_USER')
 		 * @return
 		 */
 		public ExpressionInterceptUrlRegistry access(String attribute) {
-			//是否已经否定了规则
+			//是否已经否定之后的所有规则
 			if (this.not) {
 				attribute = "!" + attribute;
 			}

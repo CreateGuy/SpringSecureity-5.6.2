@@ -30,7 +30,7 @@ import org.springframework.security.access.annotation.Secured;
 import org.springframework.security.config.annotation.authentication.configuration.EnableGlobalAuthentication;
 
 /**
- * SpringSecurity开启权限注解
+ * SpringSecurity开启权限注解(基于方法进行权限校验)
  * {@link GlobalMethodSecurityConfiguration} and override the protected methods to provide
  * custom implementations. Note that {@link EnableGlobalMethodSecurity} still must be
  * included on the class extending {@link GlobalMethodSecurityConfiguration} to determine

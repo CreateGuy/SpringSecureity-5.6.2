@@ -65,7 +65,7 @@ public abstract class AbstractInterceptUrlConfigurer<C extends AbstractIntercept
 		extends AbstractHttpConfigurer<C, H> {
 
 	/**
-	 * 我理解是：FilterSecurityInterceptor过滤器可能会执行多次，那么这个就是决定后面的执行此过滤器是否需要跳过权限检查
+	 * 我理解是：FilterSecurityInterceptor过滤器可能会执行多次，那么这个就是决定后续的执行此过滤器是否需要跳过权限检查
 	 */
 	private Boolean filterSecurityInterceptorOncePerRequest;
 
@@ -88,6 +88,7 @@ public abstract class AbstractInterceptUrlConfigurer<C extends AbstractIntercept
 		FilterSecurityInterceptor securityInterceptor = createFilterSecurityInterceptor(http, metadataSource,
 				http.getSharedObject(AuthenticationManager.class));
 
+		// 是否跳过重复的认证检查
 		if (this.filterSecurityInterceptorOncePerRequest != null) {
 			securityInterceptor.setObserveOncePerRequest(this.filterSecurityInterceptorOncePerRequest);
 		}

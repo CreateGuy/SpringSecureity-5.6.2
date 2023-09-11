@@ -60,7 +60,7 @@ public class RoleVoter implements AccessDecisionVoter<Object> {
 	}
 
 	/**
-	 * 判断认证对象是否有任何一个访问接口的角色，就投同意票
+	 * 判断认证对象是否有任何一个访问此接口的角色，就投同意票
 	 * @param authentication the caller making the invocation
 	 * @param object the secured object being invoked
 	 * @param attributes the configuration attributes associated with the secured object
